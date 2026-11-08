@@ -45,3 +45,4 @@ Set the `VITE_FIREBASE_*` and `VITE_FIRESTORE_DATABASE_ID` variables listed in `
 
 See [PWA-SETUP.md](PWA-SETUP.md) for repository and hosting steps.
 
+
