@@ -44,3 +44,4 @@ Set the `VITE_FIREBASE_*` and `VITE_FIRESTORE_DATABASE_ID` variables listed in `
 - Test customer/technician/admin permissions, bookings, maps, offline behavior, mobile installation, and all payment paths before public launch.
 
 See [PWA-SETUP.md](PWA-SETUP.md) for repository and hosting steps.
+
