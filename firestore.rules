@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // SECURITY STAGING RULES: fail closed until Firebase Authentication custom claims
+    // and server-side Cloud Functions are deployed and tested.
+    // Never trust client-supplied role/email fields for admin authorization.
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+
+    // No client may write money, payout, booking, technician balance, or ledger records.
+    // Backend Admin SDK functions (not governed by these client rules) must own mutations.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

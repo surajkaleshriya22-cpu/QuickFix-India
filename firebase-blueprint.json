@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "Service": {
+      "title": "Service",
+      "description": "Catalog of available home services across electrician, plumber, ac_repair, and fridge_repair",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "enum": ["electrician", "plumber", "ac_repair", "fridge_repair"] },
+        "title": { "type": "string" },
+        "hindiTitle": { "type": "string" },
+        "description": { "type": "string" },
+        "startingPrice": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "warrantyDays": { "type": "number" },
+        "badge": { "type": "string" },
+        "included": { "type": "array" }
+      },
+      "required": ["id", "category", "title", "startingPrice", "warrantyDays"]
+    },
+    "Technician": {
+      "title": "Technician",
+      "description": "Technician profile with verification, trade qualification, and wallet balance with 2000 INR mandatory reserve",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "trades": { "type": "array" },
+        "experienceYears": { "type": "number" },
+        "city": { "type": "string" },
+        "rating": { "type": "number" },
+        "totalJobsCompleted": { "type": "number" },
+        "avatar": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "approvalStatus": { "type": "string", "enum": ["approved", "pending_audit", "rejected"] },
+        "qualificationType": { "type": "string" },
+        "qualificationRegNumber": { "type": "string" },
+        "qualificationInstitute": { "type": "string" },
+        "kycDocType": { "type": "string" },
+        "kycDocNumber": { "type": "string" },
+        "walletBalance": { "type": "number", "minimum": 2000 },
+        "securityDepositRequired": { "type": "number", "minimum": 2000 },
+        "securityDepositPaid": { "type": "boolean" },
+        "withdrawableBalance": { "type": "number", "minimum": 0 },
+        "todayEarnings": { "type": "number" },
+        "totalEarnings": { "type": "number" },
+        "pendingPayout": { "type": "number" },
+        "lifetimeCashCollected": { "type": "number" },
+        "lifetimeCommissionPaid": { "type": "number" },
+        "bankAccount": { "type": "object" }
+      },
+      "required": ["id", "name", "phone", "trades", "city", "walletBalance", "securityDepositPaid"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Customer service booking with real-time tracking, OTP, and commission breakdown",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "serviceTitle": { "type": "string" },
+        "category": { "type": "string", "enum": ["electrician", "plumber", "ac_repair", "fridge_repair"] },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "city": { "type": "string" },
+        "pincode": { "type": "string" },
+        "scheduledDate": { "type": "string" },
+        "scheduledTimeSlot": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["requested", "assigned", "technician_en_route", "in_progress", "completed", "cancelled"] },
+        "technicianId": { "type": "string" },
+        "technicianName": { "type": "string" },
+        "technicianPhone": { "type": "string" },
+        "startOtp": { "type": "string" },
+        "price": { "type": "number" },
+        "visitingCharges": { "type": "number" },
+        "discount": { "type": "number" },
+        "taxes": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "commissionRate": { "type": "number" },
+        "adminCommission": { "type": "number" },
+        "technicianPayout": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["upi", "card", "netbanking", "cash"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "failed", "refunded"] },
+        "cashCommissionDeducted": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "serviceTitle", "category", "customerName", "customerPhone", "status", "totalAmount"]
+    },
+    "PayoutRequest": {
+      "title": "PayoutRequest",
+      "description": "Technician earnings withdrawal request submitted to Admin Escrow",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "technicianId": { "type": "string" },
+        "technicianName": { "type": "string" },
+        "amount": { "type": "number" },
+        "upiId": { "type": "string" },
+        "status": { "type": "string", "enum": ["processing", "settled", "failed", "on_hold", "rejected"] },
+        "adminApprovalStatus": { "type": "string", "enum": ["pending_approval", "approved_and_released", "held_by_admin", "rejected_by_admin"] },
+        "adminNote": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "settledAt": { "type": "string" }
+      },
+      "required": ["id", "technicianId", "amount", "upiId", "status"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Technician wallet transactions including 2000 INR security deposit, cash commission deductions, and payouts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "technicianId": { "type": "string" },
+        "type": { "type": "string", "enum": ["security_deposit", "topup", "cash_commission_deduction", "online_payout_credit", "withdrawal"] },
+        "amount": { "type": "number" },
+        "balanceAfter": { "type": "number" },
+        "bookingId": { "type": "string" },
+        "description": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "technicianId", "type", "amount", "balanceAfter", "timestamp"]
+    },
+    "ServiceZone": {
+      "title": "ServiceZone",
+      "description": "Defined service radius operating zones for geo-fencing technician status updates and 1-Hour SLA coverage",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "center": { "type": "object" },
+        "radiusKm": { "type": "number" },
+        "minLat": { "type": "number" },
+        "maxLat": { "type": "number" },
+        "minLng": { "type": "number" },
+        "maxLng": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "description": { "type": "string" },
+        "coverageAreas": { "type": "array" }
+      },
+      "required": ["id", "name", "city", "center", "radiusKm", "isActive"]
+    }
+  },
+  "firestore": {
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Public catalog of electrician, plumber, AC repair, and fridge repair services"
+    },
+    "/technicians/{technicianId}": {
+      "schema": "Technician",
+      "description": "Service technician profiles, qualifications, and wallet balances"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Marketplace bookings with real-time status and cash commission tracking"
+    },
+    "/payouts/{payoutId}": {
+      "schema": "PayoutRequest",
+      "description": "Technician withdrawal requests requiring Admin HQ approval"
+    },
+    "/wallet_transactions/{transactionId}": {
+      "schema": "WalletTransaction",
+      "description": "Ledger of security deposits, cash commission debits to Admin, and payouts"
+    },
+    "/service_zones/{zoneId}": {
+      "schema": "ServiceZone",
+      "description": "Geo-fenced service radius zones for technician duty authorization"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix QuickFix - India Home Services Marketplace",
+  "description": "On-demand home services marketplace for India featuring Electrician and Plumber bookings, technician partner dispatch, live tracking, admin commission management, and native Android Jetpack Compose architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

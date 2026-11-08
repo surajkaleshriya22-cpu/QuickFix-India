@@ -1,0 +1,1994 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  Booking,
+  BookingStatus,
+  CommissionSettings,
+  CustomerUser,
+  PayoutRecord,
+  PaymentMethod,
+  PaymentStatus,
+  ServiceCategoryType,
+  ServiceItem,
+  Technician,
+  ActiveRole,
+  AppUser,
+  UserRole,
+  AdminMasterPaymentConfig,
+  WalletTransaction,
+  isAuthorizedAdminEmail,
+  AUTHORIZED_ADMIN_EMAILS,
+  ServiceZone,
+  GeofenceValidationResult
+} from '../types';
+import {
+  CURRENT_CUSTOMER,
+  INITIAL_BOOKINGS,
+  INITIAL_COMMISSION_SETTINGS,
+  INITIAL_PAYOUTS,
+  INITIAL_SERVICES,
+  INITIAL_TECHNICIANS,
+  INITIAL_CUSTOMERS,
+  INITIAL_ADMIN_PAYMENT_CONFIG,
+  INITIAL_WALLET_TRANSACTIONS
+} from '../data/mockData';
+import { INITIAL_SERVICE_ZONES, calculateBoundingBox } from '../data/serviceZones';
+import {
+  seedServiceZonesIfEmpty,
+  calculateHaversineDistanceKm,
+  updateTechnicianFirestoreStatus
+} from '../services/geofenceService';
+import { db } from '../lib/firebase';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+
+interface QuickFixContextType {
+  // Role & View Mode
+  activeRole: ActiveRole;
+  setActiveRole: (role: ActiveRole) => void;
+  viewMode: 'phone' | 'fullscreen';
+  setViewMode: (mode: 'phone' | 'fullscreen') => void;
+  showCodeInspector: boolean;
+  setShowCodeInspector: (show: boolean) => void;
+  showFirebaseConfig: boolean;
+  setShowFirebaseConfig: (show: boolean) => void;
+  showAuthModal: boolean;
+  setShowAuthModal: (show: boolean) => void;
+  showProfileDrawer: boolean;
+  setShowProfileDrawer: (show: boolean) => void;
+
+  // Authentication & Profile
+  currentUser: AppUser | null;
+  isAuthenticated: boolean;
+  authenticateUser: (params: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    role: UserRole;
+    address?: string;
+    city: string;
+    trades?: ServiceCategoryType[];
+    rememberMe: boolean;
+  }) => { success: boolean; message?: string };
+  registerNewPartner: (params: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    trades: ServiceCategoryType[];
+    experienceYears: number;
+    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
+    kycDocNumber: string;
+    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
+    qualificationRegNumber?: string;
+    qualificationInstitute?: string;
+    upiId: string;
+    city: string;
+    address?: string;
+    initialDepositAmount?: number;
+    rememberMe: boolean;
+  }) => { success: boolean; message?: string };
+  logoutUser: () => void;
+  updateCustomerAddress: (newAddr: {
+    label: 'Home' | 'Work' | 'Other';
+    addressLine: string;
+    city: string;
+    pincode: string;
+  }) => void;
+
+  // City & Services
+  currentCity: string;
+  setCurrentCity: (city: string) => void;
+  services: ServiceItem[];
+  selectedCategory: 'all' | ServiceCategoryType;
+  setSelectedCategory: (cat: 'all' | ServiceCategoryType) => void;
+
+  // Customer State & Backward Compatibility
+  customer: CustomerUser;
+  isCustomerLoggedIn: boolean;
+  loginCustomer: (phone: string, name?: string) => void;
+  registerCustomer: (name: string, phone: string, email: string, address: string) => void;
+  logoutCustomer: () => void;
+
+  // Bookings
+  bookings: Booking[];
+  activeBookingId: string | null;
+  setActiveBookingId: (id: string | null) => void;
+  createBooking: (params: {
+    serviceId: string;
+    scheduledDate: string;
+    scheduledTimeSlot: string;
+    address: string;
+    notes?: string;
+    paymentMethod: PaymentMethod;
+  }) => Booking;
+  updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
+  addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
+
+  // Technicians & Partner App
+  technicians: Technician[];
+  currentTechnician: Technician;
+  isTechnicianLoggedIn: boolean;
+  loginTechnician: (phone: string) => boolean;
+  registerTechnician: (data: {
+    name: string;
+    phone: string;
+    email: string;
+    trades: ServiceCategoryType[];
+    experienceYears: number;
+    city: string;
+    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
+    qualificationRegNumber?: string;
+    qualificationInstitute?: string;
+    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
+    kycDocNumber: string;
+    upiId: string;
+    initialDepositAmount?: number;
+  }) => { success: boolean; message?: string };
+  logoutTechnician: () => void;
+  serviceZones: ServiceZone[];
+  toggleTechnicianOnline: (
+    techId: string,
+    coords?: { lat: number; lng: number }
+  ) => { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult };
+  validateAndSetTechnicianOnline: (
+    techId: string,
+    locationData: { lat: number; lng: number; zoneId: string; zoneName: string; distanceToCenterKm: number }
+  ) => Promise<{ success: boolean; message: string }>;
+  updateServiceZoneRadius: (zoneId: string, newRadiusKm: number) => { success: boolean; message: string };
+  toggleServiceZoneActive: (zoneId: string) => { success: boolean; message: string };
+  approveTechnicianKyc: (techId: string) => void;
+  rejectTechnicianKyc: (techId: string) => void;
+  approveTechnicianQualification: (techId: string) => void;
+  rejectTechnicianQualification: (techId: string, reason?: string) => void;
+  updateTechnicianCustomCommission: (technicianId: string, commissionPct: number | null) => { success: boolean; message: string };
+
+  // Admin Payment Control & Escrow
+  adminPaymentConfig: AdminMasterPaymentConfig;
+  updateAdminPaymentConfig: (config: Partial<AdminMasterPaymentConfig>) => void;
+  adminApprovePayout: (payoutId: string) => { success: boolean; message: string };
+  adminHoldPayout: (payoutId: string, reason: string) => { success: boolean; message: string };
+  adminRejectPayout: (payoutId: string, reason: string) => { success: boolean; message: string };
+  confirmPayoutSettlementWebhook: (payoutId: string, providerEventId: string, gatewayProvider?: string) => { success: boolean; message: string };
+  adminIssueCustomerRefund: (bookingId: string, amount?: number, reason?: string) => { success: boolean; message: string };
+
+  // Admin & Commissions & Partner Wallet
+  commissionSettings: CommissionSettings;
+  updateCommissionSettings: (settings: Partial<CommissionSettings>) => void;
+  payouts: PayoutRecord[];
+  requestPayout: (technicianId: string, amount: number) => { success: boolean; message: string };
+  processPayout: (payoutId: string) => void;
+  disbursePayout: (payoutId: string) => void;
+  walletTransactions: WalletTransaction[];
+  topupTechnicianWallet: (technicianId: string, amount: number) => { success: boolean; message: string };
+  adminWalletBalance: number;
+
+  // Admin Extended Management
+  customers: CustomerUser[];
+  deleteCustomer: (customerId: string) => void;
+  toggleCustomerStatus: (customerId: string) => void;
+  reassignBookingTechnician: (bookingId: string, technicianId: string) => void;
+  deleteBooking: (bookingId: string) => void;
+  toggleTechnicianSuspension: (techId: string) => void;
+  updateTechnicianRating: (techId: string, newRating: number) => void;
+  addCustomerReviewReply: (bookingId: string, reply: string) => void;
+  deleteReview: (bookingId: string) => void;
+  updateBookingPaymentStatus: (bookingId: string, status: PaymentStatus, transactionRef?: string) => void;
+  firestoreSyncStatus: { isConnected: boolean; lastSynced: string; latencyMs: number };
+  triggerFirestoreSync: () => Promise<void>;
+}
+
+const QuickFixContext = createContext<QuickFixContextType | undefined>(undefined);
+
+const LOCAL_STORAGE_AUTH_KEY = 'quickfix_auth_session';
+
+export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Navigation & Role State
+  const [activeRole, setActiveRole] = useState<ActiveRole>('customer');
+  const [viewMode, setViewMode] = useState<'phone' | 'fullscreen'>('phone');
+  const [showCodeInspector, setShowCodeInspector] = useState(false);
+  const [showFirebaseConfig, setShowFirebaseConfig] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+
+  // Localization & Services
+  const [currentCity, setCurrentCity] = useState('Bengaluru');
+  const [services] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [selectedCategory, setSelectedCategory] = useState<'all' | ServiceCategoryType>('all');
+
+  // Unified Firebase Auth Session state
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_AUTH_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      uid: 'user-default-101',
+      phoneNumber: '+91 98451 99221',
+      displayName: 'Ananya Deshmukh',
+      email: 'ananya.deshmukh@gmail.com',
+      role: 'customer',
+      address: 'Flat 402, Sai Silver Woods, 5th Cross, Koramangala 4th Block',
+      city: 'Bengaluru',
+      pincode: '560034',
+      createdAt: '2026-11-03T08:00:00Z'
+    };
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+
+  // Customer State
+  const [customer, setCustomer] = useState<CustomerUser>(CURRENT_CUSTOMER);
+  const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(true);
+
+  // Technicians State
+  const [technicians, setTechnicians] = useState<Technician[]>(INITIAL_TECHNICIANS);
+  const [currentTechnician, setCurrentTechnician] = useState<Technician>(INITIAL_TECHNICIANS[0]);
+  const [isTechnicianLoggedIn, setIsTechnicianLoggedIn] = useState(true);
+
+  // Commissions & Payouts & Admin Gateway Control
+  const [commissionSettings, setCommissionSettings] = useState<CommissionSettings>(INITIAL_COMMISSION_SETTINGS);
+  const [payouts, setPayouts] = useState<PayoutRecord[]>(INITIAL_PAYOUTS);
+  const [adminPaymentConfig, setAdminPaymentConfig] = useState<AdminMasterPaymentConfig>(INITIAL_ADMIN_PAYMENT_CONFIG);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(INITIAL_WALLET_TRANSACTIONS);
+  const [adminWalletBalance, setAdminWalletBalance] = useState<number>(4580);
+  const [serviceZones, setServiceZones] = useState<ServiceZone[]>(INITIAL_SERVICE_ZONES);
+
+  // Initialize service zones from Firestore / seed defaults on boot
+  useEffect(() => {
+    seedServiceZonesIfEmpty().then((zones) => {
+      if (zones && zones.length > 0) {
+        setServiceZones(zones);
+      }
+    });
+  }, []);
+
+  // Bookings State
+  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [activeBookingId, setActiveBookingId] = useState<string | null>('QF-7049');
+
+  // Sync customer details when currentUser changes
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'customer') {
+      setCustomer(prev => ({
+        ...prev,
+        name: currentUser.displayName,
+        phone: currentUser.phoneNumber,
+        email: currentUser.email,
+        addresses: currentUser.address
+          ? [
+              {
+                id: 'addr-main',
+                label: 'Home',
+                addressLine: currentUser.address,
+                city: currentUser.city,
+                pincode: currentUser.pincode || '560034'
+              },
+              ...prev.addresses.filter(a => a.label !== 'Home')
+            ]
+          : prev.addresses
+      }));
+    }
+  }, [currentUser]);
+
+  // Authentication Methods
+  const authenticateUser = ({
+    displayName,
+    phoneNumber,
+    email,
+    role,
+    address,
+    city,
+    trades,
+    rememberMe
+  }: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    role: UserRole;
+    address?: string;
+    city: string;
+    trades?: ServiceCategoryType[];
+    rememberMe: boolean;
+  }): { success: boolean; message?: string } => {
+    // Strict Super Admin Access Gate
+    if (role === 'admin') {
+      if (!isAuthorizedAdminEmail(email)) {
+        const errorMsg = `Access Denied: The account "${email}" is not on the QuickFix Super Admin Whitelist. Only verified Administrators (surajkaleshriya22@gmail.com) can access this console.`;
+        console.warn(`[SECURITY ALERT] Blocked unauthorized admin login attempt for email: ${email}`);
+        return {
+          success: false,
+          message: errorMsg
+        };
+      }
+    }
+
+    const userObj: AppUser = {
+      uid: `uid-${Date.now()}`,
+      phoneNumber,
+      displayName,
+      email,
+      role,
+      address,
+      city,
+      trades,
+      createdAt: new Date().toISOString()
+    };
+
+    setCurrentUser(userObj);
+    setIsAuthenticated(true);
+
+    if (rememberMe) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(userObj));
+      } catch {
+        // ignore
+      }
+    } else {
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (role === 'customer') {
+      setIsCustomerLoggedIn(true);
+      setCustomer({
+        id: userObj.uid,
+        name: displayName,
+        phone: phoneNumber,
+        email,
+        addresses: address
+          ? [
+              {
+                id: `addr-${Date.now()}`,
+                label: 'Home',
+                addressLine: address,
+                city,
+                pincode: '560034'
+              }
+            ]
+          : customer.addresses
+      });
+    } else if (role === 'technician') {
+      setIsTechnicianLoggedIn(true);
+      const match = technicians.find(t => t.phone.replace(/\s+/g, '') === phoneNumber.replace(/\s+/g, ''));
+      if (match) {
+        setCurrentTechnician(match);
+      }
+    }
+
+    return { success: true };
+  };
+
+  const registerNewPartner = (params: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    trades: ServiceCategoryType[];
+    experienceYears: number;
+    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
+    kycDocNumber: string;
+    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
+    qualificationRegNumber?: string;
+    qualificationInstitute?: string;
+    upiId: string;
+    city: string;
+    address?: string;
+    initialDepositAmount?: number;
+    rememberMe: boolean;
+  }): { success: boolean; message?: string } => {
+    // 1. Strict Trade Restriction: Only qualified electricians, plumbers, and AC/Fridge technicians
+    const validTrades: ServiceCategoryType[] = ['electrician', 'plumber', 'ac_repair', 'fridge_repair'];
+    const hasValidTrades =
+      params.trades &&
+      params.trades.length > 0 &&
+      params.trades.every(t => validTrades.includes(t));
+
+    if (!hasValidTrades) {
+      return {
+        success: false,
+        message: 'Registration Denied: Only certified and qualified Electricians, Plumbers, and AC/Fridge Technicians are eligible to partner with QuickFix.'
+      };
+    }
+
+    // 2. Minimum Experience Requirement: At least 2 years in field
+    if (params.experienceYears < 2) {
+      return {
+        success: false,
+        message: 'Minimum 2 years of certified field experience is mandatory for trade quality assurance.'
+      };
+    }
+
+    // 3. Strict Minimum ₹2,000 Wallet Balance Gate for Registration Completion
+    const initialDeposit = params.initialDepositAmount !== undefined ? Number(params.initialDepositAmount) : 2000;
+    if (isNaN(initialDeposit) || initialDeposit < 2000) {
+      return {
+        success: false,
+        message: 'Registration Denied: A minimum partner security deposit of ₹2,000 is strictly required in your wallet before registration can be completed.'
+      };
+    }
+
+    const qualType = params.qualificationType || 'ITI Trade Certificate';
+    const qualReg = params.qualificationRegNumber || params.kycDocNumber || 'ITI-VERIFY-PENDING';
+    const qualInst = params.qualificationInstitute || `${params.city} Technical Trade Training Institute`;
+
+    const newTech: Technician = {
+      id: `tech-${Date.now()}`,
+      name: params.displayName,
+      phone: params.phoneNumber,
+      email: params.email,
+      trades: params.trades,
+      experienceYears: params.experienceYears,
+      city: params.city,
+      rating: 5.0,
+      totalJobsCompleted: 0,
+      avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80',
+      isOnline: false, // CANNOT go online until QuickFix Admin HQ clears the qualification audit
+      isVerified: false,
+      approvalStatus: 'pending_audit',
+      qualificationType: qualType,
+      qualificationRegNumber: qualReg,
+      qualificationInstitute: qualInst,
+      kycDocType: params.kycDocType,
+      kycDocNumber: params.kycDocNumber,
+      walletBalance: initialDeposit,
+      securityDepositRequired: 2000,
+      securityDepositPaid: true,
+      withdrawableBalance: Math.max(0, initialDeposit - 2000), // Base ₹2,000 is permanently locked and non-withdrawable
+      lifetimeCashCollected: 0,
+      lifetimeCommissionPaid: 0,
+      bankAccount: {
+        accountNumber: '•••• •••• 9921',
+        ifsc: 'HDFC0001200',
+        upiId: params.upiId
+      },
+      todayEarnings: 0,
+      totalEarnings: 0,
+      pendingPayout: 0
+    };
+
+    const initialTxn: WalletTransaction = {
+      id: `TXN-W${Date.now().toString().slice(-6)}`,
+      technicianId: newTech.id,
+      type: 'security_deposit',
+      amount: initialDeposit,
+      balanceAfter: initialDeposit,
+      description: 'Mandatory Partner Security Deposit (₹2,000 Non-withdrawable Base Reserve)',
+      timestamp: new Date().toISOString()
+    };
+    setWalletTransactions(prev => [initialTxn, ...prev]);
+
+    setTechnicians(prev => [newTech, ...prev]);
+    setCurrentTechnician(newTech);
+    setIsTechnicianLoggedIn(true);
+
+    // Sync to Firestore
+    try {
+      setDoc(doc(db, 'technicians', newTech.id), newTech).catch(err => {
+        console.warn('Firestore technician sync (offline/rules):', err);
+      });
+      setDoc(doc(db, 'wallet_transactions', initialTxn.id), initialTxn).catch(err => {
+        console.warn('Firestore transaction sync:', err);
+      });
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    const userObj: AppUser = {
+      uid: newTech.id,
+      phoneNumber: params.phoneNumber,
+      displayName: params.displayName,
+      email: params.email,
+      role: 'technician',
+      trades: params.trades,
+      experienceYears: params.experienceYears,
+      qualificationType: qualType,
+      qualificationRegNumber: qualReg,
+      qualificationInstitute: qualInst,
+      approvalStatus: 'pending_audit',
+      kycDocType: params.kycDocType,
+      kycDocNumber: params.kycDocNumber,
+      isVerified: false,
+      upiId: params.upiId,
+      city: params.city,
+      address: params.address,
+      createdAt: new Date().toISOString()
+    };
+
+    setCurrentUser(userObj);
+    setIsAuthenticated(true);
+
+    if (params.rememberMe) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(userObj));
+      } catch {
+        // ignore
+      }
+    }
+
+    return { success: true };
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setIsCustomerLoggedIn(false);
+    setIsTechnicianLoggedIn(false);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  const updateCustomerAddress = (newAddr: {
+    label: 'Home' | 'Work' | 'Other';
+    addressLine: string;
+    city: string;
+    pincode: string;
+  }) => {
+    const item = {
+      id: `addr-${Date.now()}`,
+      ...newAddr
+    };
+    setCustomer(prev => ({
+      ...prev,
+      addresses: [item, ...prev.addresses]
+    }));
+    if (currentUser) {
+      const updated = { ...currentUser, address: newAddr.addressLine };
+      setCurrentUser(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Backward-compatible Customer Auth
+  const loginCustomer = (phone: string, name?: string) => {
+    setIsCustomerLoggedIn(true);
+    setCustomer(prev => ({
+      ...prev,
+      phone,
+      name: name || prev.name
+    }));
+  };
+
+  const registerCustomer = (name: string, phone: string, email: string, address: string) => {
+    setIsCustomerLoggedIn(true);
+    const newCust: CustomerUser = {
+      id: `cust-${Date.now()}`,
+      name,
+      phone,
+      email,
+      addresses: [
+        {
+          id: `addr-${Date.now()}`,
+          label: 'Home',
+          addressLine: address,
+          city: currentCity,
+          pincode: '560034'
+        }
+      ]
+    };
+    setCustomer(newCust);
+  };
+
+  const logoutCustomer = () => {
+    setIsCustomerLoggedIn(false);
+  };
+
+  // Technician Auth
+  const loginTechnician = (phone: string) => {
+    const match = technicians.find(t => t.phone.replace(/\s+/g, '') === phone.replace(/\s+/g, ''));
+    if (match) {
+      setCurrentTechnician(match);
+      setIsTechnicianLoggedIn(true);
+      return true;
+    }
+    setCurrentTechnician(technicians[0]);
+    setIsTechnicianLoggedIn(true);
+    return true;
+  };
+
+  const registerTechnician = (data: {
+    name: string;
+    phone: string;
+    email: string;
+    trades: ServiceCategoryType[];
+    experienceYears: number;
+    city: string;
+    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
+    qualificationRegNumber?: string;
+    qualificationInstitute?: string;
+    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
+    kycDocNumber: string;
+    upiId: string;
+    initialDepositAmount?: number;
+  }): { success: boolean; message?: string } => {
+    return registerNewPartner({
+      displayName: data.name,
+      phoneNumber: data.phone,
+      email: data.email,
+      trades: data.trades,
+      experienceYears: data.experienceYears,
+      kycDocType: data.kycDocType,
+      kycDocNumber: data.kycDocNumber,
+      qualificationType: data.qualificationType,
+      qualificationRegNumber: data.qualificationRegNumber,
+      qualificationInstitute: data.qualificationInstitute,
+      upiId: data.upiId,
+      city: data.city,
+      initialDepositAmount: data.initialDepositAmount,
+      rememberMe: true
+    });
+  };
+
+  const logoutTechnician = () => {
+    setIsTechnicianLoggedIn(false);
+  };
+
+  const toggleTechnicianOnline = (
+    techId: string,
+    coords?: { lat: number; lng: number }
+  ): { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult } => {
+    const tech = technicians.find(t => t.id === techId) || (currentTechnician.id === techId ? currentTechnician : null);
+    if (!tech) return { success: false, message: 'Technician record not found' };
+
+    // If currently Online, permit switching to Offline immediately
+    if (tech.isOnline) {
+      setTechnicians(prev =>
+        prev.map(t => (t.id === techId ? { ...t, isOnline: false } : t))
+      );
+      if (currentTechnician.id === techId) {
+        setCurrentTechnician(prev => ({ ...prev, isOnline: false }));
+      }
+      updateTechnicianFirestoreStatus(techId, false);
+      return { success: true, message: 'Duty status set to Offline. You will not receive customer requests.' };
+    }
+
+    // Strict Gate 1: Non-approved or unverified technicians cannot go online or receive customer bookings!
+    if (!tech.isVerified || tech.approvalStatus === 'pending_audit' || tech.approvalStatus === 'rejected') {
+      return {
+        success: false,
+        message: 'Awaiting Trade Qualification Clearance: Your certificate is under audit by QuickFix Admin HQ. Only approved and verified technicians can go online.'
+      };
+    }
+
+    // Strict Gate 2: Mandatory Minimum ₹2,000 Security Reserve Gate
+    // Technicians cannot go online or take bookings unless they maintain at least ₹2,000 in their partner wallet.
+    if ((tech.walletBalance ?? 0) < 2000) {
+      const deficit = 2000 - (tech.walletBalance ?? 0);
+      return {
+        success: false,
+        message: `Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${tech.walletBalance ?? 0}. You must maintain at least ₹2,000 to activate duty and receive customer calls. Please top-up ₹${deficit}.`
+      };
+    }
+
+    // Strict Gate 3: Suspension check
+    if (tech.isSuspended) {
+      return {
+        success: false,
+        message: 'Partner account suspended. Please contact QuickFix HQ operations.'
+      };
+    }
+
+    // Strict Gate 4: Geo-fencing Service Radius Gate
+    // If coords are supplied, validate them against active service zones
+    if (coords) {
+      const activeZones = serviceZones.filter(z => z.isActive);
+      const matchingZone = activeZones.find(
+        z => calculateHaversineDistanceKm(coords.lat, coords.lng, z.center.lat, z.center.lng) <= z.radiusKm
+      );
+
+      if (!matchingZone) {
+        const nearest = activeZones.reduce((prev, curr) => {
+          const d1 = calculateHaversineDistanceKm(coords.lat, coords.lng, prev.center.lat, prev.center.lng);
+          const d2 = calculateHaversineDistanceKm(coords.lat, coords.lng, curr.center.lat, curr.center.lng);
+          return d1 < d2 ? prev : curr;
+        }, activeZones[0] || serviceZones[0]);
+
+        const dist = nearest
+          ? calculateHaversineDistanceKm(coords.lat, coords.lng, nearest.center.lat, nearest.center.lng)
+          : 0;
+
+        return {
+          success: false,
+          requiresGeofence: true,
+          message: `Geo-fence Restriction: You are ${dist} km away from ${nearest?.name || 'the operating hub'} (Service radius: ${nearest?.radiusKm || 20} km). QuickFix partners can only go Online within approved operating zones to guarantee our 1-Hour SLA.`
+        };
+      }
+
+      // Inside zone! Grant Online status and record operating location
+      const distToCenter = calculateHaversineDistanceKm(coords.lat, coords.lng, matchingZone.center.lat, matchingZone.center.lng);
+      const locationData = {
+        lat: coords.lat,
+        lng: coords.lng,
+        zoneId: matchingZone.id,
+        zoneName: matchingZone.name,
+        distanceToCenterKm: distToCenter
+      };
+
+      setTechnicians(prev =>
+        prev.map(t => (t.id === techId ? { ...t, isOnline: true, currentLocation: locationData } : t))
+      );
+      if (currentTechnician.id === techId) {
+        setCurrentTechnician(prev => ({ ...prev, isOnline: true, currentLocation: locationData }));
+      }
+      updateTechnicianFirestoreStatus(techId, true, locationData);
+      return {
+        success: true,
+        message: `Duty Online: Verified inside ${matchingZone.name} (${distToCenter} km from center · 1-Hour SLA Active).`
+      };
+    }
+
+    // If no coordinates provided in call, check if current stored location is inside a valid zone
+    if (tech.currentLocation) {
+      const activeZones = serviceZones.filter(z => z.isActive);
+      const matchingZone = activeZones.find(
+        z => calculateHaversineDistanceKm(tech.currentLocation!.lat, tech.currentLocation!.lng, z.center.lat, z.center.lng) <= z.radiusKm
+      );
+      if (matchingZone) {
+        setTechnicians(prev =>
+          prev.map(t => (t.id === techId ? { ...t, isOnline: true } : t))
+        );
+        if (currentTechnician.id === techId) {
+          setCurrentTechnician(prev => ({ ...prev, isOnline: true }));
+        }
+        updateTechnicianFirestoreStatus(techId, true, tech.currentLocation);
+        return { success: true, message: `Duty Online: Verified inside ${matchingZone.name}.` };
+      }
+    }
+
+    // Needs geo-fence verification
+    return {
+      success: false,
+      requiresGeofence: true,
+      message: 'Geo-fence Verification Required: Confirm GPS location within operating service radius to go online.'
+    };
+  };
+
+  const validateAndSetTechnicianOnline = async (
+    techId: string,
+    locationData: { lat: number; lng: number; zoneId: string; zoneName: string; distanceToCenterKm: number }
+  ): Promise<{ success: boolean; message: string }> => {
+    setTechnicians(prev =>
+      prev.map(t => (t.id === techId ? { ...t, isOnline: true, currentLocation: locationData } : t))
+    );
+    if (currentTechnician.id === techId) {
+      setCurrentTechnician(prev => ({ ...prev, isOnline: true, currentLocation: locationData }));
+    }
+    await updateTechnicianFirestoreStatus(techId, true, locationData);
+    return {
+      success: true,
+      message: `Geo-fence Verified: Duty Online in ${locationData.zoneName} (${locationData.distanceToCenterKm} km from hub).`
+    };
+  };
+
+  const updateServiceZoneRadius = (zoneId: string, newRadiusKm: number): { success: boolean; message: string } => {
+    setServiceZones(prev =>
+      prev.map(z => {
+        if (z.id === zoneId) {
+          const updated = {
+            ...z,
+            radiusKm: newRadiusKm,
+            ...calculateBoundingBox(z.center.lat, z.center.lng, newRadiusKm)
+          };
+          setDoc(doc(db, 'service_zones', zoneId), updated, { merge: true }).catch(err => console.warn(err));
+          return updated;
+        }
+        return z;
+      })
+    );
+    return { success: true, message: `Operating radius updated to ${newRadiusKm} km.` };
+  };
+
+  const toggleServiceZoneActive = (zoneId: string): { success: boolean; message: string } => {
+    let nextState = false;
+    setServiceZones(prev =>
+      prev.map(z => {
+        if (z.id === zoneId) {
+          nextState = !z.isActive;
+          const updated = { ...z, isActive: nextState };
+          setDoc(doc(db, 'service_zones', zoneId), updated, { merge: true }).catch(err => console.warn(err));
+          return updated;
+        }
+        return z;
+      })
+    );
+    return { success: true, message: `Service zone status toggled.` };
+  };
+
+  const approveTechnicianQualification = (techId: string) => {
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === techId
+          ? {
+              ...t,
+              isVerified: true,
+              approvalStatus: 'approved',
+              rejectionReason: undefined
+            }
+          : t
+      )
+    );
+    if (currentTechnician.id === techId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        isVerified: true,
+        approvalStatus: 'approved',
+        rejectionReason: undefined
+      }));
+    }
+    if (currentUser && currentUser.uid === techId) {
+      const updated: AppUser = {
+        ...currentUser,
+        isVerified: true,
+        approvalStatus: 'approved'
+      };
+      setCurrentUser(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const rejectTechnicianQualification = (techId: string, reason?: string) => {
+    const rejectionNote = reason || 'Trade qualification certificate could not be validated with state/NSDC register.';
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === techId
+          ? {
+              ...t,
+              isVerified: false,
+              isOnline: false,
+              approvalStatus: 'rejected',
+              rejectionReason: rejectionNote
+            }
+          : t
+      )
+    );
+    if (currentTechnician.id === techId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        isVerified: false,
+        isOnline: false,
+        approvalStatus: 'rejected',
+        rejectionReason: rejectionNote
+      }));
+    }
+    if (currentUser && currentUser.uid === techId) {
+      const updated: AppUser = {
+        ...currentUser,
+        isVerified: false,
+        approvalStatus: 'rejected'
+      };
+      setCurrentUser(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const approveTechnicianKyc = (techId: string) => {
+    approveTechnicianQualification(techId);
+  };
+
+  const rejectTechnicianKyc = (techId: string) => {
+    rejectTechnicianQualification(techId);
+  };
+
+  // Admin Custom Commission Override Per Service Provider
+  const updateTechnicianCustomCommission = (technicianId: string, commissionPct: number | null): { success: boolean; message: string } => {
+    const targetTech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
+    if (!targetTech) return { success: false, message: 'Technician record not found' };
+
+    const validPct = commissionPct !== null ? Math.max(0, Math.min(100, Math.round(commissionPct))) : undefined;
+
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === technicianId
+          ? { ...t, customCommissionPct: validPct }
+          : t
+      )
+    );
+
+    if (currentTechnician.id === technicianId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        customCommissionPct: validPct
+      }));
+    }
+
+    if (currentUser && currentUser.uid === technicianId) {
+      const updated = {
+        ...currentUser,
+        customCommissionPct: validPct
+      };
+      setCurrentUser(updated);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+    }
+
+    return {
+      success: true,
+      message: validPct !== undefined
+        ? `Custom commission rate for ${targetTech.name} set to ${validPct}%.`
+        : `Custom commission rate removed for ${targetTech.name}. Reset to category standard.`
+    };
+  };
+
+  // Commission & Payouts & Admin Payment Control
+  const updateCommissionSettings = (newSettings: Partial<CommissionSettings>) => {
+    setCommissionSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  const updateAdminPaymentConfig = (config: Partial<AdminMasterPaymentConfig>) => {
+    setAdminPaymentConfig(prev => ({ ...prev, ...config }));
+  };
+
+  // Technician requests payout -> Held in Admin Escrow awaiting Admin Approval
+  // Strict Enforcement: Cannot withdraw the mandatory ₹2,000 security reserve. Can ONLY withdraw amount above ₹2,000!
+  const requestPayout = (technicianId: string, amount: number): { success: boolean; message: string } => {
+    const tech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
+    if (!tech) return { success: false, message: 'Technician record not found' };
+
+    const currentBalance = tech.walletBalance ?? 0;
+    const withdrawable = Math.max(0, currentBalance - 2000);
+
+    if (amount <= 0) {
+      return { success: false, message: 'Please enter a valid withdrawal amount greater than ₹0.' };
+    }
+
+    if (currentBalance < 2000) {
+      return {
+        success: false,
+        message: `Withdrawal Denied: Wallet balance (₹${currentBalance}) is below the mandatory ₹2,000 security reserve. Please top-up to maintain minimum balance.`
+      };
+    }
+
+    if (amount > withdrawable) {
+      return {
+        success: false,
+        message: `Withdrawal Limit Exceeded: The base ₹2,000 security deposit is non-withdrawable. You can only withdraw earnings exceeding ₹2,000. Maximum withdrawable right now: ₹${withdrawable}.`
+      };
+    }
+
+    const newPayout: PayoutRecord = {
+      id: `PAY-${Date.now().toString().slice(-4)}`,
+      technicianId,
+      technicianName: tech.name,
+      amount,
+      upiId: tech.bankAccount.upiId,
+      status: 'pending',
+      adminApprovalStatus: 'pending_approval',
+      adminNote: 'Withdrawal requested by partner. Amount reserved from wallet. Awaiting Admin clearance.',
+      requestedAt: new Date().toISOString(),
+      referenceNumber: `REQ-PAY-${technicianId.slice(-4)}-${Date.now().toString().slice(-6)}`
+    };
+
+    const newTxn: WalletTransaction = {
+      id: `TXN-W${Date.now().toString().slice(-6)}`,
+      technicianId,
+      type: 'withdrawal',
+      amount,
+      balanceAfter: currentBalance - amount,
+      description: `Payout request of ₹${amount} submitted (reserved from wallet for UPI: ${tech.bankAccount.upiId})`,
+      timestamp: new Date().toISOString()
+    };
+
+    setPayouts(prev => [newPayout, ...prev]);
+    setWalletTransactions(prev => [newTxn, ...prev]);
+
+    const updatedWallet = currentBalance - amount;
+    const updatedWithdrawable = Math.max(0, updatedWallet - 2000);
+
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === technicianId
+          ? {
+              ...t,
+              walletBalance: updatedWallet,
+              withdrawableBalance: updatedWithdrawable,
+              securityDepositPaid: updatedWallet >= 2000,
+              pendingPayout: Math.max(0, t.pendingPayout - amount)
+            }
+          : t
+      )
+    );
+
+    if (currentTechnician.id === technicianId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        walletBalance: updatedWallet,
+        withdrawableBalance: updatedWithdrawable,
+        securityDepositPaid: updatedWallet >= 2000,
+        pendingPayout: Math.max(0, prev.pendingPayout - amount)
+      }));
+    }
+
+    // Sync payout request and transaction to Firestore
+    try {
+      setDoc(doc(db, 'payouts', newPayout.id), newPayout).catch(err => {
+        console.warn('Firestore payout sync:', err);
+      });
+      setDoc(doc(db, 'wallet_transactions', newTxn.id), newTxn).catch(err => {
+        console.warn('Firestore transaction sync:', err);
+      });
+      updateDoc(doc(db, 'technicians', technicianId), {
+        walletBalance: updatedWallet,
+        withdrawableBalance: updatedWithdrawable,
+        securityDepositPaid: updatedWallet >= 2000
+      }).catch(err => {
+        console.warn('Firestore tech balance sync:', err);
+      });
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    return {
+      success: true,
+      message: `Payout request for ₹${amount} submitted! Amount reserved from wallet (₹2,000 security reserve preserved). Awaiting Admin HQ review.`
+    };
+  };
+
+  // Top-up Technician Wallet (to fulfill or restore the ₹2,000 minimum reserve)
+  const topupTechnicianWallet = (technicianId: string, amount: number): { success: boolean; message: string } => {
+    if (amount <= 0) return { success: false, message: 'Invalid top-up amount' };
+    const tech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
+    if (!tech) return { success: false, message: 'Technician record not found' };
+
+    const currentBal = tech.walletBalance ?? 0;
+    const newBalance = currentBal + amount;
+    const isDepositMet = newBalance >= 2000;
+    const newWithdrawable = Math.max(0, newBalance - 2000);
+
+    const newTxn: WalletTransaction = {
+      id: `TXN-W${Date.now().toString().slice(-6)}`,
+      technicianId,
+      type: currentBal < 2000 && isDepositMet ? 'security_deposit' : 'topup',
+      amount,
+      balanceAfter: newBalance,
+      description: `Technician Wallet Top-up via Fast UPI (+₹${amount})`,
+      timestamp: new Date().toISOString()
+    };
+
+    setWalletTransactions(prev => [newTxn, ...prev]);
+
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === technicianId
+          ? {
+              ...t,
+              walletBalance: newBalance,
+              securityDepositPaid: isDepositMet,
+              withdrawableBalance: newWithdrawable
+            }
+          : t
+      )
+    );
+
+    if (currentTechnician.id === technicianId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        walletBalance: newBalance,
+        securityDepositPaid: isDepositMet,
+        withdrawableBalance: newWithdrawable
+      }));
+    }
+
+    return {
+      success: true,
+      message: `₹${amount} added successfully to partner wallet! Balance: ₹${newBalance} (Withdrawable: ₹${newWithdrawable})`
+    };
+  };
+
+  // Admin approves payout: marks as 'processing' awaiting payment provider webhook confirmation
+  // CRITICAL: Does NOT mark settled immediately and does NOT generate fake UTRs
+  const adminApprovePayout = (payoutId: string): { success: boolean; message: string } => {
+    const target = payouts.find(p => p.id === payoutId);
+    if (!target) return { success: false, message: 'Payout record not found' };
+    if (target.status === 'settled') {
+      return { success: false, message: 'Payout is already settled.' };
+    }
+
+    const approvedAt = new Date().toISOString();
+    const updatedPayout: PayoutRecord = {
+      ...target,
+      status: 'processing',
+      adminApprovalStatus: 'approved_and_released',
+      adminApprovedBy: currentUser?.email || 'HQ Admin Finance Operations',
+      adminApprovedAt: approvedAt,
+      adminNote: `Approved by Admin HQ. Queued for payment gateway dispatch. Awaiting verified payment-provider webhook confirmation.`,
+      payoutProvider: adminPaymentConfig?.gatewayProvider || 'Payment Gateway'
+    };
+
+    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
+
+    // Sync to Firestore
+    try {
+      updateDoc(doc(db, 'payouts', payoutId), {
+        status: 'processing',
+        adminApprovalStatus: 'approved_and_released',
+        adminApprovedBy: updatedPayout.adminApprovedBy,
+        adminApprovedAt: approvedAt,
+        adminNote: updatedPayout.adminNote,
+        payoutProvider: updatedPayout.payoutProvider
+      }).catch(err => console.warn('Firestore payout approval sync:', err));
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    return {
+      success: true,
+      message: `Payout #${payoutId} approved by Admin! State updated to Processing. Awaiting payment-provider webhook confirmation to mark settled.`
+    };
+  };
+
+  const adminHoldPayout = (payoutId: string, reason: string): { success: boolean; message: string } => {
+    const target = payouts.find(p => p.id === payoutId);
+    if (!target) return { success: false, message: 'Payout record not found' };
+
+    const updatedPayout: PayoutRecord = {
+      ...target,
+      status: 'on_hold',
+      adminApprovalStatus: 'held_by_admin',
+      adminNote: reason || 'Audit Hold: Job verification or document audit pending'
+    };
+
+    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
+
+    try {
+      updateDoc(doc(db, 'payouts', payoutId), {
+        status: 'on_hold',
+        adminApprovalStatus: 'held_by_admin',
+        adminNote: updatedPayout.adminNote
+      }).catch(err => console.warn('Firestore payout hold sync:', err));
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    return { success: true, message: `Payout #${payoutId} has been placed on Admin Hold.` };
+  };
+
+  // Admin rejects payout: strictly restores the reserved amount to the technician's wallet balance
+  const adminRejectPayout = (payoutId: string, reason: string): { success: boolean; message: string } => {
+    const target = payouts.find(p => p.id === payoutId);
+    if (!target) return { success: false, message: 'Payout record not found' };
+    if (target.status === 'rejected') {
+      return { success: false, message: 'Payout has already been rejected.' };
+    }
+    if (target.status === 'settled') {
+      return { success: false, message: 'Cannot reject a payout that is already settled.' };
+    }
+
+    const tech = technicians.find(t => t.id === target.technicianId) || (currentTechnician.id === target.technicianId ? currentTechnician : null);
+    const techBal = tech?.walletBalance ?? 0;
+    const restoredBal = techBal + target.amount;
+    const restoredWithdrawable = Math.max(0, restoredBal - 2000);
+
+    const reversalTxnId = `TXN-REV-${Date.now().toString().slice(-6)}`;
+    const reversalTxn: WalletTransaction = {
+      id: reversalTxnId,
+      technicianId: target.technicianId,
+      type: 'payout_reversal',
+      amount: target.amount,
+      balanceAfter: restoredBal,
+      description: `Payout #${payoutId} rejected by Admin. ₹${target.amount} restored to wallet. Reason: ${reason || 'Admin rejected'}`,
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedPayout: PayoutRecord = {
+      ...target,
+      status: 'rejected',
+      adminApprovalStatus: 'rejected_by_admin',
+      adminNote: reason || 'Disallowed: Quality policy violation or duplicate request',
+      reversalTxnId
+    };
+
+    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
+    setWalletTransactions(prev => [reversalTxn, ...prev]);
+
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === target.technicianId
+          ? {
+              ...t,
+              walletBalance: restoredBal,
+              withdrawableBalance: restoredWithdrawable,
+              securityDepositPaid: restoredBal >= 2000
+            }
+          : t
+      )
+    );
+
+    if (currentTechnician.id === target.technicianId) {
+      setCurrentTechnician(prev => ({
+        ...prev,
+        walletBalance: restoredBal,
+        withdrawableBalance: restoredWithdrawable,
+        securityDepositPaid: restoredBal >= 2000
+      }));
+    }
+
+    try {
+      updateDoc(doc(db, 'payouts', payoutId), {
+        status: 'rejected',
+        adminApprovalStatus: 'rejected_by_admin',
+        adminNote: updatedPayout.adminNote,
+        reversalTxnId
+      }).catch(err => console.warn('Firestore payout reject sync:', err));
+
+      setDoc(doc(db, 'wallet_transactions', reversalTxn.id), reversalTxn).catch(err => console.warn('Firestore reversal txn sync:', err));
+
+      updateDoc(doc(db, 'technicians', target.technicianId), {
+        walletBalance: restoredBal,
+        withdrawableBalance: restoredWithdrawable,
+        securityDepositPaid: restoredBal >= 2000
+      }).catch(err => console.warn('Firestore tech balance restore sync:', err));
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    return {
+      success: true,
+      message: `Payout #${payoutId} rejected. Reserved amount of ₹${target.amount} has been restored to partner wallet balance.`
+    };
+  };
+
+  // Payment Provider Webhook Confirmation: Only this marks payout as 'settled'
+  const confirmPayoutSettlementWebhook = (
+    payoutId: string,
+    providerEventId: string,
+    gatewayProvider = 'Verified Payment Webhook'
+  ): { success: boolean; message: string } => {
+    const target = payouts.find(p => p.id === payoutId);
+    if (!target) return { success: false, message: 'Payout record not found' };
+    if (target.status !== 'processing') {
+      return { success: false, message: `Payout must be in processing status to settle. Current status is '${target.status}'.` };
+    }
+
+    const settledAt = new Date().toISOString();
+    const updatedPayout: PayoutRecord = {
+      ...target,
+      status: 'settled',
+      settledAt,
+      providerEventId,
+      payoutProvider: gatewayProvider,
+      webhookConfirmedAt: settledAt,
+      adminNote: `Settled via verified payment-provider webhook (${gatewayProvider}). Provider Ref: ${providerEventId}`
+    };
+
+    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
+
+    try {
+      updateDoc(doc(db, 'payouts', payoutId), {
+        status: 'settled',
+        settledAt,
+        providerEventId,
+        payoutProvider: gatewayProvider,
+        webhookConfirmedAt: settledAt,
+        adminNote: updatedPayout.adminNote
+      }).catch(err => console.warn('Firestore webhook settle sync:', err));
+    } catch (e) {
+      console.warn('Firestore sync err:', e);
+    }
+
+    return {
+      success: true,
+      message: `Payout #${payoutId} verified & settled by payment provider webhook. Provider Ref: ${providerEventId}`
+    };
+  };
+
+  const adminIssueCustomerRefund = (
+    bookingId: string,
+    amount?: number,
+    reason?: string
+  ): { success: boolean; message: string } => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return { success: false, message: 'Booking not found' };
+
+    const refundAmount = amount || booking.totalAmount;
+    const refundRef = `REFUND/${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+
+    setBookings(prev =>
+      prev.map(b =>
+        b.id === bookingId
+          ? {
+              ...b,
+              paymentStatus: 'refunded',
+              escrowStatus: 'refunded_to_customer',
+              refundAmount,
+              refundReason: reason || 'Customer refund issued directly from QuickFix Admin Master Account',
+              refundedAt: new Date().toISOString(),
+              transactionRef: refundRef
+            }
+          : b
+      )
+    );
+
+    return {
+      success: true,
+      message: `₹${refundAmount} refunded to ${booking.customerName} from QuickFix Admin Master Account. Ref: ${refundRef}`
+    };
+  };
+
+  const processPayout = (payoutId: string) => {
+    adminApprovePayout(payoutId);
+  };
+
+  // Create Booking
+  const createBooking = ({
+    serviceId,
+    scheduledDate,
+    scheduledTimeSlot,
+    address,
+    notes,
+    paymentMethod
+  }: {
+    serviceId: string;
+    scheduledDate: string;
+    scheduledTimeSlot: string;
+    address: string;
+    notes?: string;
+    paymentMethod: PaymentMethod;
+  }): Booking => {
+    const service = services.find(s => s.id === serviceId) || services[0];
+    
+    const cityPincodes: Record<string, string> = {
+      'Indore': '452001',
+      'Bhopal': '462016',
+      'Ujjain': '456010',
+      'Dewas': '455001',
+      'Bengaluru': '560034',
+      'Mumbai': '400053',
+      'Delhi-NCR': '110048',
+      'Hyderabad': '500033'
+    };
+
+    const availableTech = technicians.find(
+      t => t.city.toLowerCase() === currentCity.toLowerCase() && t.isOnline && t.isVerified && t.trades.includes(service.category)
+    ) || technicians.find(
+      t => t.city.toLowerCase() === currentCity.toLowerCase() && t.trades.includes(service.category)
+    ) || technicians.find(
+      t => t.isOnline && t.isVerified && t.trades.includes(service.category)
+    ) || technicians[0];
+
+    const visitingCharges = commissionSettings.platformConvenienceFee;
+    const price = service.startingPrice;
+    const discount = 20;
+    const taxableSubtotal = price + visitingCharges - discount;
+    const taxes = Math.round((taxableSubtotal * commissionSettings.gstPct) / 100);
+    const totalAmount = taxableSubtotal + taxes;
+
+    const categoryCommissionPct =
+      service.category === 'electrician'
+        ? commissionSettings.electricianCommissionPct
+        : service.category === 'plumber'
+        ? commissionSettings.plumberCommissionPct
+        : service.category === 'ac_repair'
+        ? (commissionSettings.acCommissionPct || 15)
+        : (commissionSettings.fridgeCommissionPct || 15);
+
+    // Apply technician custom commission % override if set by Admin HQ
+    const commissionPct = (availableTech && typeof availableTech.customCommissionPct === 'number')
+      ? availableTech.customCommissionPct
+      : categoryCommissionPct;
+    
+    const adminCommission = Math.round((price * commissionPct) / 100) + visitingCharges;
+    const technicianPayout = totalAmount - adminCommission;
+
+    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const newBookingId = `QF-${Math.floor(7050 + Math.random() * 900)}`;
+
+    const newBooking: Booking = {
+      id: newBookingId,
+      serviceId: service.id,
+      serviceTitle: service.title,
+      category: service.category,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      customerAddress: address,
+      city: currentCity,
+      pincode: cityPincodes[currentCity] || '452001',
+      scheduledDate,
+      scheduledTimeSlot,
+      notes,
+      status: 'assigned',
+      technicianId: availableTech.id,
+      technicianName: availableTech.name,
+      technicianPhone: availableTech.phone,
+      technicianRating: availableTech.rating,
+      technicianAvatar: availableTech.avatar,
+      technicianEtaMinutes: 20,
+      technicianCurrentLocation: { lat: 12.9352, lng: 77.6245 },
+      startOtp: randomOtp,
+      price,
+      visitingCharges,
+      discount,
+      taxes,
+      totalAmount,
+      commissionRate: commissionPct,
+      effectiveCommissionRate: commissionPct,
+      adminCommission,
+      technicianPayout,
+      paymentMethod,
+      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'paid',
+      createdAt: new Date().toISOString()
+    };
+
+    setBookings(prev => [newBooking, ...prev]);
+    setActiveBookingId(newBooking.id);
+    return newBooking;
+  };
+
+  // Update Booking Status & Handle Real-Time Wallet / Commission Settlements
+  const updateBookingStatus = (
+    bookingId: string,
+    newStatus: BookingStatus,
+    otpProvided?: string
+  ): { success: boolean; message?: string } => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return { success: false, message: 'Booking not found' };
+
+    if (newStatus === 'in_progress' && otpProvided) {
+      if (otpProvided.trim() !== booking.startOtp) {
+        return { success: false, message: 'Invalid start OTP. Please ask the customer for the 4-digit code.' };
+      }
+    }
+
+    const now = new Date().toISOString();
+    const techId = booking.technicianId || currentTechnician.id;
+    const tech = technicians.find(t => t.id === techId) || (currentTechnician.id === techId ? currentTechnician : null);
+
+    // GATE 1: Service notification acceptance validation
+    // Occurs when booking moves from unaccepted state (requested/assigned) to accepted (technician_en_route or in_progress)
+    const isAcceptingJob = (newStatus === 'technician_en_route' || newStatus === 'in_progress') &&
+      (booking.status === 'requested' || booking.status === 'assigned');
+
+    if (isAcceptingJob && tech) {
+      const currentTechBal = tech.walletBalance ?? 0;
+
+      // REQUIREMENT 3: Service provider cannot accept service notification if wallet balance < 1000
+      if (currentTechBal < 1000) {
+        return {
+          success: false,
+          message: `Service Notification Acceptance Blocked: Service provider must maintain a minimum wallet balance of ₹1,000 to accept booking notifications. Current balance is ₹${currentTechBal}. Please recharge/top up your wallet.`
+        };
+      }
+
+      // REQUIREMENT 2: Immediate commission auto-debit on acceptance (non-refundable irrespective of visit)
+      if (!booking.acceptanceCommissionDebited) {
+        const effectivePct = (typeof tech.customCommissionPct === 'number')
+          ? tech.customCommissionPct
+          : (booking.effectiveCommissionRate || booking.commissionRate);
+
+        const commissionAmount = Math.round((booking.price * effectivePct) / 100) + booking.visitingCharges;
+        const newBal = currentTechBal - commissionAmount;
+        const isDepositMet = newBal >= 2000;
+        const newWithdrawable = Math.max(0, newBal - 2000);
+
+        // Deduct from technician's wallet
+        setTechnicians(prev =>
+          prev.map(t =>
+            t.id === tech.id
+              ? {
+                  ...t,
+                  walletBalance: newBal,
+                  securityDepositPaid: isDepositMet,
+                  withdrawableBalance: newWithdrawable,
+                  lifetimeCommissionPaid: (t.lifetimeCommissionPaid ?? 0) + commissionAmount
+                }
+              : t
+          )
+        );
+
+        if (currentTechnician.id === tech.id) {
+          setCurrentTechnician(prev => ({
+            ...prev,
+            walletBalance: newBal,
+            securityDepositPaid: isDepositMet,
+            withdrawableBalance: newWithdrawable,
+            lifetimeCommissionPaid: (prev.lifetimeCommissionPaid ?? 0) + commissionAmount
+          }));
+        }
+
+        // Credit to Admin Platform Wallet
+        setAdminWalletBalance(prev => prev + commissionAmount);
+
+        // Record immediate acceptance auto-debit transaction
+        const acceptTxn: WalletTransaction = {
+          id: `TXN-W${Date.now().toString().slice(-6)}`,
+          technicianId: tech.id,
+          type: 'job_acceptance_commission',
+          amount: commissionAmount,
+          balanceAfter: newBal,
+          bookingId: booking.id,
+          description: `Platform commission auto-debited on accepting Service Notification #${booking.id} (${booking.serviceTitle} · 1-Hour SLA Limit)`,
+          timestamp: now
+        };
+        setWalletTransactions(prev => [acceptTxn, ...prev]);
+
+        // REQUIREMENT 1: 1-Hour Delivery SLA Deadline
+        const deadline = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+        setBookings(prev =>
+          prev.map(b => {
+            if (b.id !== bookingId) return b;
+            return {
+              ...b,
+              status: newStatus,
+              acceptedAt: now,
+              serviceDeadline: deadline,
+              acceptanceCommissionDebited: true,
+              acceptanceCommissionAmount: commissionAmount,
+              effectiveCommissionRate: effectivePct,
+              commissionRate: effectivePct,
+              adminCommission: commissionAmount,
+              technicianPayout: b.totalAmount - commissionAmount
+            };
+          })
+        );
+
+        return { success: true };
+      }
+    }
+
+    setBookings(prev =>
+      prev.map(b => {
+        if (b.id !== bookingId) return b;
+        const updated: Booking = {
+          ...b,
+          status: newStatus,
+          paymentStatus: newStatus === 'completed' ? 'paid' : b.paymentStatus,
+          cashCommissionDeducted: newStatus === 'completed' && b.paymentMethod === 'cash' ? true : b.cashCommissionDeducted,
+          paidAt: newStatus === 'completed' ? (b.paidAt || now) : b.paidAt
+        };
+        return updated;
+      })
+    );
+
+    if (newStatus === 'completed' && booking.technicianId) {
+      const isCash = booking.paymentMethod === 'cash';
+      const commission = booking.adminCommission;
+      const payout = booking.technicianPayout;
+
+      if (booking.acceptanceCommissionDebited) {
+        // Commission was ALREADY auto-debited upon acceptance!
+        if (isCash) {
+          // Cash booking: customer handed cash to technician. Commission already in admin wallet!
+          setTechnicians(prev =>
+            prev.map(t => {
+              if (t.id !== booking.technicianId) return t;
+              return {
+                ...t,
+                totalJobsCompleted: t.totalJobsCompleted + 1,
+                todayEarnings: t.todayEarnings + payout,
+                totalEarnings: t.totalEarnings + payout,
+                lifetimeCashCollected: (t.lifetimeCashCollected ?? 0) + booking.totalAmount
+              };
+            })
+          );
+
+          if (currentTechnician.id === booking.technicianId) {
+            setCurrentTechnician(prev => ({
+              ...prev,
+              totalJobsCompleted: prev.totalJobsCompleted + 1,
+              todayEarnings: prev.todayEarnings + payout,
+              totalEarnings: prev.totalEarnings + payout,
+              lifetimeCashCollected: (prev.lifetimeCashCollected ?? 0) + booking.totalAmount
+            }));
+          }
+        } else {
+          // Online booking: customer paid online. Credit net technician payout to wallet
+          setTechnicians(prev =>
+            prev.map(t => {
+              if (t.id !== booking.technicianId) return t;
+              const currentBal = t.walletBalance ?? 0;
+              const newBal = currentBal + payout;
+              return {
+                ...t,
+                totalJobsCompleted: t.totalJobsCompleted + 1,
+                todayEarnings: t.todayEarnings + payout,
+                totalEarnings: t.totalEarnings + payout,
+                pendingPayout: t.pendingPayout + payout,
+                walletBalance: newBal,
+                securityDepositPaid: newBal >= 2000,
+                withdrawableBalance: Math.max(0, newBal - 2000)
+              };
+            })
+          );
+
+          if (currentTechnician.id === booking.technicianId) {
+            setCurrentTechnician(prev => {
+              const currentBal = prev.walletBalance ?? 0;
+              const newBal = currentBal + payout;
+              return {
+                ...prev,
+                totalJobsCompleted: prev.totalJobsCompleted + 1,
+                todayEarnings: prev.todayEarnings + payout,
+                totalEarnings: prev.totalEarnings + payout,
+                pendingPayout: prev.pendingPayout + payout,
+                walletBalance: newBal,
+                securityDepositPaid: newBal >= 2000,
+                withdrawableBalance: Math.max(0, newBal - 2000)
+              };
+            });
+          }
+
+          const creditTxn: WalletTransaction = {
+            id: `TXN-W${Date.now().toString().slice(-6)}`,
+            technicianId: booking.technicianId,
+            type: 'online_payout_credit',
+            amount: payout,
+            balanceAfter: (currentTechnician.walletBalance ?? 0) + payout,
+            bookingId: booking.id,
+            description: `Net earnings credited for Online Job #${booking.id}`,
+            timestamp: now
+          };
+          setWalletTransactions(prev => [creditTxn, ...prev]);
+        }
+      } else {
+        // Fallback for bookings without upfront acceptance debit
+        if (isCash) {
+          setTechnicians(prev =>
+            prev.map(t => {
+              if (t.id !== booking.technicianId) return t;
+              const currentBal = t.walletBalance ?? 0;
+              const newBal = currentBal - commission;
+              const isDepositMet = newBal >= 2000;
+              const newWithdrawable = Math.max(0, newBal - 2000);
+              const droppedBelowReserve = !isDepositMet;
+
+              return {
+                ...t,
+                totalJobsCompleted: t.totalJobsCompleted + 1,
+                todayEarnings: t.todayEarnings + payout,
+                totalEarnings: t.totalEarnings + payout,
+                walletBalance: newBal,
+                securityDepositPaid: isDepositMet,
+                withdrawableBalance: newWithdrawable,
+                isOnline: droppedBelowReserve ? false : t.isOnline,
+                lifetimeCashCollected: (t.lifetimeCashCollected ?? 0) + booking.totalAmount,
+                lifetimeCommissionPaid: (t.lifetimeCommissionPaid ?? 0) + commission
+              };
+            })
+          );
+
+          if (currentTechnician.id === booking.technicianId) {
+            setCurrentTechnician(prev => {
+              const currentBal = prev.walletBalance ?? 0;
+              const newBal = currentBal - commission;
+              const isDepositMet = newBal >= 2000;
+              return {
+                ...prev,
+                totalJobsCompleted: prev.totalJobsCompleted + 1,
+                todayEarnings: prev.todayEarnings + payout,
+                totalEarnings: prev.totalEarnings + payout,
+                walletBalance: newBal,
+                securityDepositPaid: isDepositMet,
+                withdrawableBalance: Math.max(0, newBal - 2000),
+                isOnline: !isDepositMet ? false : prev.isOnline,
+                lifetimeCashCollected: (prev.lifetimeCashCollected ?? 0) + booking.totalAmount,
+                lifetimeCommissionPaid: (prev.lifetimeCommissionPaid ?? 0) + commission
+              };
+            });
+          }
+
+          const deductionTxn: WalletTransaction = {
+            id: `TXN-W${Date.now().toString().slice(-6)}`,
+            technicianId: booking.technicianId,
+            type: 'cash_commission_deduction',
+            amount: commission,
+            balanceAfter: (currentTechnician.walletBalance ?? 0) - commission,
+            bookingId: booking.id,
+            description: `Auto-commission deduction for Cash Booking #${booking.id} (Customer handed ₹${booking.totalAmount} in cash)`,
+            timestamp: now
+          };
+          setWalletTransactions(prev => [deductionTxn, ...prev]);
+          setAdminWalletBalance(prev => prev + commission);
+        } else {
+          setTechnicians(prev =>
+            prev.map(t => {
+              if (t.id !== booking.technicianId) return t;
+              const currentBal = t.walletBalance ?? 0;
+              const newBal = currentBal + payout;
+              return {
+                ...t,
+                totalJobsCompleted: t.totalJobsCompleted + 1,
+                todayEarnings: t.todayEarnings + payout,
+                totalEarnings: t.totalEarnings + payout,
+                pendingPayout: t.pendingPayout + payout,
+                walletBalance: newBal,
+                securityDepositPaid: newBal >= 2000,
+                withdrawableBalance: Math.max(0, newBal - 2000)
+              };
+            })
+          );
+
+          if (currentTechnician.id === booking.technicianId) {
+            setCurrentTechnician(prev => {
+              const currentBal = prev.walletBalance ?? 0;
+              const newBal = currentBal + payout;
+              return {
+                ...prev,
+                totalJobsCompleted: prev.totalJobsCompleted + 1,
+                todayEarnings: prev.todayEarnings + payout,
+                totalEarnings: prev.totalEarnings + payout,
+                pendingPayout: prev.pendingPayout + payout,
+                walletBalance: newBal,
+                securityDepositPaid: newBal >= 2000,
+                withdrawableBalance: Math.max(0, newBal - 2000)
+              };
+            });
+          }
+
+          const creditTxn: WalletTransaction = {
+            id: `TXN-W${Date.now().toString().slice(-6)}`,
+            technicianId: booking.technicianId,
+            type: 'online_payout_credit',
+            amount: payout,
+            balanceAfter: (currentTechnician.walletBalance ?? 0) + payout,
+            bookingId: booking.id,
+            description: `Net earnings credited for Online Job #${booking.id}`,
+            timestamp: now
+          };
+          setWalletTransactions(prev => [creditTxn, ...prev]);
+          setAdminWalletBalance(prev => prev + commission);
+        }
+      }
+    }
+
+    return { success: true };
+  };
+
+  // Customer Management
+  const [customers, setCustomers] = useState<CustomerUser[]>(INITIAL_CUSTOMERS);
+  const [firestoreSyncStatus, setFirestoreSyncStatus] = useState({
+    isConnected: true,
+    lastSynced: 'Just now',
+    latencyMs: 38
+  });
+
+  const deleteCustomer = (customerId: string) => {
+    setCustomers(prev => prev.filter(c => c.id !== customerId));
+  };
+
+  const toggleCustomerStatus = (customerId: string) => {
+    setCustomers(prev =>
+      prev.map(c =>
+        c.id === customerId
+          ? { ...c, status: c.status === 'suspended' ? 'active' : 'suspended' }
+          : c
+      )
+    );
+  };
+
+  const reassignBookingTechnician = (bookingId: string, technicianId: string) => {
+    const tech = technicians.find(t => t.id === technicianId);
+    if (!tech) return;
+    setBookings(prev =>
+      prev.map(b =>
+        b.id === bookingId
+          ? {
+              ...b,
+              technicianId: tech.id,
+              technicianName: tech.name,
+              technicianPhone: tech.phone,
+              technicianRating: tech.rating,
+              technicianAvatar: tech.avatar
+            }
+          : b
+      )
+    );
+  };
+
+  const deleteBooking = (bookingId: string) => {
+    setBookings(prev => prev.filter(b => b.id !== bookingId));
+  };
+
+  const toggleTechnicianSuspension = (techId: string) => {
+    setTechnicians(prev =>
+      prev.map(t =>
+        t.id === techId ? { ...t, isSuspended: !t.isSuspended } : t
+      )
+    );
+  };
+
+  const updateTechnicianRating = (techId: string, newRating: number) => {
+    setTechnicians(prev =>
+      prev.map(t => (t.id === techId ? { ...t, rating: newRating } : t))
+    );
+  };
+
+  const disbursePayout = (payoutId: string) => {
+    adminApprovePayout(payoutId);
+  };
+
+  const addCustomerReviewReply = (bookingId: string, reply: string) => {
+    setBookings(prev =>
+      prev.map(b =>
+        b.id === bookingId && b.review
+          ? {
+              ...b,
+              review: { ...b.review, adminReply: reply }
+            }
+          : b
+      )
+    );
+  };
+
+  const deleteReview = (bookingId: string) => {
+    setBookings(prev =>
+      prev.map(b => (b.id === bookingId ? { ...b, review: undefined } : b))
+    );
+  };
+
+  const triggerFirestoreSync = async () => {
+    setFirestoreSyncStatus(prev => ({ ...prev, latencyMs: 24, lastSynced: 'Syncing...' }));
+    await new Promise(r => setTimeout(r, 600));
+    setFirestoreSyncStatus({
+      isConnected: true,
+      lastSynced: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      latencyMs: Math.floor(25 + Math.random() * 20)
+    });
+  };
+
+  // Add Review
+  const addReview = (bookingId: string, rating: number, comment: string, tags: string[]) => {
+    const rev = {
+      rating,
+      comment,
+      tags,
+      createdAt: new Date().toISOString()
+    };
+
+    setBookings(prev =>
+      prev.map(b => (b.id === bookingId ? { ...b, review: rev } : b))
+    );
+  };
+
+  const updateBookingPaymentStatus = (bookingId: string, status: PaymentStatus, transactionRef?: string) => {
+    setBookings(prev =>
+      prev.map(b => {
+        if (b.id === bookingId) {
+          const now = new Date().toISOString();
+          return {
+            ...b,
+            paymentStatus: status,
+            paidAt: status === 'paid' ? (b.paidAt || now) : undefined,
+            transactionRef: transactionRef || b.transactionRef || (status === 'paid' ? `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}` : b.transactionRef)
+          };
+        }
+        return b;
+      })
+    );
+  };
+
+  return (
+    <QuickFixContext.Provider
+      value={{
+        activeRole,
+        setActiveRole,
+        viewMode,
+        setViewMode,
+        showCodeInspector,
+        setShowCodeInspector,
+        showFirebaseConfig,
+        setShowFirebaseConfig,
+        showAuthModal,
+        setShowAuthModal,
+        showProfileDrawer,
+        setShowProfileDrawer,
+        currentUser,
+        isAuthenticated,
+        authenticateUser,
+        registerNewPartner,
+        logoutUser,
+        updateCustomerAddress,
+        currentCity,
+        setCurrentCity,
+        services,
+        selectedCategory,
+        setSelectedCategory,
+        customer,
+        isCustomerLoggedIn,
+        loginCustomer,
+        registerCustomer,
+        logoutCustomer,
+        bookings,
+        activeBookingId,
+        setActiveBookingId,
+        createBooking,
+        updateBookingStatus,
+        addReview,
+        technicians,
+        currentTechnician,
+        isTechnicianLoggedIn,
+        loginTechnician,
+        registerTechnician,
+        logoutTechnician,
+        serviceZones,
+        toggleTechnicianOnline,
+        validateAndSetTechnicianOnline,
+        updateServiceZoneRadius,
+        toggleServiceZoneActive,
+        approveTechnicianKyc,
+        rejectTechnicianKyc,
+        approveTechnicianQualification,
+        rejectTechnicianQualification,
+        updateTechnicianCustomCommission,
+        commissionSettings,
+        updateCommissionSettings,
+        adminPaymentConfig,
+        updateAdminPaymentConfig,
+        adminApprovePayout,
+        adminHoldPayout,
+        adminRejectPayout,
+        confirmPayoutSettlementWebhook,
+        adminIssueCustomerRefund,
+        payouts,
+        requestPayout,
+        processPayout,
+        disbursePayout,
+        walletTransactions,
+        topupTechnicianWallet,
+        adminWalletBalance,
+        customers,
+        deleteCustomer,
+        toggleCustomerStatus,
+        reassignBookingTechnician,
+        deleteBooking,
+        toggleTechnicianSuspension,
+        updateTechnicianRating,
+        addCustomerReviewReply,
+        deleteReview,
+        updateBookingPaymentStatus,
+        firestoreSyncStatus,
+        triggerFirestoreSync
+      }}
+    >
+      {children}
+    </QuickFixContext.Provider>
+  );
+};
+
+export const useQuickFix = () => {
+  const context = useContext(QuickFixContext);
+  if (!context) {
+    throw new Error('useQuickFix must be used within a QuickFixProvider');
+  }
+  return context;
+};
