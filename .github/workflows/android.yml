@@ -11,9 +11,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: quickfix-android-apk
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -29,20 +34,26 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Configure Firebase Android app
+      - name: Configure Firebase
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
-            echo "::error::Missing GitHub Actions secret GOOGLE_SERVICES_JSON_BASE64. Add the Base64-encoded google-services.json for the Android Firebase app."
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICES_JSON_BASE64:-}" ]; then
+            echo "::error::Firebase secret is missing"
             exit 1
           fi
           mkdir -p android/app
-          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
           python3 -m json.tool android/app/google-services.json > /dev/null
 
-      - name: Build debug APK
-        run: gradle -p android --no-daemon assembleDebug
+      - name: Build APK
+        run: gradle -p android --no-daemon --stacktrace assembleDebug
+
+      - name: Verify APK
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -50,3 +61,4 @@ jobs:
           name: quickfix-india-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 7
