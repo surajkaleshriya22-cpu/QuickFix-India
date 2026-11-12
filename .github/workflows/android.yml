@@ -1,64 +1,36 @@
-name: QuickFix India Android APK
-
-on:
-  workflow_dispatch:
-  push:
-    branches: ["main"]
-    paths:
-      - "android/**"
-      - ".github/workflows/android.yml"
-
-permissions:
-  contents: read
-
-concurrency:
-  group: quickfix-android-apk
-  cancel-in-progress: true
-
-jobs:
-  apk:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
-
       - name: Configure Firebase
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${GOOGLE_SERVICES_JSON_BASE64:-}" ]; then
+          value="${GOOGLE_SERVICES_JSON_BASE64:-}"
+
+          if [ -z "$value" ]; then
             echo "::error::Firebase secret is missing"
             exit 1
           fi
+
           mkdir -p android/app
-          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+
+          if [[ "$value" =~ ^[[:space:]]*\{ ]]; then
+            printf '%s' "$value" > android/app/google-services.json
+          else
+            encoded="$(printf '%s' "$value" | tr -d '[:space:]')"
+            printf '%s' "$encoded" | base64 --decode > android/app/google-services.json
+          fi
+
           python3 -m json.tool android/app/google-services.json > /dev/null
 
-      - name: Build APK
-        run: gradle -p android --no-daemon --stacktrace assembleDebug
-
-      - name: Verify APK
-        run: |
-          test -s android/app/build/outputs/apk/debug/app-debug.apk
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: quickfix-india-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+          python3 - <<'PY'
+          import json
+          with open("android/app/google-services.json") as f:
+              data = json.load(f)
+          packages = {
+              c.get("client_info", {}).get("android_client_info", {}).get("package_name")
+              for c in data.get("client", [])
+          }
+          if "com.quickfix.app" not in packages:
+              raise SystemExit("Wrong Firebase Android package. Expected com.quickfix.app")
+          print("Firebase configuration verified.")
+          PY
