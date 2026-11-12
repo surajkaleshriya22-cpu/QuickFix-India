@@ -43,7 +43,7 @@ Set the `VITE_FIREBASE_*` and `VITE_FIRESTORE_DATABASE_ID` variables listed in `
 - Replace any demo/test authentication flows and hardcoded demo credentials before launch. Use Firebase Auth and server-issued custom claims for admin authorization.
 - Test customer/technician/admin permissions, bookings, maps, offline behavior, mobile installation, and all payment paths before public launch.
 
-See [PWA-SETUP.md](PWA-SETUP.md) for repository and hosting steps.
+See [PWA-SETUP.md](PWA-SETUP.md) for repository and hosting steps
 
 
 
