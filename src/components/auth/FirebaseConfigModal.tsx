@@ -69,7 +69,7 @@ service cloud.firestore {
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <span>Firebase Authentication & Firestore Architecture</span>
                 <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-700/60 px-2 py-0.2 rounded font-mono">
-                  Production Setup
+                  Staging Setup
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">Requirements and configurations for native Android APK and Web execution</p>
