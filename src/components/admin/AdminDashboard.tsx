@@ -192,7 +192,6 @@ export const AdminDashboard: React.FC = () => {
   const countPendingPayments = pendingBookings.length;
 
   const totalFailedPayments = failedBookings.reduce((sum, b) => sum + b.totalAmount, 0);
-  const countFailedPayments = failedBookings.length;
 
   const totalTechnicianPayments = paidBookings.reduce((sum, b) => sum + b.technicianPayout, 0);
   const technicianWalletPending = technicians.reduce((sum, t) => sum + t.pendingPayout, 0);
