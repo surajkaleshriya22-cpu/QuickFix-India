@@ -14,7 +14,6 @@ import {
   Check,
   AlertCircle,
   ArrowUpRight,
-  Radio,
   ExternalLink,
   Info
 } from 'lucide-react';
