@@ -27,7 +27,7 @@ jobs:
       - name: Dependency security audit (report only)
         shell: bash
         run: |
-          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || audit_exit=$?
           node - "$RUNNER_TEMP/npm-audit.json" <<'NODE'
           const fs = require("node:fs");
           const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -48,6 +48,7 @@ jobs:
           }
           NODE
           npm explain @grpc/grpc-js || true
+          exit "${audit_exit:-0}"
 
       - name: TypeScript check
         run: npm run lint
