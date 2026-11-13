@@ -48,67 +48,14 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
   const sampleFirestoreRules = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default Deny All
+    // STAGING ONLY: deny all client access until server-side authorization,
+    // role claims, and emulator tests are implemented and deployed.
+    // Do not replace this with client-controlled role fields.
     match /{document=**} {
       allow read, write: if false;
     }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isAdmin() {
-      return isSignedIn() && getUserRole() == 'admin';
-    }
-
-    // User Profiles (Customers, Technicians, Admins)
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Marketplace Bookings
-    match /bookings/{bookingId} {
-      allow read: if isSignedIn() && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.technicianId == request.auth.uid ||
-        isAdmin()
-      );
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.technicianId == request.auth.uid ||
-        isAdmin()
-      );
-      allow delete: if isAdmin();
-    }
-
-    // Technician Profiles & Public Listing
-    match /technicians/{techId} {
-      allow read: if true; // Public catalog for discovery
-      allow write: if isOwner(techId) || isAdmin();
-    }
-    
-    // Admin Commissions & System Settings
-    match /system/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
   }
 }`;
-
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div className="w-full max-w-3xl bg-slate-950 text-slate-100 rounded-2xl border border-slate-800 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
@@ -122,7 +69,7 @@ service cloud.firestore {
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <span>Firebase Authentication & Firestore Architecture</span>
                 <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-700/60 px-2 py-0.2 rounded font-mono">
-                  Production Setup
+                  Staging Setup
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">Requirements and configurations for native Android APK and Web execution</p>
@@ -153,7 +100,7 @@ service cloud.firestore {
               activeTab === 'rules' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
-            Firestore Security Rules (RBAC)
+            Firestore Staging Rules
           </button>
           <button
             onClick={() => setActiveTab('config')}
@@ -221,13 +168,13 @@ dependencies {
           {activeTab === 'rules' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Hardened RBAC Security Rules for QuickFix India</span>
+                <span className="text-slate-400">Staging deny-all rules — not production RBAC</span>
                 <button
                   onClick={() => copyToClipboard(sampleFirestoreRules, 'rules')}
                   className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                 >
                   {copiedKey === 'rules' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === 'rules' ? 'Copied' : 'Copy firestore.rules'}</span>
+                  <span>{copiedKey === 'rules' ? 'Copied' : 'Copy staging rules'}</span>
                 </button>
               </div>
               <pre className="p-4 bg-black/70 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto leading-relaxed">
@@ -243,7 +190,7 @@ dependencies {
                   <span className="text-slate-400">Path: <code className="text-amber-300">android/app/google-services.json</code></span>
                   <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                     <Check className="w-3 h-3 text-emerald-400" />
-                    <span>VERIFIED & ACTIVE (YOUR_FIREBASE_PROJECT_ID)</span>
+                    <span>TEMPLATE ONLY — NOT VERIFIED</span>
                   </span>
                 </div>
                 <button
@@ -251,7 +198,7 @@ dependencies {
                   className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                 >
                   {copiedKey === 'config' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === 'config' ? 'Copied' : 'Copy JSON'}</span>
+                  <span>{copiedKey === 'config' ? 'Copied' : 'Copy template JSON'}</span>
                 </button>
               </div>
               <pre className="p-4 bg-black/70 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto leading-relaxed">

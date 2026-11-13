@@ -14,7 +14,6 @@ import {
   Check,
   AlertCircle,
   ArrowUpRight,
-  Radio,
   ExternalLink,
   Info
 } from 'lucide-react';
@@ -31,7 +30,6 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
     adminApprovePayout,
     adminHoldPayout,
     adminRejectPayout,
-    confirmPayoutSettlementWebhook,
     adminPaymentConfig,
     technicians
   } = useQuickFix();
@@ -111,17 +109,6 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
     setIsProcessingId(payoutId);
     try {
       const res = adminRejectPayout(payoutId, reason);
-      showFeedback(res.message, res.success ? 'success' : 'error');
-    } finally {
-      setIsProcessingId(null);
-    }
-  };
-
-  const handleTriggerWebhookConfirmation = (payoutId: string) => {
-    setIsProcessingId(payoutId);
-    try {
-      const providerEventId = `WH-EVT-${Date.now().toString().slice(-6)}`;
-      const res = confirmPayoutSettlementWebhook(payoutId, providerEventId, adminPaymentConfig.gatewayProvider || 'Payment Gateway Webhook');
       showFeedback(res.message, res.success ? 'success' : 'error');
     } finally {
       setIsProcessingId(null);
@@ -440,19 +427,6 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span>Approve (Move to Processing)</span>
-                      </button>
-                    )}
-
-                    {/* Trigger Webhook Callback (Visible when in Processing) */}
-                    {isProcessing && (
-                      <button
-                        onClick={() => handleTriggerWebhookConfirmation(p.id)}
-                        disabled={isProcessingId === p.id}
-                        title="Simulate payment gateway webhook callback to mark settled safely"
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
-                      >
-                        <Radio className="w-3.5 h-3.5 animate-ping" />
-                        <span>Confirm Webhook (Settle)</span>
                       </button>
                     )}
 

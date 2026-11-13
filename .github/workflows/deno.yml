@@ -19,10 +19,33 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24.12.0"
 
       - name: Install dependencies
         run: npm install
+
+      - name: Dependency security audit (fail on high)
+        shell: bash
+        run: |
+          npm audit --audit-level=high --json > "$RUNNER_TEMP/npm-audit.json" || audit_exit=$?
+          node - "$RUNNER_TEMP/npm-audit.json" <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          console.log("Vulnerability totals:", JSON.stringify(report.metadata?.vulnerabilities ?? {}));
+          for (const [name, vulnerability] of Object.entries(report.vulnerabilities ?? {})) {
+            console.log(JSON.stringify({
+              name,
+              severity: vulnerability.severity,
+              range: vulnerability.range,
+              via: vulnerability.via,
+              effects: vulnerability.effects,
+              nodes: vulnerability.nodes,
+              fixAvailable: vulnerability.fixAvailable
+            }, null, 2));
+          }
+          NODE
+          npm explain @grpc/grpc-js || true
+          exit "${audit_exit:-0}"
 
       - name: TypeScript check
         run: npm run lint
