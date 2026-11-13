@@ -1268,49 +1268,16 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   };
 
-  // Payment Provider Webhook Confirmation: Only this marks payout as 'settled'
+  // Client-side code must never settle payouts. Only a verified server webhook
+  // may perform this transition after signature verification and idempotency checks.
   const confirmPayoutSettlementWebhook = (
-    payoutId: string,
-    providerEventId: string,
-    gatewayProvider = 'Verified Payment Webhook'
-  ): { success: boolean; message: string } => {
-    const target = payouts.find(p => p.id === payoutId);
-    if (!target) return { success: false, message: 'Payout record not found' };
-    if (target.status !== 'processing') {
-      return { success: false, message: `Payout must be in processing status to settle. Current status is '${target.status}'.` };
-    }
-
-    const settledAt = new Date().toISOString();
-    const updatedPayout: PayoutRecord = {
-      ...target,
-      status: 'settled',
-      settledAt,
-      providerEventId,
-      payoutProvider: gatewayProvider,
-      webhookConfirmedAt: settledAt,
-      adminNote: `Settled via verified payment-provider webhook (${gatewayProvider}). Provider Ref: ${providerEventId}`
-    };
-
-    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
-
-    try {
-      updateDoc(doc(db, 'payouts', payoutId), {
-        status: 'settled',
-        settledAt,
-        providerEventId,
-        payoutProvider: gatewayProvider,
-        webhookConfirmedAt: settledAt,
-        adminNote: updatedPayout.adminNote
-      }).catch(err => console.warn('Firestore webhook settle sync:', err));
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
-    return {
-      success: true,
-      message: `Payout #${payoutId} verified & settled by payment provider webhook. Provider Ref: ${providerEventId}`
-    };
-  };
+    _payoutId: string,
+    _providerEventId: string,
+    _gatewayProvider = 'Verified Payment Webhook'
+  ): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Payout settlement is disabled in the client. A verified payment-provider webhook on the trusted server is required.'
+  });
 
   const adminIssueCustomerRefund = (
     bookingId: string,
