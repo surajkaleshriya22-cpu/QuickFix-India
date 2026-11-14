@@ -42,31 +42,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [isSignupMode, setIsSignupMode] = useState(false);
 
   // Form Fields
-  const [phone, setPhone] = useState('9845199221');
-  const [displayName, setDisplayName] = useState('Ananya Deshmukh');
-  const [email, setEmail] = useState('ananya.deshmukh@gmail.com');
-  const [address, setAddress] = useState('Flat 402, Sai Silver Woods, 5th Cross, Koramangala 4th Block');
+  const [phone, setPhone] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
   // Partner Specific Fields
   const [partnerTrades, setPartnerTrades] = useState<ServiceCategoryType[]>(['electrician']);
   const [experienceYears, setExperienceYears] = useState(7);
   const [kycType, setKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
-  const [kycNumber, setKycNumber] = useState('SIC-EL-2019-8812');
+  const [kycNumber, setKycNumber] = useState('');
   const [qualificationType, setQualificationType] = useState<'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma'>('ITI Trade Certificate');
-  const [qualificationRegNumber, setQualificationRegNumber] = useState('ITI-MP-EL-2019-8812');
-  const [qualificationInstitute, setQualificationInstitute] = useState('Govt Industrial Training Institute (ITI)');
-  const [upiId, setUpiId] = useState('ramesh.partner@okaxis');
+  const [qualificationRegNumber, setQualificationRegNumber] = useState('');
+  const [qualificationInstitute, setQualificationInstitute] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [partnerDeposit, setPartnerDeposit] = useState<number>(2000);
 
   // Admin Specific Fields
-  const [adminPasscode, setAdminPasscode] = useState('ADMIN2026');
-  const [adminPhone, setAdminPhone] = useState('9800012345');
+  const [adminPasscode, setAdminPasscode] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
   const [adminError, setAdminError] = useState('');
 
   // OTP Verification Step
   const [isOtpStep, setIsOtpStep] = useState(false);
-  const [enteredOtp, setEnteredOtp] = useState('4821');
+  const [enteredOtp, setEnteredOtp] = useState('');
   const [countdown, setCountdown] = useState(30);
   const [formError, setFormError] = useState('');
 
@@ -82,23 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError('');
-
-    const targetPhone = selectedRoleTab === 'admin' ? adminPhone : phone;
-    if (!targetPhone || targetPhone.replace(/\D/g, '').length < 10) {
-      setFormError('Please enter a valid 10-digit Indian mobile number');
-      return;
-    }
-
-    if (selectedRoleTab === 'admin') {
-      if (adminPasscode.trim() !== 'ADMIN2026') {
-        setAdminError('Invalid Admin Passcode. Default demo security key is: ADMIN2026');
-        return;
-      }
-    }
-
-    setIsOtpStep(true);
-    setCountdown(30);
+    setFormError('Secure Firebase phone verification is not connected in this build. No OTP has been sent and no account has been signed in.');
+    setIsOtpStep(false);
   };
 
   const handleVerifyAndComplete = (e: React.FormEvent) => {
@@ -208,7 +193,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
           <p className="text-xs text-blue-100 mt-0.5">
             {isOtpStep
               ? `Verification OTP sent to +91 ${selectedRoleTab === 'admin' ? adminPhone : phone}`
-              : 'Secured via Firebase Authentication & Firestore DB'}
+              : 'Secure sign-in requires Firebase Authentication setup'}
           </p>
         </div>
 
