@@ -313,19 +313,12 @@ fun AdminLoginScreen(
             Button(
                 onClick = {
                     val cleanEmail = email.trim().lowercase()
-                    if (cleanEmail !in listOf("surajkaleshriya22@gmail.com", "ops.admin@quickfix.in")) {
-                        failedCount++
-                        localError = "⛔ ACCESS DENIED: Account '$email' is NOT on the Super Admin Whitelist. Customers and Technicians are strictly prohibited."
+                    if (cleanEmail.isBlank()) {
+                        localError = "Enter the email address of your signed-in Firebase administrator account."
                         return@Button
                     }
 
-                    if (passcode.trim() != "ADMIN2026") {
-                        failedCount++
-                        localError = "Invalid Master Security Passcode. Access attempt logged."
-                        return@Button
-                    }
-
-                                        localError = null
+                    localError = null
                     authViewModel.verifyAdminPasscode(
                         email = cleanEmail,
                         passcode = passcode,
