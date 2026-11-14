@@ -1,5 +1,9 @@
 import express from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -15,7 +19,67 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: '25mb' }));
+// Render terminates TLS at its proxy. Trust only the first proxy hop for client IPs.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(express.json({ limit: '12mb' }));
+
+let firebaseAdminApp: App | null = null;
+try {
+  if (getApps().length) {
+    firebaseAdminApp = getApps()[0]!;
+  } else {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    firebaseAdminApp = initializeApp(serviceAccountJson
+      ? { credential: cert(JSON.parse(serviceAccountJson)) }
+      : { credential: applicationDefault() });
+  }
+  console.info('Firebase Admin SDK initialized.');
+} catch (error) {
+  console.error('Firebase Admin SDK initialization failed; protected APIs will fail closed.', error);
+}
+
+type AuthenticatedRequest = Request & { firebaseUser?: import('firebase-admin/auth').DecodedIdToken };
+
+const apiRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests. Please try again in one minute.' },
+});
+
+const authenticateFirebaseUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (!firebaseAdminApp) {
+    return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
+  }
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer\\s+(.+)$/i);
+  if (!match) {
+    return res.status(401).json({ success: false, error: 'A valid Firebase ID token is required.' });
+  }
+  try {
+    req.firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, error: 'Firebase ID token is invalid or expired.' });
+  }
+};
+
+const requireServerAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (!req.firebaseUser?.admin) {
+    return res.status(403).json({ success: false, error: 'Server-side admin permission required.' });
+  }
+  return next();
+};
+
+// All API requests are rate-limited and require a verified Firebase identity.
+// Admin-only operations must additionally use requireServerAdmin.
+app.use('/api', apiRateLimit);
+app.use('/api/places', authenticateFirebaseUser);
+app.use('/api/audio', authenticateFirebaseUser);
+app.use('/api/music', authenticateFirebaseUser);
 
 // Create Gemini client lazily so the web app can boot before an API key is configured.
 const getAI = () => {
@@ -177,6 +241,11 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
     verified: false,
     error: 'Payout webhook is not configured. No payout has been settled.'
   });
+});
+
+// Server-side admin gate. No client-supplied role or email is trusted.
+app.get('/api/admin/health', authenticateFirebaseUser, requireServerAdmin, (_req: Request, res: Response) => {
+  res.json({ success: true, authenticated: true, authorization: 'server_verified_admin_claim' });
 });
 
 // Start Express and attach Vite middleware in dev or static in prod
