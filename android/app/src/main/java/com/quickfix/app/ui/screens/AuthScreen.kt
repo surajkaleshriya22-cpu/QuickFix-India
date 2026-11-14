@@ -1,6 +1,7 @@
 package com.quickfix.app.ui.screens
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -324,9 +325,16 @@ fun AuthScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 OutlinedTextField(
+                                    value = experienceYears,
+                                    onValueChange = { value -> if (value.all { it.isDigit() } && value.length <= 2) experienceYears = value },
+                                    label = { Text("Trade experience (minimum 2 years)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OutlinedTextField(
                                     value = upiId,
                                     onValueChange = { upiId = it },
-                                    label = { Text("UPI ID for Instant Payouts") },
+                                    label = { Text("UPI ID (payouts not active yet)") },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -350,8 +358,23 @@ fun AuthScreen(
 
                         Button(
                             onClick = {
-                                activity?.let { act ->
-                                    authViewModel.sendOtp("+91 $phone", act)
+                                val phoneDigits = phone.filter { it.isDigit() }
+                                val hasTrade = tradeElectrician || tradePlumber
+                                val years = experienceYears.toIntOrNull() ?: 0
+                                val validationMessage = when {
+                                    phoneDigits.length != 10 -> "Enter a valid 10-digit mobile number."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && displayName.isBlank() -> "Enter your full name."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && !hasTrade -> "Select at least one trade."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && years < 2 -> "At least 2 years of trade experience is required."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && kycNumber.isBlank() -> "Enter your KYC document number."
+                                    else -> null
+                                }
+                                if (validationMessage != null) {
+                                    Toast.makeText(context, validationMessage, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    activity?.let { act ->
+                                        authViewModel.sendOtp("+91$phoneDigits", act)
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
