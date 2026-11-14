@@ -184,12 +184,6 @@ fun AuthScreen(
                             fontSize = 14.sp,
                             color = Color(0xFF1E293B)
                         )
-                        Text(
-                            text = "Demonstration OTP code is 4821",
-                            fontSize = 11.sp,
-                            color = Color(0xFF2563EB)
-                        )
-
                         OutlinedTextField(
                             value = otpCode,
                             onValueChange = { if (it.length <= 6) otpCode = it },
