@@ -137,6 +137,30 @@ class AuthRepository(
         )
     }
 
+    /**
+     * Admin access is granted only by a Firebase Admin SDK custom claim.
+     * A client-side passcode or email whitelist is never sufficient.
+     */
+    suspend fun getAdminUser(expectedEmail: String): User? {
+        val firebaseUser = auth.currentUser ?: return null
+        val token = firebaseUser.getIdToken(true).await()
+        if (token.claims["admin"] != true) return null
+
+        val tokenEmail = (token.claims["email"] as? String)
+            ?: firebaseUser.email
+            ?: return null
+        if (!tokenEmail.equals(expectedEmail.trim(), ignoreCase = true)) return null
+
+        return User(
+            uid = firebaseUser.uid,
+            phoneNumber = firebaseUser.phoneNumber ?: "",
+            displayName = firebaseUser.displayName ?: tokenEmail.substringBefore("@"),
+            email = tokenEmail,
+            role = UserRole.ADMIN,
+            city = "Bengaluru"
+        )
+    }
+
     fun signOut() {
         auth.signOut()
     }
