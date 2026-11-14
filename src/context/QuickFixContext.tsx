@@ -405,33 +405,14 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Backward-compatible Customer Auth
-  const loginCustomer = (phone: string, name?: string) => {
-    setIsCustomerLoggedIn(true);
-    setCustomer(prev => ({
-      ...prev,
-      phone,
-      name: name || prev.name
-    }));
+  const loginCustomer = (_phone: string, _name?: string) => {
+    // Legacy local-only login is intentionally disabled. Use Firebase Auth.
+    console.warn('QuickFix customer login requires Firebase Authentication.');
   };
 
-  const registerCustomer = (name: string, phone: string, email: string, address: string) => {
-    setIsCustomerLoggedIn(true);
-    const newCust: CustomerUser = {
-      id: `cust-${Date.now()}`,
-      name,
-      phone,
-      email,
-      addresses: [
-        {
-          id: `addr-${Date.now()}`,
-          label: 'Home',
-          addressLine: address,
-          city: currentCity,
-          pincode: '560034'
-        }
-      ]
-    };
-    setCustomer(newCust);
+  const registerCustomer = (_name: string, _phone: string, _email: string, _address: string) => {
+    // Never create a customer session without a verified Firebase identity.
+    console.warn('QuickFix customer registration requires Firebase Authentication.');
   };
 
   const logoutCustomer = () => {
