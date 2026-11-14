@@ -41,10 +41,6 @@ class QuickFixViewModel : ViewModel() {
         observeSignedInAccount(firebaseAuth)
     }
 
-    init {
-        auth.addAuthStateListener(authStateListener)
-    }
-
     private fun observeSignedInAccount(firebaseAuth: FirebaseAuth) {
         bookingsListener?.remove()
         usersListener?.remove()
@@ -179,6 +175,10 @@ class QuickFixViewModel : ViewModel() {
 
     private val _firestoreSyncStatus = MutableStateFlow("Not checked")
     val firestoreSyncStatus: StateFlow<String> = _firestoreSyncStatus.asStateFlow()
+
+    init {
+        auth.addAuthStateListener(authStateListener)
+    }
 
     fun updateAdminPaymentConfig(updated: AdminMasterPaymentConfig) {
         _adminPaymentConfig.value = updated
