@@ -48,63 +48,10 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
   const sampleFirestoreRules = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default Deny All
+    // STAGING ONLY: deny client access until reviewed, tested rules are deployed.
+    // This is a safety template, not a copy of the current QuickFix rules.
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isAdmin() {
-      return isSignedIn() && getUserRole() == 'admin';
-    }
-
-    // User Profiles (Customers, Technicians, Admins)
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Marketplace Bookings
-    match /bookings/{bookingId} {
-      allow read: if isSignedIn() && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.technicianId == request.auth.uid ||
-        isAdmin()
-      );
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.technicianId == request.auth.uid ||
-        isAdmin()
-      );
-      allow delete: if isAdmin();
-    }
-
-    // Technician Profiles & Public Listing
-    match /technicians/{techId} {
-      allow read: if true; // Public catalog for discovery
-      allow write: if isOwner(techId) || isAdmin();
-    }
-    
-    // Admin Commissions & System Settings
-    match /system/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
     }
   }
 }`;
@@ -122,7 +69,7 @@ service cloud.firestore {
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <span>Firebase Authentication & Firestore Architecture</span>
                 <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-700/60 px-2 py-0.2 rounded font-mono">
-                  Production Setup
+                  Staging Setup
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">Requirements and configurations for native Android APK and Web execution</p>
@@ -181,7 +128,7 @@ service cloud.firestore {
                   <li><strong className="text-white">SHA-1 Certificate:</strong> Generate via <code className="text-amber-300 font-mono">./gradlew signingReport</code> and paste in Firebase Console Project Settings.</li>
                   <li><strong className="text-white">Phone Sign-In Provider:</strong> Enable under Firebase Console &gt; Build &gt; Authentication &gt; Sign-in method &gt; Phone.</li>
                   <li><strong className="text-white">Package Name:</strong> Must match <code className="text-amber-300 font-mono">com.quickfix.app</code> declared in <code className="text-slate-400 font-mono">build.gradle.kts</code>.</li>
-                  <li><strong className="text-white">Test Numbers:</strong> You can add test phone numbers (e.g. <code className="text-blue-300 font-mono">+91 9845199221</code> with OTP <code className="text-blue-300 font-mono">123456</code>) in the Firebase console for instant sandbox testing without SMS charges.</li>
+                  <li><strong className="text-white">Test Numbers:</strong> Add test phone numbers and their fixed test codes only in Firebase Console. These are for sandbox testing and do not send real SMS.</li>
                 </ol>
               </div>
 
@@ -207,7 +154,7 @@ dependencies {
   "phoneNumber": "+91 98451 99221",
   "displayName": "Ananya Deshmukh",
   "email": "ananya.deshmukh@gmail.com",
-  "role": "customer", // "customer" | "technician" | "admin"
+  "role": "CUSTOMER", // "CUSTOMER" | "TECHNICIAN"; admin is assigned by trusted server claims
   "address": "Flat 402, Sai Silver Woods, Koramangala 4th Block",
   "city": "Bengaluru",
   "pincode": "560034",
@@ -221,13 +168,13 @@ dependencies {
           {activeTab === 'rules' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Hardened RBAC Security Rules for QuickFix India</span>
+                <span className="text-slate-400">Staging deny-all example — not the deployed Firestore rules</span>
                 <button
                   onClick={() => copyToClipboard(sampleFirestoreRules, 'rules')}
                   className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                 >
                   {copiedKey === 'rules' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === 'rules' ? 'Copied' : 'Copy firestore.rules'}</span>
+                  <span>{copiedKey === 'rules' ? 'Copied' : 'Copy staging rules'}</span>
                 </button>
               </div>
               <pre className="p-4 bg-black/70 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto leading-relaxed">
@@ -243,7 +190,7 @@ dependencies {
                   <span className="text-slate-400">Path: <code className="text-amber-300">android/app/google-services.json</code></span>
                   <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                     <Check className="w-3 h-3 text-emerald-400" />
-                    <span>VERIFIED & ACTIVE (YOUR_FIREBASE_PROJECT_ID)</span>
+                    <span>TEMPLATE ONLY — NOT VERIFIED</span>
                   </span>
                 </div>
                 <button
@@ -251,7 +198,7 @@ dependencies {
                   className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                 >
                   {copiedKey === 'config' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === 'config' ? 'Copied' : 'Copy JSON'}</span>
+                  <span>{copiedKey === 'config' ? 'Copied' : 'Copy template JSON'}</span>
                 </button>
               </div>
               <pre className="p-4 bg-black/70 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-200 overflow-x-auto leading-relaxed">
