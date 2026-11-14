@@ -60,8 +60,9 @@ fun AuthScreen(
     var kycNumber by remember { mutableStateOf("") }
     var upiId by remember { mutableStateOf("") }
 
-    // Admin specific
-    var adminPasscode by remember { mutableStateOf("") }
+    // Admin credentials are verified by Firebase Auth and an Admin SDK custom claim.
+    var adminEmail by remember { mutableStateOf("") }
+    var adminPassword by remember { mutableStateOf("") }
 
     // OTP
     var otpCode by remember { mutableStateOf("") }
@@ -226,34 +227,37 @@ fun AuthScreen(
                     } else if (selectedRole == UserRole.ADMIN) {
                         // ADMIN AUTHENTICATION
                         Text("HQ Administration Security Gate", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("Role-Based Access: Requires Master Administrative Passcode", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            "Secure Firebase sign-in. Admin access is allowed only for accounts with an Admin SDK-issued admin claim.",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
 
                         OutlinedTextField(
-                            value = adminPasscode,
-                            onValueChange = { adminPasscode = it },
-                            label = { Text("Admin Security Passcode") },
-                            visualTransformation = PasswordVisualTransformation(),
+                            value = adminEmail,
+                            onValueChange = { adminEmail = it.trim() },
+                            label = { Text("Authorized Admin Email") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
-                            value = phone,
-                            onValueChange = { phone = it },
-                            label = { Text("Authorized Phone (+91)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            value = adminPassword,
+                            onValueChange = { adminPassword = it },
+                            label = { Text("Firebase Account Password") },
+                            visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Button(
                             onClick = {
-                                authViewModel.verifyAdminPasscode(adminPasscode, "+91 $phone") {
-                                    navController.navigate("admin_dashboard")
-                                }
+                                authViewModel.signInAdmin(adminEmail, adminPassword)
                             },
+                            enabled = adminEmail.isNotBlank() && adminPassword.isNotBlank() && authState !is AuthState.Loading,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Unlock Admin Console", fontWeight = FontWeight.Bold)
+                            Text("Sign In to Admin Console", fontWeight = FontWeight.Bold)
                         }
                     } else {
                         // CUSTOMER & PARTNER FORM
