@@ -31,6 +31,7 @@ fun TechnicianScreen(
     viewModel: QuickFixViewModel
 ) {
     val bookings by viewModel.bookings.collectAsState()
+    val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
 
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
@@ -199,7 +200,7 @@ fun TechnicianScreen(
                         Text(booking.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text("Customer: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
                         Text("Location: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
-                        Text("Payout Share: ₹${booking.technicianPayout} (after admin commission)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF10B981))
+                        Text("Partner payout details unavailable until server-side settlement is enabled.", fontSize = 11.sp, color = TextSecondary)
 
                         // OTP Verification when assigned
                         if (booking.status != "in_progress" && booking.status != "completed") {
@@ -213,7 +214,7 @@ fun TechnicianScreen(
                                         otpError = null
                                     },
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("e.g. ${booking.startOtp}") },
+                                    placeholder = { Text("Enter OTP shared by customer") },
                                     singleLine = true
                                 )
                                 Button(
@@ -244,8 +245,9 @@ fun TechnicianScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Mark Service Completed", fontWeight = FontWeight.Bold)
+                                Text("Request completion (currently unavailable)", fontWeight = FontWeight.Bold)
                             }
+                            Text(firestoreStatus, color = Color(0xFFDC2626), fontSize = 11.sp)
                         }
                     }
                 }
