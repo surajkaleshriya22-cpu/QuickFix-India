@@ -114,6 +114,7 @@ class AuthViewModel(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun verifyAdminPasscode(
         email: String,
         passcode: String,
@@ -121,40 +122,33 @@ class AuthViewModel(
         onSuccess: (User) -> Unit,
         onError: (String) -> Unit = {}
     ) {
-        val cleanEmail = email.trim().lowercase()
-        val isWhitelisted = cleanEmail in listOf(
-            "surajkaleshriya22@gmail.com",
-            "ops.admin@quickfix.in"
-        )
-
-        if (!isWhitelisted) {
-            val err = "Access Denied: The account '$email' is not on the QuickFix Super Admin Whitelist. Only verified Administrators can log in."
-            _authState.value = AuthState.Error(err)
-            onError(err)
-            return
+        // Legacy passcodes are deliberately ignored. The account must already
+        // be signed in to Firebase and carry an Admin SDK-issued { admin: true } claim.
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val adminUser = repository.getAdminUser(email)
+                    ?: throw SecurityException(
+                        "Admin access denied. Sign in with the authorized Firebase account and have an administrator assign the admin custom claim."
+                    )
+                _authState.value = AuthState.Authenticated(adminUser)
+                onSuccess(adminUser)
+            } catch (e: Exception) {
+                val message = e.localizedMessage ?: "Firebase admin verification failed."
+                _authState.value = AuthState.Error(message)
+                onError(message)
+            }
         }
-
-        if (passcode.trim() != "ADMIN2026") {
-            val err = "Invalid Master Security Passcode. Access attempt logged."
-            _authState.value = AuthState.Error(err)
-            onError(err)
-            return
-        }
-
-        val adminUser = User(
-            uid = "admin-master-uid",
-            phoneNumber = phone,
-            displayName = if (cleanEmail.contains("suraj")) "Suraj (Super Admin Owner)" else "QuickFix HQ Admin",
-            email = email,
-            role = UserRole.ADMIN,
-            city = "Bengaluru"
-        )
-        _authState.value = AuthState.Authenticated(adminUser)
-        onSuccess(adminUser)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun verifyAdminPasscode(passcode: String, phone: String, onSuccess: (User) -> Unit) {
-        verifyAdminPasscode("surajkaleshriya22@gmail.com", passcode, phone, onSuccess)
+        verifyAdminPasscode(
+            email = repository.currentUserEmail.orEmpty(),
+            passcode = passcode,
+            phone = phone,
+            onSuccess = onSuccess
+        )
     }
 
     fun logout() {
