@@ -38,7 +38,7 @@ import {
 } from '../services/geofenceService';
 import { auth, db, testFirestoreConnection } from '../lib/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import { getIdTokenResult } from 'firebase/auth';
+import { getIdTokenResult, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
   // Role & View Mode
@@ -58,6 +58,7 @@ interface QuickFixContextType {
   // Authentication & Profile
   currentUser: AppUser | null;
   isAuthenticated: boolean;
+  authenticateFirebaseCustomer: (params: { firebaseUser: FirebaseUser; displayName: string; email: string; address?: string; city: string; rememberMe: boolean }) => Promise<{ success: boolean; message?: string }>;
   authenticateUser: (params: {
     displayName: string;
     phoneNumber: string;
@@ -280,6 +281,61 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentUser]);
 
   // Authentication Methods
+  const authenticateFirebaseCustomer = async ({ firebaseUser, displayName, email, address, city, rememberMe }: { firebaseUser: FirebaseUser; displayName: string; email: string; address?: string; city: string; rememberMe: boolean }): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const profileRef = doc(db, 'users', firebaseUser.uid);
+      const existing = await (await import('firebase/firestore')).getDoc(profileRef);
+      if (existing.exists()) {
+        const data = existing.data();
+        if (data.role !== 'CUSTOMER' || data.isVerified !== false) {
+          return { success: false, message: 'This phone number is not registered as a customer account. Please contact support.' };
+        }
+      } else {
+        const profile: Record<string, unknown> = {
+          uid: firebaseUser.uid,
+          phoneNumber: firebaseUser.phoneNumber || '',
+          displayName: displayName.trim() || 'QuickFix Customer',
+          email: email.trim(),
+          role: 'CUSTOMER',
+          isVerified: false,
+          createdAt: new Date().toISOString()
+        };
+        if (address?.trim()) profile.address = address.trim();
+        if (city.trim()) profile.city = city.trim();
+        await setDoc(profileRef, profile);
+      }
+
+      const userObj: AppUser = {
+        uid: firebaseUser.uid,
+        phoneNumber: firebaseUser.phoneNumber || '',
+        displayName: displayName.trim() || firebaseUser.displayName || 'QuickFix Customer',
+        email: email.trim() || firebaseUser.email || '',
+        role: 'customer',
+        address: address?.trim() || undefined,
+        city,
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUser(userObj);
+      setIsAuthenticated(true);
+      setIsCustomerLoggedIn(true);
+      setCustomer(prev => ({
+        ...prev,
+        id: firebaseUser.uid,
+        name: userObj.displayName,
+        phone: userObj.phoneNumber,
+        email: userObj.email,
+        addresses: address?.trim() ? [{ id: 'addr-main', label: 'Home', addressLine: address.trim(), city, pincode: '560034' }, ...prev.addresses.filter(a => a.label !== 'Home')] : prev.addresses
+      }));
+      if (rememberMe) localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(userObj));
+      else localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
+      setActiveRole('customer');
+      return { success: true };
+    } catch (error) {
+      console.warn('Firebase customer profile save failed:', error);
+      return { success: false, message: 'Phone verified, but the customer profile could not be saved. Check Firestore rules and try again.' };
+    }
+  };
+
   const authenticateUser = ({
     displayName,
     phoneNumber,
@@ -1636,6 +1692,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         currentUser,
         isAuthenticated,
         authenticateUser,
+        authenticateFirebaseCustomer,
         authenticateVerifiedAdmin,
         registerNewPartner,
         logoutUser,
