@@ -101,7 +101,10 @@ service cloud.firestore {
         ]);
 
       allow get, list: if isAdmin()
-        || (signedIn() && resource.data.customerUid == request.auth.uid);
+        || (signedIn() && (
+          resource.data.customerUid == request.auth.uid
+          || resource.data.technicianUid == request.auth.uid
+        ));
 
       // A customer may cancel only a still-requested booking. All assignment,
       // OTP, payment, refund and completion transitions remain server-owned.
