@@ -55,7 +55,7 @@ const authenticateFirebaseUser = async (req: Request, res: Response, next: NextF
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
   const header = req.headers.authorization || '';
-  const match = header.match(/^Bearer\\s+(.+)$/i);
+  const match = header.match(/^Bearer\s+(.+)$/i);
   if (!match) {
     return res.status(401).json({ success: false, error: 'A valid Firebase ID token is required.' });
   }
