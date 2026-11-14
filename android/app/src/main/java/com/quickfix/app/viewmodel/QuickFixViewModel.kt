@@ -65,10 +65,12 @@ class QuickFixViewModel : ViewModel() {
             try {
                 val token = firebaseUser.getIdToken(true).await()
                 val isAdmin = token.claims["admin"] == true
-                val bookingQuery = if (isAdmin) {
-                    firestore.collection("bookings")
-                } else {
-                    firestore.collection("bookings").whereEqualTo("customerUid", firebaseUser.uid)
+                val ownProfile = firestore.collection("users").document(firebaseUser.uid).get().await()
+                val isTechnician = ownProfile.getString("role") == "TECHNICIAN"
+                val bookingQuery = when {
+                    isAdmin -> firestore.collection("bookings")
+                    isTechnician -> firestore.collection("bookings").whereEqualTo("technicianUid", firebaseUser.uid)
+                    else -> firestore.collection("bookings").whereEqualTo("customerUid", firebaseUser.uid)
                 }
 
                 bookingsListener = bookingQuery.addSnapshotListener { snapshot, error ->
