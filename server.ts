@@ -50,7 +50,7 @@ const apiRateLimit = rateLimit({
   message: { success: false, error: 'Too many requests. Please try again in one minute.' },
 });
 
-const authenticateFirebaseUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const authenticateFirebaseUser = async (req: Request, res: Response, next: NextFunction) => {
   if (!firebaseAdminApp) {
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
@@ -60,15 +60,15 @@ const authenticateFirebaseUser = async (req: AuthenticatedRequest, res: Response
     return res.status(401).json({ success: false, error: 'A valid Firebase ID token is required.' });
   }
   try {
-    req.firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+    (req as AuthenticatedRequest).firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
     return next();
   } catch {
     return res.status(401).json({ success: false, error: 'Firebase ID token is invalid or expired.' });
   }
 };
 
-const requireServerAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (!req.firebaseUser?.admin) {
+const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!(req as AuthenticatedRequest).firebaseUser?.admin) {
     return res.status(403).json({ success: false, error: 'Server-side admin permission required.' });
   }
   return next();
