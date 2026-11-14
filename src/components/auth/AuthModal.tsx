@@ -94,7 +94,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
 
     if (selectedRoleTab === 'customer') {
-      authenticateUser({
+      const result = authenticateUser({
         displayName,
         phoneNumber: `+91 ${phone}`,
         email,
@@ -103,6 +103,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         city: currentCity,
         rememberMe
       });
+      if (!result.success) {
+        setFormError(result.message || 'Customer sign-in failed. Please try again.');
+        return;
+      }
       setActiveRole('customer');
     } else if (selectedRoleTab === 'technician') {
       if (isSignupMode) {
@@ -128,15 +132,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
           return;
         }
       } else {
-        authenticateUser({
-          displayName: displayName || 'Ramesh Kumar',
+        const result = authenticateUser({
+          displayName,
           phoneNumber: `+91 ${phone}`,
-          email: email || 'partner@quickfix.in',
+          email,
           role: 'technician',
           trades: partnerTrades,
           city: currentCity,
           rememberMe
         });
+        if (!result.success) {
+          setFormError(result.message || 'Partner sign-in failed. Please check your approval status.');
+          return;
+        }
       }
       setActiveRole('technician');
     } else if (selectedRoleTab === 'admin') {
