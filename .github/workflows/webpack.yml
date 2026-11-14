@@ -6,9 +6,18 @@ on:
   pull_request:
     branches: ["main"]
 
+# This workflow only reads repository contents and does not need write access.
+permissions:
+  contents: read
+
+concurrency:
+  group: quickfix-vite-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -17,10 +26,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24.12.0"
+          node-version: "24"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: TypeScript check
+        run: npm run lint
 
       - name: Build Vite app
         run: npm run build
