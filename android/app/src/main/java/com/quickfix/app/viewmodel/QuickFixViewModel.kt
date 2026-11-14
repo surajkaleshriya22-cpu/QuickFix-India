@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 data class AdminMetrics(
     val totalCustomers: Int = 0,
@@ -373,17 +374,15 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun adminApprovePayout(payoutId: String) {
-        val utr = "HDFC" + System.currentTimeMillis().toString().takeLast(10)
-        _payouts.value = _payouts.value.map { p ->
-            if (p.id == payoutId) {
-                p.copy(
-                    status = "settled",
-                    adminApprovalStatus = "approved",
-                    adminApprovedBy = "QuickFix HQ Admin",
-                    adminNote = "Approved & disbursed via Admin Master Account ($utr)",
-                    bankUtr = utr
+        // Never manufacture a UTR or mark a payout settled from the Android client.
+        _payouts.value = _payouts.value.map { payout ->
+            if (payout.id == payoutId) {
+                payout.copy(
+                    status = "held_in_escrow",
+                    adminApprovalStatus = "pending",
+                    adminNote = "Not released: secure server-side payment integration and verified provider response are required. No money was transferred."
                 )
-            } else p
+            } else payout
         }
     }
 
@@ -602,10 +601,17 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun triggerFirestoreSync() {
-        _firestoreSyncStatus.value = "Synchronizing..."
+        _firestoreSyncStatus.value = "Checking Firestore connection..."
         viewModelScope.launch {
-            kotlinx.coroutines.delay(800)
-            _firestoreSyncStatus.value = "Synced with Cloud Firestore (12ms latency)"
+            val startedAt = System.nanoTime()
+            try {
+                firestore.collection("_quickfix_health").document("ping").get().await()
+                val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+                _firestoreSyncStatus.value = "Firestore reachable (" + elapsedMs + "ms)."
+            } catch (error: Exception) {
+                val reason = error.localizedMessage ?: "Unknown connection or permission error"
+                _firestoreSyncStatus.value = "Firestore check failed: " + reason
+            }
         }
     }
 }
