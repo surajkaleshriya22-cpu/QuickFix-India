@@ -18,6 +18,7 @@ import {
   ServiceZone,
   GeofenceValidationResult
 } from '../types';
+import { isAuthorizedAdminEmail } from '../types';
 import {
   CURRENT_CUSTOMER,
   INITIAL_BOOKINGS,
@@ -37,6 +38,7 @@ import {
 } from '../services/geofenceService';
 import { db, testFirestoreConnection } from '../lib/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { getIdTokenResult } from 'firebase/auth';
 
 interface QuickFixContextType {
   // Role & View Mode
@@ -66,6 +68,12 @@ interface QuickFixContextType {
     trades?: ServiceCategoryType[];
     rememberMe: boolean;
   }) => { success: boolean; message?: string };
+  authenticateVerifiedAdmin: (params: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    city: string;
+  }) => Promise<{ success: boolean; message?: string }>;
   registerNewPartner: (params: {
     displayName: string;
     phoneNumber: string;
@@ -363,6 +371,54 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     return { success: true };
+  };
+
+  const authenticateVerifiedAdmin = async ({
+    displayName,
+    phoneNumber,
+    email,
+    city
+  }: {
+    displayName: string;
+    phoneNumber: string;
+    email: string;
+    city: string;
+  }): Promise<{ success: boolean; message?: string }> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      return { success: false, message: 'Firebase sign-in is required before admin access.' };
+    }
+
+    try {
+      const tokenResult = await getIdTokenResult(firebaseUser, true);
+      const verifiedEmail = (tokenResult.claims.email as string | undefined) || firebaseUser.email || '';
+      if (
+        tokenResult.claims.admin !== true ||
+        verifiedEmail.trim().toLowerCase() !== email.trim().toLowerCase() ||
+        !isAuthorizedAdminEmail(verifiedEmail)
+      ) {
+        return { success: false, message: 'Admin access denied: a server-issued admin claim and authorized email are required.' };
+      }
+
+      const adminUser: AppUser = {
+        uid: firebaseUser.uid,
+        phoneNumber: firebaseUser.phoneNumber || phoneNumber,
+        displayName: firebaseUser.displayName || displayName,
+        email: verifiedEmail,
+        role: 'admin',
+        city,
+        createdAt: new Date().toISOString()
+      };
+
+      setCurrentUser(adminUser);
+      setIsAuthenticated(true);
+      setActiveRole('admin');
+      // Firebase Authentication persistence is authoritative; never restore an admin role from localStorage.
+      return { success: true };
+    } catch (error) {
+      console.warn('Firebase admin claim verification failed:', error);
+      return { success: false, message: 'Unable to verify the Firebase administrator session.' };
+    }
   };
 
   const registerNewPartner = (params: {
@@ -1580,6 +1636,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         currentUser,
         isAuthenticated,
         authenticateUser,
+        authenticateVerifiedAdmin,
         registerNewPartner,
         logoutUser,
         updateCustomerAddress,
