@@ -1090,78 +1090,40 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     latencyMs: 0
   });
 
-  const deleteCustomer = (customerId: string) => {
-    setCustomers(prev => prev.filter(c => c.id !== customerId));
+  const deleteCustomer = (_customerId: string) => {
+    console.warn('Customer deletion requires trusted server-side admin authorization and an audit trail. No customer record was changed.');
   };
 
-  const toggleCustomerStatus = (customerId: string) => {
-    setCustomers(prev =>
-      prev.map(c =>
-        c.id === customerId
-          ? { ...c, status: c.status === 'suspended' ? 'active' : 'suspended' }
-          : c
-      )
-    );
+  const toggleCustomerStatus = (_customerId: string) => {
+    console.warn('Customer suspension changes require trusted server-side admin authorization. No customer status changed.');
   };
 
-  const reassignBookingTechnician = (bookingId: string, technicianId: string) => {
-    const tech = technicians.find(t => t.id === technicianId);
-    if (!tech) return;
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? {
-              ...b,
-              technicianId: tech.id,
-              technicianName: tech.name,
-              technicianPhone: tech.phone,
-              technicianRating: tech.rating,
-              technicianAvatar: tech.avatar
-            }
-          : b
-      )
-    );
+  const reassignBookingTechnician = (_bookingId: string, _technicianId: string) => {
+    console.warn('Booking assignment requires trusted server-side partner eligibility and atomic assignment checks. No booking was reassigned.');
   };
 
-  const deleteBooking = (bookingId: string) => {
-    setBookings(prev => prev.filter(b => b.id !== bookingId));
+  const deleteBooking = (_bookingId: string) => {
+    console.warn('Booking deletion requires trusted server-side admin authorization and an audit trail. No booking was deleted.');
   };
 
-  const toggleTechnicianSuspension = (techId: string) => {
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === techId ? { ...t, isSuspended: !t.isSuspended } : t
-      )
-    );
+  const toggleTechnicianSuspension = (_techId: string) => {
+    console.warn('Partner suspension changes require trusted server-side admin authorization. No partner status changed.');
   };
 
-  const updateTechnicianRating = (techId: string, newRating: number) => {
-    setTechnicians(prev =>
-      prev.map(t => (t.id === techId ? { ...t, rating: newRating } : t))
-    );
+  const updateTechnicianRating = (_techId: string, _newRating: number) => {
+    console.warn('Partner ratings must be derived from verified customer reviews. No rating was changed.');
   };
 
   const disbursePayout = (payoutId: string) => {
     adminApprovePayout(payoutId);
   };
 
-  const addCustomerReviewReply = (bookingId: string, reply: string) => {
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId && b.review
-          ? {
-              ...b,
-              review: { ...b.review, adminReply: reply }
-            }
-          : b
-      )
-    );
+  const addCustomerReviewReply = (_bookingId: string, _reply: string) => {
+    console.warn('Review replies require a trusted persisted review workflow. No reply was saved.');
   };
 
-  const deleteReview = (bookingId: string) => {
-    setBookings(prev =>
-      prev.map(b => (b.id === bookingId ? { ...b, review: undefined } : b))
-    );
+  const deleteReview = (_bookingId: string) => {
+    console.warn('Review moderation requires trusted server-side admin authorization and an audit trail. No review was deleted.');
   };
 
   const triggerFirestoreSync = async () => {
@@ -1192,19 +1154,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
-  const updateBookingPaymentStatus = (bookingId: string, status: PaymentStatus, transactionRef?: string) => {
-    // Payment success/refund states must come from a verified server callback,
-    // never from a client-generated reference or a UI action.
-    if (status === 'paid' || status === 'refunded') {
-      console.warn('Ignored client-side payment state change for booking:', bookingId, transactionRef);
-      return;
-    }
-    setBookings(prev =>
-      prev.map(b => b.id === bookingId
-        ? { ...b, paymentStatus: status, paidAt: undefined }
-        : b
-      )
-    );
+  const updateBookingPaymentStatus = (bookingId: string, _status: PaymentStatus, _transactionRef?: string) => {
+    console.warn('All payment-state changes require a verified server-side payment event. No payment state changed for booking:', bookingId);
   };
 
   return (
