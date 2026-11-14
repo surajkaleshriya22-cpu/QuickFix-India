@@ -32,7 +32,8 @@ class AuthViewModel(
             viewModelScope.launch {
                 try {
                     _authState.value = AuthState.Loading
-                    val profile = repository.getUserProfile(uid)
+                    val adminProfile = repository.getAdminUser(repository.currentUserEmail.orEmpty())
+                    val profile = if (adminProfile != null) adminProfile else repository.getUserProfile(uid)
                     if (profile != null) {
                         _authState.value = AuthState.Authenticated(profile)
                     } else {
