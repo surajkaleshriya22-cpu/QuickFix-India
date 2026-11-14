@@ -23,7 +23,6 @@ import {
   CURRENT_CUSTOMER,
   INITIAL_COMMISSION_SETTINGS,
   INITIAL_SERVICES,
-  INITIAL_TECHNICIANS,
   INITIAL_ADMIN_PAYMENT_CONFIG
 } from '../data/mockData';
 import { INITIAL_SERVICE_ZONES, calculateBoundingBox } from '../data/serviceZones';
@@ -229,7 +228,30 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Technicians State
   // No sample partner records are loaded into the live admin or partner state.
   const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [currentTechnician, setCurrentTechnician] = useState<Technician>(INITIAL_TECHNICIANS[0]);
+  const [currentTechnician, setCurrentTechnician] = useState<Technician>({
+    id: '',
+    name: '',
+    phone: '',
+    email: '',
+    trades: [],
+    experienceYears: 0,
+    city: '',
+    rating: 0,
+    totalJobsCompleted: 0,
+    avatar: '',
+    isOnline: false,
+    isVerified: false,
+    kycDocType: 'PAN',
+    kycDocNumber: '',
+    walletBalance: 0,
+    securityDepositRequired: 2000,
+    securityDepositPaid: false,
+    withdrawableBalance: 0,
+    bankAccount: { accountNumber: '', ifsc: '', upiId: '' },
+    todayEarnings: 0,
+    totalEarnings: 0,
+    pendingPayout: 0
+  });
   const [isTechnicianLoggedIn, setIsTechnicianLoggedIn] = useState(false);
 
   // Commissions & Payouts & Admin Gateway Control
@@ -464,33 +486,14 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Backward-compatible Customer Auth
-  const loginCustomer = (phone: string, name?: string) => {
-    setIsCustomerLoggedIn(true);
-    setCustomer(prev => ({
-      ...prev,
-      phone,
-      name: name || prev.name
-    }));
+  const loginCustomer = (_phone: string, _name?: string) => {
+    // Legacy local-only sign-in is disabled; Firebase Authentication is required.
+    setIsCustomerLoggedIn(false);
   };
 
-  const registerCustomer = (name: string, phone: string, email: string, address: string) => {
-    setIsCustomerLoggedIn(true);
-    const newCust: CustomerUser = {
-      id: `cust-${Date.now()}`,
-      name,
-      phone,
-      email,
-      addresses: [
-        {
-          id: `addr-${Date.now()}`,
-          label: 'Home',
-          addressLine: address,
-          city: currentCity,
-          pincode: '560034'
-        }
-      ]
-    };
-    setCustomer(newCust);
+  const registerCustomer = (_name: string, _phone: string, _email: string, _address: string) => {
+    // Legacy local-only registration is disabled; no local customer account is created.
+    setIsCustomerLoggedIn(false);
   };
 
   const logoutCustomer = () => {
