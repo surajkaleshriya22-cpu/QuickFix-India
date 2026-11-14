@@ -32,7 +32,7 @@ import {
   updateTechnicianFirestoreStatus
 } from '../services/geofenceService';
 import { auth, db, testFirestoreConnection } from '../lib/firebase';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getIdTokenResult, signOut, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
@@ -327,7 +327,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           email: email.trim(),
           role: 'CUSTOMER',
           isVerified: false,
-          createdAt: new Date().toISOString()
+          // Firestore rules require a native timestamp, not an ISO string.
+          createdAt: Timestamp.now()
         };
         if (address?.trim()) profile.address = address.trim();
         if (city.trim()) profile.city = city.trim();
