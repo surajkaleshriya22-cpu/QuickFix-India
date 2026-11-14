@@ -1,14 +1,82 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // SECURITY STAGING RULES: fail closed until Firebase Authentication custom claims
-    // and server-side Cloud Functions are deployed and tested.
-    // Never trust client-supplied role/email fields for admin authorization.
-    function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function signedIn() {
+      return request.auth != null;
+    }
 
-    // No client may write money, payout, booking, technician balance, or ledger records.
-    // Backend Admin SDK functions (not governed by these client rules) must own mutations.
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    // A health document is readable so clients can test connectivity without
+    // granting access to business data. No client can write health records.
+    match /_quickfix_health/{documentId} {
+      allow get: if true;
+      allow list, create, update, delete: if false;
+    }
+
+    // Users may create/read their own basic profile after Firebase Phone Auth.
+    // Client-created admin roles and client-controlled verification flags are forbidden.
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.role in ['CUSTOMER', 'TECHNICIAN']
+        && request.resource.data.isVerified == false
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'phoneNumber',
+          'displayName',
+          'email',
+          'role',
+          'address',
+          'city',
+          'pincode',
+          'trades',
+          'experienceYears',
+          'kycDocType',
+          'kycDocNumber',
+          'isVerified',
+          'upiId',
+          'createdAt'
+        ]);
+
+      // Users can update only their ordinary contact/profile fields.
+      // Role, KYC, verification and financial fields remain server/admin controlled.
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.isVerified == resource.data.isVerified
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'email',
+          'address',
+          'city',
+          'pincode'
+        ])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // Service coverage is public read-only data. Only trusted admins may edit it.
+    match /service_zones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Bookings, technician verification/status, wallets, ledgers, payouts,
+    // refunds, payment configuration and all other collections are server-owned.
+    // Keep them closed until authenticated callable functions and atomic
+    // transactions are deployed and tested.
     match /{document=**} {
       allow read, write: if false;
     }
