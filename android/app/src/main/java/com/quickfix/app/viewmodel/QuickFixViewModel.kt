@@ -185,41 +185,15 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun adminApprovePayout(payoutId: String) {
-        // Never manufacture a UTR or mark a payout settled from the Android client.
-        _payouts.value = _payouts.value.map { payout ->
-            if (payout.id == payoutId) {
-                payout.copy(
-                    status = "held_in_escrow",
-                    adminApprovalStatus = "pending",
-                    adminNote = "Not released: secure server-side payment integration and verified provider response are required. No money was transferred."
-                )
-            } else payout
-        }
+        _firestoreSyncStatus.value = "Payout not approved or released: trusted ledger and verified payment-provider backend are not configured. No money moved."
     }
 
     fun adminHoldPayout(payoutId: String, reason: String) {
-        _payouts.value = _payouts.value.map { p ->
-            if (p.id == payoutId) {
-                p.copy(
-                    status = "held_in_escrow",
-                    adminApprovalStatus = "held",
-                    adminApprovedBy = "QuickFix HQ Admin",
-                    adminNote = "FUNDS ON HOLD BY ADMIN: $reason"
-                )
-            } else p
-        }
+        _firestoreSyncStatus.value = "Payout hold not recorded: trusted server ledger is not configured. No funds were changed."
     }
 
     fun adminIssueCustomerRefund(bookingId: String, amount: Int, reason: String) {
-        // A refund is not a local status change. Keep the payment state unchanged
-        // until a trusted payment provider confirms the refund server-side.
-        _bookings.value = _bookings.value.map { booking ->
-            if (booking.id == bookingId) {
-                booking.copy(
-                    refundReason = "Refund not issued. Payment provider integration is not configured. " + reason
-                )
-            } else booking
-        }
+        _firestoreSyncStatus.value = "Refund not issued: trusted payment-provider backend is not configured. No money was refunded."
     }
 
     fun updateCommissionSettings(electricianPct: Int, plumberPct: Int, convenienceFee: Int) {
