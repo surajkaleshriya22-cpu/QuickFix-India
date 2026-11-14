@@ -26,7 +26,7 @@ interface AdminLoginScreenProps {
 }
 
 export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp }) => {
-  const { authenticateUser, setActiveRole } = useQuickFix();
+  const { authenticateVerifiedAdmin, setActiveRole } = useQuickFix();
 
   const [adminEmail, setAdminEmail] = useState('surajkaleshriya22@gmail.com');
   const [adminPhone, setAdminPhone] = useState('+91 98000 12345');
@@ -78,19 +78,18 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
         return;
       }
 
-      const result = authenticateUser({
+      const result = await authenticateVerifiedAdmin({
         displayName: firebaseUser.displayName || tokenEmail,
         phoneNumber: firebaseUser.phoneNumber || adminPhone,
         email: tokenEmail,
-        role: 'admin',
-        city: 'Bengaluru',
-        rememberMe: false
+        city: 'Bengaluru'
       });
 
       if (!result.success) {
         setErrorMessage(result.message || 'Admin authentication was rejected.');
         return;
       }
+      setActiveRole('admin');
       setSuccessMessage('Firebase administrator identity verified.');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Firebase admin verification failed.');
