@@ -45,9 +45,7 @@ fun AdminLoginScreen(
 
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(true) }
     var localError by remember { mutableStateOf<String?>(null) }
-    var failedCount by remember { mutableStateOf(0) }
 
     // If authenticated as admin, navigate directly to admin dashboard
     LaunchedEffect(authState) {
@@ -232,22 +230,6 @@ fun AdminLoginScreen(
                     fontSize = 11.sp,
                     modifier = Modifier.padding(12.dp)
                 )
-            }
-
-            // Remember Me
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = rememberMe,
-                        onCheckedChange = { rememberMe = it },
-                        colors = CheckboxDefaults.colors(checkedColor = BrandBlue)
-                    )
-                    Text("Remember Super Admin Session", color = Color(0xFFCBD5E1), fontSize = 11.sp)
-                }
             }
 
             // Error Display
