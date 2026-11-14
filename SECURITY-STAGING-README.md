@@ -28,6 +28,37 @@ firebase deploy --only firestore:rules --project quickfix-india
 
 The root `firebase.json` points Firebase CLI to `firestore.rules`. Check the Firebase Console after deployment and confirm the published rules match this file.
 
+## Grant the first administrator claim (one-time trusted PC step)
+
+The Android and web admin screens now require a Firebase ID token containing `admin: true`. A typed email or passcode cannot create this claim.
+
+1. In Firebase Console, open Project settings → Service accounts and create a private service-account JSON key for the `quickfix-india` project.
+2. Save that file only on your trusted PC. Never upload it to this repository, the APK, or this chat.
+3. In the project folder, install the Admin SDK temporarily:
+
+   ```bash
+   npm install --no-save --package-lock=false firebase-admin
+   ```
+
+4. Find the Firebase Authentication UID of the verified authorized admin account.
+5. Run the script with the service-account path and UID.
+
+   **Windows PowerShell:**
+   ```powershell
+   $env:GOOGLE_APPLICATION_CREDENTIALS="C:\\private\\quickfix-service-account.json"
+   node .\\scripts\\grant-admin-claim.mjs YOUR_FIREBASE_UID
+   Remove-Item Env:GOOGLE_APPLICATION_CREDENTIALS
+   ```
+
+   **macOS/Linux:**
+   ```bash
+   export GOOGLE_APPLICATION_CREDENTIALS="/private/quickfix-service-account.json"
+   node scripts/grant-admin-claim.mjs YOUR_FIREBASE_UID
+   unset GOOGLE_APPLICATION_CREDENTIALS
+   ```
+
+The script refuses users without a verified email in the explicit admin allowlist. After it succeeds, sign out and sign in again in the app so Firebase refreshes the ID token. Delete the local service-account key when finished.
+
 ## Required before production
 
 1. Provision the real administrator account with an Admin SDK custom claim `admin: true`. Never set this claim from the browser or Android client. Keep the service-account key off GitHub and out of the APK.
