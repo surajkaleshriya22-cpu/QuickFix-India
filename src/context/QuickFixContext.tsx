@@ -1054,14 +1054,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       'Hyderabad': '500033'
     };
 
-    const availableTech = technicians.find(
-      t => t.city.toLowerCase() === currentCity.toLowerCase() && t.isOnline && t.isVerified && t.trades.includes(service.category)
-    ) || technicians.find(
-      t => t.city.toLowerCase() === currentCity.toLowerCase() && t.trades.includes(service.category)
-    ) || technicians.find(
-      t => t.isOnline && t.isVerified && t.trades.includes(service.category)
-    ) || technicians[0];
-
+    // Assignment is performed only by the trusted backend after partner
+    // availability, verification, wallet and service-area checks.
     const visitingCharges = commissionSettings.platformConvenienceFee;
     const price = service.startingPrice;
     const discount = 20;
@@ -1078,15 +1072,13 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ? (commissionSettings.acCommissionPct || 15)
         : (commissionSettings.fridgeCommissionPct || 15);
 
-    // Apply technician custom commission % override if set by Admin HQ
-    const commissionPct = (availableTech && typeof availableTech.customCommissionPct === 'number')
-      ? availableTech.customCommissionPct
-      : categoryCommissionPct;
-    
+    // Partner-specific commission overrides are applied by the trusted backend
+    // after a real partner has been assigned.
+    const commissionPct = categoryCommissionPct;
+
     const adminCommission = Math.round((price * commissionPct) / 100) + visitingCharges;
     const technicianPayout = totalAmount - adminCommission;
 
-    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
     const newBookingId = `QF-${Math.floor(7050 + Math.random() * 900)}`;
 
     const newBooking: Booking = {
@@ -1102,15 +1094,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       scheduledDate,
       scheduledTimeSlot,
       notes,
-      status: 'assigned',
-      technicianId: availableTech.id,
-      technicianName: availableTech.name,
-      technicianPhone: availableTech.phone,
-      technicianRating: availableTech.rating,
-      technicianAvatar: availableTech.avatar,
-      technicianEtaMinutes: 20,
-      technicianCurrentLocation: { lat: 12.9352, lng: 77.6245 },
-      startOtp: randomOtp,
+      status: 'requested',
+      startOtp: '',
       price,
       visitingCharges,
       discount,
@@ -1121,7 +1106,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       adminCommission,
       technicianPayout,
       paymentMethod,
-      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'paid',
+      // A booking is never marked paid by choosing UPI; only a verified gateway
+      // webhook may confirm payment.
+      paymentStatus: 'pending',
       createdAt: new Date().toISOString()
     };
 
