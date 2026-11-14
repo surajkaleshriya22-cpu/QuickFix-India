@@ -225,7 +225,7 @@ class QuickFixViewModel : ViewModel() {
                 customerAddress = "Flat 402, Prestige Palms, Indiranagar, Bengaluru",
                 status = "technician_en_route",
                 technicianName = "Ramesh Kumar",
-                startOtp = "4821",
+                startOtp = "",
                 price = 249,
                 totalAmount = 316,
                 technicianPayout = 278,
@@ -239,7 +239,7 @@ class QuickFixViewModel : ViewModel() {
                 customerAddress = "#18, 5th Cross, Koramangala 4th Block, Bengaluru",
                 status = "assigned",
                 technicianName = "Suresh Patel",
-                startOtp = "9134",
+                startOtp = "",
                 price = 299,
                 totalAmount = 375,
                 technicianPayout = 328,
@@ -402,15 +402,14 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun adminIssueCustomerRefund(bookingId: String, amount: Int, reason: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) {
-                b.copy(
-                    paymentStatus = "refunded",
-                    escrowStatus = "refunded_to_customer",
-                    refundAmount = amount,
-                    refundReason = reason
+        // A refund is not a local status change. Keep the payment state unchanged
+        // until a trusted payment provider confirms the refund server-side.
+        _bookings.value = _bookings.value.map { booking ->
+            if (booking.id == bookingId) {
+                booking.copy(
+                    refundReason = "Refund not issued. Payment provider integration is not configured. " + reason
                 )
-            } else b
+            } else booking
         }
     }
 
