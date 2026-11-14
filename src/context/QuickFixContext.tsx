@@ -21,14 +21,11 @@ import {
 import { isAuthorizedAdminEmail } from '../types';
 import {
   CURRENT_CUSTOMER,
-  INITIAL_BOOKINGS,
   INITIAL_COMMISSION_SETTINGS,
-  INITIAL_PAYOUTS,
   INITIAL_SERVICES,
   INITIAL_TECHNICIANS,
   INITIAL_CUSTOMERS,
-  INITIAL_ADMIN_PAYMENT_CONFIG,
-  INITIAL_WALLET_TRANSACTIONS
+  INITIAL_ADMIN_PAYMENT_CONFIG
 } from '../data/mockData';
 import { INITIAL_SERVICE_ZONES, calculateBoundingBox } from '../data/serviceZones';
 import {
