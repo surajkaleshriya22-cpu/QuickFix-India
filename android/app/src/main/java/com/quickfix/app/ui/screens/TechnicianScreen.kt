@@ -223,7 +223,7 @@ fun TechnicianScreen(
                                             enteredOtp = ""
                                             otpError = null
                                         } else {
-                                            otpError = "Invalid OTP code. Ask customer."
+                                            otpError = "Server-side OTP verification is not configured. No status was changed."
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
