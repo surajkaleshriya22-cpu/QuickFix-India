@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import {
   X,
   Phone,
@@ -31,6 +33,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'customer' }) => {
   const {
     authenticateUser,
+    authenticateFirebaseCustomer,
     registerNewPartner,
     currentCity,
     setCurrentCity,
@@ -69,6 +72,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [enteredOtp, setEnteredOtp] = useState('');
   const [countdown, setCountdown] = useState(30);
   const [formError, setFormError] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   const toggleTrade = (trade: ServiceCategoryType) => {
     if (partnerTrades.includes(trade)) {
@@ -80,91 +85,78 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
   };
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError('Secure Firebase phone verification is not connected in this build. No OTP has been sent and no account has been signed in.');
-    setIsOtpStep(false);
-  };
-
-  const handleVerifyAndComplete = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!enteredOtp || enteredOtp.trim().length < 4) {
-      setFormError('Please enter the 4-digit verification OTP');
+    setFormError('');
+    if (selectedRoleTab !== 'customer') {
+      setFormError(selectedRoleTab === 'admin'
+        ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
+        : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
       return;
     }
+    if (!/^\\d{10}$/.test(phone)) {
+      setFormError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    setIsSendingOtp(true);
+    try {
+      const verifier = new RecaptchaVerifier(auth, 'quickfix-recaptcha-container', { size: 'invisible' });
+      const result = await signInWithPhoneNumber(auth, '+91' + phone, verifier);
+      setConfirmationResult(result);
+      setIsOtpStep(true);
+      setEnteredOtp('');
+      setFormError('');
+    } catch (error: any) {
+      console.warn('Firebase phone OTP send failed:', error);
+      setFormError(error?.code === 'auth/too-many-requests'
+        ? 'Firebase SMS limit or abuse protection reached. Please try later; the free plan has a daily SMS quota.'
+        : error?.code === 'auth/invalid-phone-number'
+        ? 'The mobile number is invalid. Please check it and try again.'
+        : error?.code === 'auth/captcha-check-failed'
+        ? 'reCAPTCHA verification failed. Refresh the page and try again.'
+        : 'Firebase could not send the SMS. Check the authorized domain, Phone provider and SMS quota in Firebase Console.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
 
-    if (selectedRoleTab === 'customer') {
-      const result = authenticateUser({
+  const handleVerifyAndComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\\d{6}$/.test(enteredOtp.trim())) {
+      setFormError('Please enter the 6-digit SMS verification code.');
+      return;
+    }
+    if (!confirmationResult) {
+      setFormError('OTP verification session expired. Please request a new code.');
+      setIsOtpStep(false);
+      return;
+    }
+    try {
+      const credential = await confirmationResult.confirm(enteredOtp.trim());
+      if (selectedRoleTab !== 'customer') {
+        setFormError('This account type cannot be completed through customer phone sign-in.');
+        return;
+      }
+      const result = await authenticateFirebaseCustomer({
+        firebaseUser: credential.user,
         displayName,
-        phoneNumber: `+91 ${phone}`,
         email,
-        role: 'customer',
         address,
         city: currentCity,
         rememberMe
       });
       if (!result.success) {
-        setFormError(result.message || 'Customer sign-in failed. Please try again.');
+        setFormError(result.message || 'Unable to complete customer sign-in.');
         return;
       }
       setActiveRole('customer');
-    } else if (selectedRoleTab === 'technician') {
-      if (isSignupMode) {
-        const result = registerNewPartner({
-          displayName,
-          phoneNumber: `+91 ${phone}`,
-          email,
-          trades: partnerTrades,
-          experienceYears,
-          kycDocType: kycType,
-          kycDocNumber: kycNumber,
-          qualificationType,
-          qualificationRegNumber,
-          qualificationInstitute,
-          upiId,
-          city: currentCity,
-          address,
-          initialDepositAmount: partnerDeposit,
-          rememberMe
-        });
-        if (!result.success) {
-          setFormError(result.message || 'Qualification registration rejected');
-          return;
-        }
-      } else {
-        const result = authenticateUser({
-          displayName,
-          phoneNumber: `+91 ${phone}`,
-          email,
-          role: 'technician',
-          trades: partnerTrades,
-          city: currentCity,
-          rememberMe
-        });
-        if (!result.success) {
-          setFormError(result.message || 'Partner sign-in failed. Please check your approval status.');
-          return;
-        }
-      }
-      setActiveRole('technician');
-    } else if (selectedRoleTab === 'admin') {
-      const adminEmailTarget = 'surajkaleshriya22@gmail.com';
-      const result = authenticateUser({
-        displayName: 'Suraj (Super Admin Owner)',
-        phoneNumber: `+91 ${adminPhone}`,
-        email: adminEmailTarget,
-        role: 'admin',
-        city: currentCity,
-        rememberMe
-      });
-      if (!result.success) {
-        setFormError(result.message || 'Access Denied: Non-admin users cannot log in.');
-        return;
-      }
-      setActiveRole('admin');
+      onClose();
+    } catch (error: any) {
+      console.warn('Firebase OTP verification failed:', error);
+      setFormError(error?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect OTP. Please check the SMS and try again.'
+        : 'OTP verification failed or expired. Please request a new code.');
     }
-
-    onClose();
   };
 
   return (
@@ -200,8 +192,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
           </h3>
           <p className="text-xs text-blue-100 mt-0.5">
             {isOtpStep
-              ? `Verification OTP sent to +91 ${selectedRoleTab === 'admin' ? adminPhone : phone}`
-              : 'Secure sign-in requires Firebase Authentication setup'}
+              ? `SMS verification code sent to +91 ${phone}`
+              : 'Customer login uses Firebase phone verification'}
           </p>
         </div>
 
