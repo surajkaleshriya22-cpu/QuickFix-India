@@ -214,7 +214,7 @@ export const AdminDashboard: React.FC = () => {
       platformConvenienceFee: Number(convFee),
       minPayoutThreshold: Number(minPayout)
     });
-    setSaveMessage('Commission rates (Electrician, Plumber, AC, Fridge) & ₹2,000 Wallet Reserve Policy saved in Firestore!');
+    setSaveMessage('Commission settings are disabled until secure server-side admin APIs are deployed. No changes were saved.');
     setTimeout(() => setSaveMessage(''), 3500);
   };
 
