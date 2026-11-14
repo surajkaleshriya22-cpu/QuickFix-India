@@ -166,7 +166,7 @@ fun ServiceBookingScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "A verified partner will be assigned after accepting your request. ${service.warrantyDays}-Day QuickFix Guarantee",
+                        "Your request can be saved. Live partner assignment and service warranty workflows are not active yet.",
                         fontSize = 12.sp,
                         color = BrandBlue,
                         fontWeight = FontWeight.Medium
@@ -220,7 +220,7 @@ fun ServiceBookingScreen(
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
                     Icon(
                         Icons.Default.Security,
-                        contentDescription = "Escrow",
+                        contentDescription = "Payment status",
                         tint = BrandBlue,
                         modifier = Modifier.size(20.dp)
                     )
