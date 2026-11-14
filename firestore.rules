@@ -67,6 +67,55 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Customers may create a request only for their own Firebase UID.
+    // They cannot assign a technician, issue a start OTP, or mark a payment as paid.
+    match /bookings/{bookingId} {
+      allow create: if signedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.status == 'requested'
+        && request.resource.data.startOtp == ''
+        && request.resource.data.paymentStatus == 'pending'
+        && request.resource.data.escrowStatus == 'not_funded'
+        && request.resource.data.price is number
+        && request.resource.data.totalAmount is number
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'customerUid',
+          'customerName',
+          'customerPhone',
+          'customerAddress',
+          'serviceTitle',
+          'category',
+          'notes',
+          'status',
+          'startOtp',
+          'price',
+          'convenienceFee',
+          'discount',
+          'taxes',
+          'totalAmount',
+          'paymentStatus',
+          'escrowStatus',
+          'createdAt'
+        ]);
+
+      allow get, list: if isAdmin()
+        || (signedIn() && resource.data.customerUid == request.auth.uid);
+
+      // A customer may cancel only a still-requested booking. All assignment,
+      // OTP, payment, refund and completion transitions remain server-owned.
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.customerUid == request.auth.uid
+        && resource.data.status == 'requested'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
     // Service coverage is public read-only data. Only trusted admins may edit it.
     match /service_zones/{zoneId} {
       allow read: if true;
