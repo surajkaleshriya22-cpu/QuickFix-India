@@ -300,8 +300,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     if (role === 'technician') {
-      const normalizedPhone = phoneNumber.replace(/\\D/g, '').replace(/^91/, '');
-      const partner = technicians.find(t => t.phone.replace(/\\D/g, '').replace(/^91/, '') === normalizedPhone);
+      const normalizedPhone = phoneNumber.replace(/\D/g, '').replace(/^91/, '');
+      const partner = technicians.find(t => t.phone.replace(/\D/g, '').replace(/^91/, '') === normalizedPhone);
       if (!partner || partner.isSuspended || !partner.isVerified) {
         return { success: false, message: 'Partner account not found, not yet verified, or suspended. Complete registration and wait for admin approval.' };
       }
@@ -368,8 +368,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           : customer.addresses
       });
     } else if (role === 'technician') {
-      const normalizedPhone = phoneNumber.replace(/\\D/g, '').replace(/^91/, '');
-      const match = technicians.find(t => t.phone.replace(/\\D/g, '').replace(/^91/, '') === normalizedPhone);
+      const normalizedPhone = phoneNumber.replace(/\D/g, '').replace(/^91/, '');
+      const match = technicians.find(t => t.phone.replace(/\D/g, '').replace(/^91/, '') === normalizedPhone);
       if (match && !match.isSuspended && match.isVerified) {
         setCurrentTechnician(match);
         setIsTechnicianLoggedIn(true);
