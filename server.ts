@@ -64,12 +64,13 @@ app.post('/api/places/grounding', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.warn('Notice in /api/places/grounding (Google Maps disabled or quota limit):', error.message);
-    const targetCity = req.body?.city || 'Indore';
-    res.json({
-      success: true,
-      text: `Verified physical hardware & spare parts markets in ${targetCity}, Madhya Pradesh:\n- Electrical Wholesale Hub: Maharani Road & Hamidia Road for wires (Polycab/Havells), MCBs (Schneider/Legrand), and modular switchboards.\n- Sanitary & Plumbing: Chiman Bagh & New Market for Astral/Supreme CPVC pipes, brass valves, and water pump motors.\n- AC & Refrigeration: Kothari Market & MP Nagar Zone-II for R32/R410A refrigerant gas canisters, dual run capacitors, and copper tubing.`,
+    const targetCity = req.body?.city || 'your selected city';
+    res.status(503).json({
+      success: false,
+      text: `Live Google Maps lookup is currently unavailable for ${targetCity}. No shops or stock details could be verified. Please try again later or use a trusted local directory to confirm store names, addresses, opening hours, and availability.`,
       groundingChunks: [],
       isFallback: true,
+      error: 'LIVE_PLACES_LOOKUP_UNAVAILABLE',
     });
   }
 });
