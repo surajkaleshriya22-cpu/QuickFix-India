@@ -228,14 +228,25 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
 
   // Technicians State
-  const [technicians, setTechnicians] = useState<Technician[]>(INITIAL_TECHNICIANS);
+  // No sample partner records are loaded into the live admin or partner state.
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [currentTechnician, setCurrentTechnician] = useState<Technician>(INITIAL_TECHNICIANS[0]);
   const [isTechnicianLoggedIn, setIsTechnicianLoggedIn] = useState(false);
 
   // Commissions & Payouts & Admin Gateway Control
   const [commissionSettings, setCommissionSettings] = useState<CommissionSettings>(INITIAL_COMMISSION_SETTINGS);
   const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
-  const [adminPaymentConfig, setAdminPaymentConfig] = useState<AdminMasterPaymentConfig>(INITIAL_ADMIN_PAYMENT_CONFIG);
+  const [adminPaymentConfig, setAdminPaymentConfig] = useState<AdminMasterPaymentConfig>({
+    ...INITIAL_ADMIN_PAYMENT_CONFIG,
+    merchantName: 'Payment account not configured',
+    merchantVpa: '',
+    bankName: '',
+    bankAccountNumber: '',
+    bankIfsc: '',
+    gatewayProvider: 'Not configured',
+    merchantId: '',
+    escrowEnabled: false
+  });
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [adminWalletBalance, setAdminWalletBalance] = useState<number>(0);
   const [serviceZones, setServiceZones] = useState<ServiceZone[]>(INITIAL_SERVICE_ZONES);
@@ -488,22 +499,11 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Technician Auth
-  const loginTechnician = (phone: string) => {
-    const normalizedPhone = phone.replace(/\D/g, '').replace(/^91/, '');
-    if (normalizedPhone.length !== 10) return false;
-
-    const match = technicians.find(t => {
-      const storedPhone = t.phone.replace(/\D/g, '').replace(/^91/, '');
-      return storedPhone === normalizedPhone;
-    });
-
-    // Never fall back to the first/demo technician: an unknown phone must not
-    // inherit another partner's profile, wallet, jobs, or permissions.
-    if (!match || match.isSuspended || !match.isVerified) return false;
-
-    setCurrentTechnician(match);
-    setIsTechnicianLoggedIn(true);
-    return true;
+  const loginTechnician = (_phone: string) => {
+    // Partner authentication must be backed by Firebase identity and a
+    // server-verified partner record. Never authenticate against mock data.
+    setIsTechnicianLoggedIn(false);
+    return false;
   };
 
   const registerTechnician = (data: {
@@ -1329,7 +1329,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Customer Management
-  const [customers, setCustomers] = useState<CustomerUser[]>(INITIAL_CUSTOMERS);
+  // Customer management must be populated from verified Firestore records, not demo profiles.
+  const [customers, setCustomers] = useState<CustomerUser[]>([]);
   const [firestoreSyncStatus, setFirestoreSyncStatus] = useState({
     isConnected: false,
     lastSynced: 'Not checked',
