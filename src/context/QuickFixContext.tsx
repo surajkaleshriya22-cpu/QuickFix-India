@@ -299,6 +299,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     trades?: ServiceCategoryType[];
     rememberMe: boolean;
   }): { success: boolean; message?: string } => {
+    // Fail closed: this web helper previously minted synthetic uid-* sessions.
+    // Only Firebase Authentication may establish a customer/partner identity.
+    return { success: false, message: 'Secure sign-in is not connected in this web preview. Please use the Firebase-authenticated Android app; demo sign-in is disabled.' };
+
     // The dedicated AdminLoginScreen verifies Firebase admin custom claims.
     // Never create an admin session through this synchronous demo helper.
     if (role === 'admin') {
@@ -438,6 +442,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     initialDepositAmount?: number;
     rememberMe: boolean;
   }): { success: boolean; message?: string } => {
+    // Do not create a local partner or imply that a deposit/KYC was received.
+    // Registration must be persisted and verified by a trusted backend.
+    return { success: false, message: 'Partner registration is temporarily unavailable in this preview. No deposit has been collected or recorded. Secure server registration is required.' };
+
     // 1. Strict Trade Restriction: Only qualified electricians, plumbers, and AC/Fridge technicians
     const validTrades: ServiceCategoryType[] = ['electrician', 'plumber', 'ac_repair', 'fridge_repair'];
     const hasValidTrades =
