@@ -586,13 +586,19 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Technician Auth
   const loginTechnician = (phone: string) => {
-    const match = technicians.find(t => t.phone.replace(/\s+/g, '') === phone.replace(/\s+/g, ''));
-    if (match) {
-      setCurrentTechnician(match);
-      setIsTechnicianLoggedIn(true);
-      return true;
-    }
-    setCurrentTechnician(technicians[0]);
+    const normalizedPhone = phone.replace(/\D/g, '').replace(/^91/, '');
+    if (normalizedPhone.length !== 10) return false;
+
+    const match = technicians.find(t => {
+      const storedPhone = t.phone.replace(/\D/g, '').replace(/^91/, '');
+      return storedPhone === normalizedPhone;
+    });
+
+    // Never fall back to the first/demo technician: an unknown phone must not
+    // inherit another partner's profile, wallet, jobs, or permissions.
+    if (!match || match.isSuspended || !match.isVerified) return false;
+
+    setCurrentTechnician(match);
     setIsTechnicianLoggedIn(true);
     return true;
   };
