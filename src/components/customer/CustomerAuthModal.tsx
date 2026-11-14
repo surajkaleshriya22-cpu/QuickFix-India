@@ -10,17 +10,18 @@ interface CustomerAuthModalProps {
 export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose }) => {
   const { loginCustomer, registerCustomer, currentCity, setCurrentCity } = useQuickFix();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [phone, setPhone] = useState('9845199221');
-  const [name, setName] = useState('Ananya Deshmukh');
-  const [email, setEmail] = useState('ananya.deshmukh@gmail.com');
-  const [address, setAddress] = useState('Flat 402, Sai Silver Woods, Koramangala 4th Block');
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [otpStep, setOtpStep] = useState(false);
-  const [enteredOtp, setEnteredOtp] = useState('1234');
+  const [enteredOtp, setEnteredOtp] = useState('');
+  const [formError, setFormError] = useState('');
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) return;
-    setOtpStep(true);
+    setFormError('Secure Firebase phone verification is not connected in this build. No OTP has been sent and no account has been signed in.');
+    setOtpStep(false);
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
@@ -59,6 +60,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose })
 
         {/* Form Body */}
         <div className="p-5">
+          {formError && <div role="alert" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{formError}</div>}
           {!otpStep ? (
             <form onSubmit={handleSendOtp} className="space-y-3.5">
               {/* City selector */}
@@ -174,7 +176,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose })
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="text-center py-2">
                 <div className="text-xs text-slate-600 mb-3">
-                  Enter demonstration OTP <span className="font-mono font-bold text-blue-600">1234</span>
+                  Enter the OTP sent by Firebase
                 </div>
                 <input
                   type="text"
@@ -202,7 +204,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose })
                 </button>
                 <button
                   type="button"
-                  onClick={() => alert('New OTP sent: 1234')}
+                  onClick={() => setFormError('Firebase OTP resend is unavailable until phone authentication is configured.')}
                   className="text-slate-600 hover:text-slate-900"
                 >
                   Resend OTP
