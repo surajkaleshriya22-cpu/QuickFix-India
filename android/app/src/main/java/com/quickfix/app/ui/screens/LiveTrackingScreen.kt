@@ -77,37 +77,52 @@ fun LiveTrackingScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Start OTP Banner (Crucial security)
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = DeepNavy),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                // A start OTP is shown only after a trusted backend assigns and dispatches a partner.
+                if (booking.startOtp.isNotBlank()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = DeepNavy),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "SERVICE START OTP",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                booking.startOtp,
+                                color = Color(0xFF60A5FA),
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 4.sp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "Share this code only after the assigned technician arrives.",
+                                color = Color(0xFFCBD5E1),
+                                fontSize = 11.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    Surface(
+                        color = Color(0xFFEFF6FF),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            "SERVICE START OTP",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            booking.startOtp,
-                            color = Color(0xFF60A5FA),
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 4.sp
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            "Share this 4-digit code with the technician only when they arrive at your location.",
-                            color = Color(0xFFCBD5E1),
-                            fontSize = 11.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            "Your request is saved. A start OTP will appear only after a verified technician accepts the job. No technician has been assigned yet.",
+                            color = Color(0xFF1E40AF),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(14.dp)
                         )
                     }
                 }
@@ -146,12 +161,12 @@ fun LiveTrackingScreen(
                                 color = TextPrimary
                             )
                             Text(
-                                "QuickFix Certified • ⭐ 4.9 Rating",
+                                if (booking.technicianName != null) "Assigned QuickFix partner" else "Waiting for partner acceptance",
                                 fontSize = 12.sp,
                                 color = TextSecondary
                             )
                             Text(
-                                "Carrying sanitized tools & standard spare parts",
+                                if (booking.technicianName != null) "Partner details will be confirmed in the app." else "We will show partner details here after assignment.",
                                 fontSize = 11.sp,
                                 color = Color(0xFF16A34A)
                             )
@@ -170,8 +185,8 @@ fun LiveTrackingScreen(
                         Text("Live Job Milestones", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
 
                         val steps = listOf(
-                            "Booking Placed & Confirmed" to true,
-                            "Partner Assigned (${booking.technicianName ?: "Allocated"})" to true,
+                            "Booking Request Saved" to true,
+                            "Partner Assigned" to (booking.technicianName != null),
                             "Technician En Route" to (booking.status == "technician_en_route" || booking.status == "in_progress" || booking.status == "completed"),
                             "Service in Progress (OTP Verified)" to (booking.status == "in_progress" || booking.status == "completed"),
                             "Job Completed & Escrow Cleared" to (booking.status == "completed")
@@ -218,7 +233,7 @@ fun LiveTrackingScreen(
                         Text("Service Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = BrandBlue)
                         Text("Address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
-                        Text("Total Amount Paid: ₹${booking.totalAmount} (Held in Admin Escrow)", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF16A34A))
+                        Text(if (booking.paymentStatus == "paid") "Payment confirmed: ₹${booking.totalAmount}" else "Estimated total: ₹${booking.totalAmount} • Payment pending (no payment collected)", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF16A34A))
                     }
                 }
 
