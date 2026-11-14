@@ -11,7 +11,7 @@ interface ServiceBookingSheetProps {
 }
 
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
-  const { customer, currentCity, createBooking, commissionSettings, adminPaymentConfig } = useQuickFix();
+  const { customer, currentCity, commissionSettings } = useQuickFix();
 
   const [selectedDate, setSelectedDate] = useState('Today');
   const [selectedSlot, setSelectedSlot] = useState('Express (Within 45 Mins)');
@@ -105,21 +105,9 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     '06:00 PM - 09:00 PM'
   ];
 
+  // Do not simulate a successful booking before the trusted backend exists.
   const handleConfirm = () => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const addressToUse = isEditingAddress && customAddress ? customAddress : selectedAddress;
-      const newBooking = createBooking({
-        serviceId: service.id,
-        scheduledDate: selectedDate,
-        scheduledTimeSlot: selectedSlot,
-        address: addressToUse,
-        notes,
-        paymentMethod
-      });
-      setIsSubmitting(false);
-      onSuccess(newBooking.id);
-    }, 600);
+    window.alert('Online booking is temporarily unavailable while QuickFix completes secure booking setup. No booking has been created and no payment has been taken. Please try again later.');
   };
 
   return (
@@ -318,18 +306,11 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               </button>
             </div>
 
-            {/* QuickFix Admin Escrow Guarantee Badge */}
-            <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl flex items-start gap-2.5">
-              <Shield className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-[11px] font-bold text-blue-950">QuickFix Admin Escrow Protected</p>
-                  <span className="text-[9px] bg-blue-600 text-white font-medium px-1.5 py-0.2 rounded-full">Admin Controlled</span>
-                </div>
-                <p className="text-[10px] text-blue-800 leading-relaxed mt-0.5">
-                  100% payments land in Admin HQ Account ({adminPaymentConfig?.merchantVpa || 'quickfix.master@hdfcbank'}). Technician payouts released only after verified completion.
-                </p>
-              </div>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-amber-900 leading-relaxed">
+                UPI collection and escrow are not active yet. QuickFix will not collect or mark any payment as paid until a verified payment gateway is connected.
+              </p>
             </div>
           </div>
 
@@ -371,17 +352,10 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={isSubmitting}
+            disabled
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {isSubmitting ? (
-              <span>Dispatching Technician...</span>
-            ) : (
-              <>
-                <span>Confirm Booking</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
+            <span>Booking Temporarily Unavailable</span>
           </button>
         </div>
       </div>
