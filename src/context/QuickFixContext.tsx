@@ -546,141 +546,20 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const toggleTechnicianOnline = (
-    techId: string,
-    coords?: { lat: number; lng: number }
-  ): { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult } => {
-    const tech = technicians.find(t => t.id === techId) || (currentTechnician.id === techId ? currentTechnician : null);
-    if (!tech) return { success: false, message: 'Technician record not found' };
-
-    // If currently Online, permit switching to Offline immediately
-    if (tech.isOnline) {
-      setTechnicians(prev =>
-        prev.map(t => (t.id === techId ? { ...t, isOnline: false } : t))
-      );
-      if (currentTechnician.id === techId) {
-        setCurrentTechnician(prev => ({ ...prev, isOnline: false }));
-      }
-      updateTechnicianFirestoreStatus(techId, false);
-      return { success: true, message: 'Duty status set to Offline. You will not receive customer requests.' };
-    }
-
-    // Strict Gate 1: Non-approved or unverified technicians cannot go online or receive customer bookings!
-    if (!tech.isVerified || tech.approvalStatus === 'pending_audit' || tech.approvalStatus === 'rejected') {
-      return {
-        success: false,
-        message: 'Awaiting Trade Qualification Clearance: Your certificate is under audit by QuickFix Admin HQ. Only approved and verified technicians can go online.'
-      };
-    }
-
-    // Strict Gate 2: Mandatory Minimum ₹2,000 Security Reserve Gate
-    // Technicians cannot go online or take bookings unless they maintain at least ₹2,000 in their partner wallet.
-    if ((tech.walletBalance ?? 0) < 2000) {
-      const deficit = 2000 - (tech.walletBalance ?? 0);
-      return {
-        success: false,
-        message: `Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${tech.walletBalance ?? 0}. You must maintain at least ₹2,000 to activate duty and receive customer calls. Please top-up ₹${deficit}.`
-      };
-    }
-
-    // Strict Gate 3: Suspension check
-    if (tech.isSuspended) {
-      return {
-        success: false,
-        message: 'Partner account suspended. Please contact QuickFix HQ operations.'
-      };
-    }
-
-    // Strict Gate 4: Geo-fencing Service Radius Gate
-    // If coords are supplied, validate them against active service zones
-    if (coords) {
-      const activeZones = serviceZones.filter(z => z.isActive);
-      const matchingZone = activeZones.find(
-        z => calculateHaversineDistanceKm(coords.lat, coords.lng, z.center.lat, z.center.lng) <= z.radiusKm
-      );
-
-      if (!matchingZone) {
-        const nearest = activeZones.reduce((prev, curr) => {
-          const d1 = calculateHaversineDistanceKm(coords.lat, coords.lng, prev.center.lat, prev.center.lng);
-          const d2 = calculateHaversineDistanceKm(coords.lat, coords.lng, curr.center.lat, curr.center.lng);
-          return d1 < d2 ? prev : curr;
-        }, activeZones[0] || serviceZones[0]);
-
-        const dist = nearest
-          ? calculateHaversineDistanceKm(coords.lat, coords.lng, nearest.center.lat, nearest.center.lng)
-          : 0;
-
-        return {
-          success: false,
-          requiresGeofence: true,
-          message: `Geo-fence Restriction: You are ${dist} km away from ${nearest?.name || 'the operating hub'} (Service radius: ${nearest?.radiusKm || 20} km). QuickFix partners can only go Online within approved operating zones to guarantee our 1-Hour SLA.`
-        };
-      }
-
-      // Inside zone! Grant Online status and record operating location
-      const distToCenter = calculateHaversineDistanceKm(coords.lat, coords.lng, matchingZone.center.lat, matchingZone.center.lng);
-      const locationData = {
-        lat: coords.lat,
-        lng: coords.lng,
-        zoneId: matchingZone.id,
-        zoneName: matchingZone.name,
-        distanceToCenterKm: distToCenter
-      };
-
-      setTechnicians(prev =>
-        prev.map(t => (t.id === techId ? { ...t, isOnline: true, currentLocation: locationData } : t))
-      );
-      if (currentTechnician.id === techId) {
-        setCurrentTechnician(prev => ({ ...prev, isOnline: true, currentLocation: locationData }));
-      }
-      updateTechnicianFirestoreStatus(techId, true, locationData);
-      return {
-        success: true,
-        message: `Duty Online: Verified inside ${matchingZone.name} (${distToCenter} km from center · 1-Hour SLA Active).`
-      };
-    }
-
-    // If no coordinates provided in call, check if current stored location is inside a valid zone
-    if (tech.currentLocation) {
-      const activeZones = serviceZones.filter(z => z.isActive);
-      const matchingZone = activeZones.find(
-        z => calculateHaversineDistanceKm(tech.currentLocation!.lat, tech.currentLocation!.lng, z.center.lat, z.center.lng) <= z.radiusKm
-      );
-      if (matchingZone) {
-        setTechnicians(prev =>
-          prev.map(t => (t.id === techId ? { ...t, isOnline: true } : t))
-        );
-        if (currentTechnician.id === techId) {
-          setCurrentTechnician(prev => ({ ...prev, isOnline: true }));
-        }
-        updateTechnicianFirestoreStatus(techId, true, tech.currentLocation);
-        return { success: true, message: `Duty Online: Verified inside ${matchingZone.name}.` };
-      }
-    }
-
-    // Needs geo-fence verification
-    return {
-      success: false,
-      requiresGeofence: true,
-      message: 'Geo-fence Verification Required: Confirm GPS location within operating service radius to go online.'
-    };
-  };
+    _techId: string,
+    _coords?: { lat: number; lng: number }
+  ): { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult } => ({
+    success: false,
+    message: 'Partner online status is disabled until trusted server-side identity, verification, wallet reserve and GPS checks are deployed.'
+  });
 
   const validateAndSetTechnicianOnline = async (
-    techId: string,
-    locationData: { lat: number; lng: number; zoneId: string; zoneName: string; distanceToCenterKm: number }
-  ): Promise<{ success: boolean; message: string }> => {
-    setTechnicians(prev =>
-      prev.map(t => (t.id === techId ? { ...t, isOnline: true, currentLocation: locationData } : t))
-    );
-    if (currentTechnician.id === techId) {
-      setCurrentTechnician(prev => ({ ...prev, isOnline: true, currentLocation: locationData }));
-    }
-    await updateTechnicianFirestoreStatus(techId, true, locationData);
-    return {
-      success: true,
-      message: `Geo-fence Verified: Duty Online in ${locationData.zoneName} (${locationData.distanceToCenterKm} km from hub).`
-    };
-  };
+    _techId: string,
+    _locationData: { lat: number; lng: number; zoneId: string; zoneName: string; distanceToCenterKm: number }
+  ): Promise<{ success: boolean; message: string }> => ({
+    success: false,
+    message: 'GPS verification cannot activate a partner from the client. Trusted server-side verification is not configured.'
+  });
 
   const updateServiceZoneRadius = (_zoneId: string, _newRadiusKm: number): { success: boolean; message: string } => ({
     success: false,
@@ -709,47 +588,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Admin Custom Commission Override Per Service Provider
-  const updateTechnicianCustomCommission = (technicianId: string, commissionPct: number | null): { success: boolean; message: string } => {
-    const targetTech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
-    if (!targetTech) return { success: false, message: 'Technician record not found' };
-
-    const validPct = commissionPct !== null ? Math.max(0, Math.min(100, Math.round(commissionPct))) : undefined;
-
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === technicianId
-          ? { ...t, customCommissionPct: validPct }
-          : t
-      )
-    );
-
-    if (currentTechnician.id === technicianId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        customCommissionPct: validPct
-      }));
-    }
-
-    if (currentUser && currentUser.uid === technicianId) {
-      const updated = {
-        ...currentUser,
-        customCommissionPct: validPct
-      };
-      setCurrentUser(updated);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-    }
-
-    return {
-      success: true,
-      message: validPct !== undefined
-        ? `Custom commission rate for ${targetTech.name} set to ${validPct}%.`
-        : `Custom commission rate removed for ${targetTech.name}. Reset to category standard.`
-    };
-  };
+  const updateTechnicianCustomCommission = (_technicianId: string, _commissionPct: number | null): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Partner commission changes require trusted server-side admin authorization and audit logging. No rate was changed.'
+  });
 
   // Commission & Payouts & Admin Payment Control
   const updateCommissionSettings = (_newSettings: Partial<CommissionSettings>) => {
