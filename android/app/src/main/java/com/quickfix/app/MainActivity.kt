@@ -67,9 +67,12 @@ fun QuickFixNavHost(
             AuthScreen(navController = navController, authViewModel = authViewModel)
         }
         composable("profile_screen") {
-            val user = (authState as? AuthState.Authenticated)?.user 
-                ?: com.quickfix.app.data.model.User(displayName = "Ananya Deshmukh", phoneNumber = "+91 98451 99221")
-            ProfileScreen(navController = navController, authViewModel = authViewModel, user = user)
+            val user = (authState as? AuthState.Authenticated)?.user
+            if (user != null) {
+                ProfileScreen(navController = navController, authViewModel = authViewModel, user = user)
+            } else {
+                AuthScreen(navController = navController, authViewModel = authViewModel)
+            }
         }
         composable("service_booking/{serviceId}") { backStackEntry ->
             val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
