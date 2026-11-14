@@ -1,12 +1,12 @@
-# QuickFix India — PWA staging
+# QuickFix India — staging application
 
-QuickFix is a home-services marketplace with three role-based experiences:
+QuickFix India is a home-services marketplace with customer, Channel Partner, and admin experiences.
 
-- Customer: browse home services, book a service, view booking status and reviews.
-- Technician partner: manage partner profile, service requests and work status.
-- Admin: review marketplace operations, technicians, bookings and commission information.
+- Customer: browse services, create service requests, and view booking information.
+- Channel Partner: manage partner details and service work.
+- Admin: review marketplace operations and partner activity.
 
-This repository preserves the existing React + Vite application and Android source tree while adding installable PWA support. It is a staging build, not a production-ready payments release.
+This repository contains the existing React + Vite application and Android source tree. It is a **staging build**, not a production-ready release. A successful build does not prove that live OTP delivery, booking assignment, payments, or payouts work end to end.
 
 ## Run locally
 
@@ -20,11 +20,12 @@ cp .env.example .env
 npm run dev
 ```
 
-Open the local URL printed by the server. PWA installability/service-worker registration is enabled in production builds over HTTPS (localhost is also treated as secure by browsers).
+Open the local URL printed by the server.
 
 ## Build
 
 ```bash
+npm run lint
 npm run build
 npm start
 ```
@@ -33,17 +34,23 @@ The Express server serves the Vite `dist` output and retains the existing `/api/
 
 ## Firebase configuration
 
-Set the `VITE_FIREBASE_*` and `VITE_FIRESTORE_DATABASE_ID` variables listed in `.env.example` using the Web App configuration from the correct QuickFix Firebase project. Do not use the AI Studio preview project's old config. For native Android builds, add the matching `android/app/google-services.json` for package `com.quickfix.app`; it is intentionally excluded from this public-ready archive because the file in the source archive belonged to a different package/project.
+- Web: set the `VITE_FIREBASE_*` and `VITE_FIRESTORE_DATABASE_ID` variables listed in `.env.example` using the Web App configuration from the intended Firebase project.
+- Android: provide the matching `android/app/google-services.json` for package `com.quickfix.app`. The file is intentionally excluded from this repository.
+- Never commit service-account JSON, private API credentials, payment keys, webhook secrets, or `.env` files.
 
-## Security and release blockers
+## Current Firebase / free-plan limitations
 
-- `firestore.rules` currently denies all client reads/writes as a fail-closed staging safeguard. Firebase-backed workflows will not function until role-scoped rules and trusted backend functions are implemented and tested.
-- The payout webhook deliberately returns HTTP 503 and never marks payouts as settled. No automated payouts are live.
-- Do not expose service-account JSON, private API credentials, Razorpay keys, webhook secrets, or `.env` files in GitHub.
-- Replace any demo/test authentication flows and hardcoded demo credentials before launch. Use Firebase Auth and server-issued custom claims for admin authorization.
-- Test customer/technician/admin permissions, bookings, maps, offline behavior, mobile installation, and all payment paths before public launch.
+The Firebase project is being kept on the Spark (no-cost) plan. No paid plan or billing is enabled by this repository work.
 
-See [PWA-SETUP.md](PWA-SETUP.md) for repository and hosting steps
+- Firestore rules are role-scoped and restrictive; they are **not** deny-all. They permit limited owner profile operations and safe customer booking-request creation. Sensitive booking transitions and financial collections remain server-owned.
+- The web OTP flow currently reports that secure Firebase phone verification is not connected; it must not claim an SMS was sent.
+- Android source includes Firebase Phone Auth, but real SMS delivery still needs testing on a physical device.
+- Booking assignment, server-issued start OTP validation, atomic wallet/ledger operations, refunds, and payouts require trusted backend functions that are not currently deployed.
+- The payout webhook deliberately returns HTTP 503 until a verified provider integration exists. No payout is represented as settled.
+- Do not loosen Firestore rules or simulate real payments to make the interface appear functional.
 
+See `docs/FREE_PLAN_BACKEND_PREP.md` for the free-plan preparation, security boundaries, and release checklist. See `PWA-SETUP.md` for repository and hosting setup.
 
+## Release checklist
 
+Before production release, verify web and Android builds, test Firestore rules against cross-user access, test admin custom-claim authorization, validate booking and OTP flows with trusted backend transactions, and perform physical-device SMS testing. Any billing or paid deployment decision must be reviewed and explicitly approved by a parent/guardian before enabling it.
