@@ -94,7 +94,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
       return;
     }
-    if (!/^\\d{10}$/.test(phone)) {
+    if (!/^\d{10}$/.test(phone)) {
       setFormError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
@@ -122,7 +122,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   const handleVerifyAndComplete = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\\d{6}$/.test(enteredOtp.trim())) {
+    if (!/^\d{6}$/.test(enteredOtp.trim())) {
       setFormError('Please enter the 6-digit SMS verification code.');
       return;
     }
