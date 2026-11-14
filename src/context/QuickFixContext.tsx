@@ -307,18 +307,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    // Strict Super Admin Access Gate
-    if (role === 'admin') {
-      if (!isAuthorizedAdminEmail(email)) {
-        const errorMsg = `Access Denied: The account "${email}" is not on the QuickFix Super Admin Whitelist. Only verified Administrators (surajkaleshriya22@gmail.com) can access this console.`;
-        console.warn(`[SECURITY ALERT] Blocked unauthorized admin login attempt for email: ${email}`);
-        return {
-          success: false,
-          message: errorMsg
-        };
-      }
-    }
-
     const userObj: AppUser = {
       uid: `uid-${Date.now()}`,
       phoneNumber,
