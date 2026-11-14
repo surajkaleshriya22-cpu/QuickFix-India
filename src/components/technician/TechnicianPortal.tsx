@@ -120,7 +120,7 @@ export const TechnicianPortal: React.FC = () => {
 
   // Auth toggle
   const [showRegisterForm, setShowRegisterForm] = useState(false);
-  const [loginPhone, setLoginPhone] = useState('9845012345');
+  const [loginPhone, setLoginPhone] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
   const [acceptError, setAcceptError] = useState('');
@@ -245,7 +245,7 @@ export const TechnicianPortal: React.FC = () => {
                     type="tel"
                     value={loginPhone}
                     onChange={e => setLoginPhone(e.target.value)}
-                    placeholder="98450 12345"
+                    placeholder="Enter registered mobile number"
                     className="flex-1 px-3 py-2.5 text-xs font-mono focus:outline-none"
                   />
                 </div>
