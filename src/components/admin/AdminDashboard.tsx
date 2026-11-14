@@ -1821,7 +1821,7 @@ export const AdminDashboard: React.FC = () => {
                             {b.paymentStatus === 'paid' && (
                               <button
                                 onClick={() => {
-                                  if (confirm(`Issue 100% refund of ₹${b.totalAmount} to customer ${b.customerName} directly from the QuickFix Admin Master Account?`)) {
+                                  if (confirm(`Refunds are not configured. No funds will be sent. Show the status message for this booking?`)) {
                                     const res = adminIssueCustomerRefund(b.id, b.totalAmount, 'Customer cancellation / satisfaction refund approved by Admin');
                                     setStatusUpdateNoticeMsg(res.message);
                                     setTimeout(() => setStatusUpdateNoticeMsg(''), 4500);
@@ -1830,7 +1830,7 @@ export const AdminDashboard: React.FC = () => {
                                 className="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                               >
                                 <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-                                <span>Issue Refund (Admin A/C)</span>
+                                <span>Refund unavailable</span>
                               </button>
                             )}
 
@@ -2280,7 +2280,7 @@ export const AdminDashboard: React.FC = () => {
                       className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-colors shadow-xs flex items-center gap-2"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      <span>Request commission change (disabled until server setup)</span>
+                      <span>Preview only — commission changes are not saved</span>
                     </button>
                   </form>
                 </div>
@@ -2566,7 +2566,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
                     >
                       <Save className="w-4 h-4" />
-                      <span>Request settings change (disabled until server setup)</span>
+                      <span>Preview only — payment settings are not saved</span>
                     </button>
                   </div>
                 </div>
