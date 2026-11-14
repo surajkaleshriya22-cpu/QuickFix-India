@@ -18,7 +18,7 @@ data class Booking(
     val customerAddress: String,
     val status: String, // "requested", "assigned", "technician_en_route", "in_progress", "completed"
     val technicianName: String? = null,
-    val startOtp: String = "4821",
+    val startOtp: String = "",
     val price: Int = 199,
     val totalAmount: Int = 257,
     val technicianPayout: Int = 226,
