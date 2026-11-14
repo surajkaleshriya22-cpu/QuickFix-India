@@ -280,16 +280,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentUser]);
 
   // Authentication Methods
-  const authenticateUser = ({
-    displayName,
-    phoneNumber,
-    email,
-    role,
-    address,
-    city,
-    trades,
-    rememberMe
-  }: {
+  const authenticateUser = (_params: {
     displayName: string;
     phoneNumber: string;
     email: string;
@@ -299,82 +290,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     trades?: ServiceCategoryType[];
     rememberMe: boolean;
   }): { success: boolean; message?: string } => {
-    // Fail closed: this web helper previously minted synthetic uid-* sessions.
-    // Only Firebase Authentication may establish a customer/partner identity.
-    return { success: false, message: 'Secure sign-in is not connected in this web preview. Please use the Firebase-authenticated Android app; demo sign-in is disabled.' };
-
-    // The dedicated AdminLoginScreen verifies Firebase admin custom claims.
-    // Never create an admin session through this synchronous demo helper.
-    if (role === 'admin') {
-      return { success: false, message: 'Demo admin login is disabled. Use secure Firebase Super Admin sign-in.' };
-    }
-
-    if (role === 'technician') {
-      const normalizedPhone = phoneNumber.replace(/\D/g, '').replace(/^91/, '');
-      const partner = technicians.find(t => t.phone.replace(/\D/g, '').replace(/^91/, '') === normalizedPhone);
-      if (!partner || partner.isSuspended || !partner.isVerified) {
-        return { success: false, message: 'Partner account not found, not yet verified, or suspended. Complete registration and wait for admin approval.' };
-      }
-    }
-
-    const userObj: AppUser = {
-      uid: `uid-${Date.now()}`,
-      phoneNumber,
-      displayName,
-      email,
-      role,
-      address,
-      city,
-      trades,
-      createdAt: new Date().toISOString()
+    return {
+      success: false,
+      message: 'Secure sign-in is not connected in this web preview. Please use the Firebase-authenticated Android app; demo sign-in is disabled.'
     };
-
-    setCurrentUser(userObj);
-    setIsAuthenticated(true);
-
-    if (rememberMe) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(userObj));
-      } catch {
-        // ignore
-      }
-    } else {
-      try {
-        localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
-      } catch {
-        // ignore
-      }
-    }
-
-    if (role === 'customer') {
-      setIsCustomerLoggedIn(true);
-      setCustomer({
-        id: userObj.uid,
-        name: displayName,
-        phone: phoneNumber,
-        email,
-        addresses: address
-          ? [
-              {
-                id: `addr-${Date.now()}`,
-                label: 'Home',
-                addressLine: address,
-                city,
-                pincode: '560034'
-              }
-            ]
-          : customer.addresses
-      });
-    } else if (role === 'technician') {
-      const normalizedPhone = phoneNumber.replace(/\D/g, '').replace(/^91/, '');
-      const match = technicians.find(t => t.phone.replace(/\D/g, '').replace(/^91/, '') === normalizedPhone);
-      if (match && !match.isSuspended && match.isVerified) {
-        setCurrentTechnician(match);
-        setIsTechnicianLoggedIn(true);
-      }
-    }
-
-    return { success: true };
   };
 
   const authenticateVerifiedAdmin = async ({
@@ -425,7 +344,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const registerNewPartner = (params: {
+  const registerNewPartner = (_params: {
     displayName: string;
     phoneNumber: string;
     email: string;
@@ -442,140 +361,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     initialDepositAmount?: number;
     rememberMe: boolean;
   }): { success: boolean; message?: string } => {
-    // Do not create a local partner or imply that a deposit/KYC was received.
-    // Registration must be persisted and verified by a trusted backend.
-    return { success: false, message: 'Partner registration is temporarily unavailable in this preview. No deposit has been collected or recorded. Secure server registration is required.' };
-
-    // 1. Strict Trade Restriction: Only qualified electricians, plumbers, and AC/Fridge technicians
-    const validTrades: ServiceCategoryType[] = ['electrician', 'plumber', 'ac_repair', 'fridge_repair'];
-    const hasValidTrades =
-      params.trades &&
-      params.trades.length > 0 &&
-      params.trades.every(t => validTrades.includes(t));
-
-    if (!hasValidTrades) {
-      return {
-        success: false,
-        message: 'Registration Denied: Only certified and qualified Electricians, Plumbers, and AC/Fridge Technicians are eligible to partner with QuickFix.'
-      };
-    }
-
-    // 2. Minimum Experience Requirement: At least 2 years in field
-    if (params.experienceYears < 2) {
-      return {
-        success: false,
-        message: 'Minimum 2 years of certified field experience is mandatory for trade quality assurance.'
-      };
-    }
-
-    // 3. Strict Minimum ₹2,000 Wallet Balance Gate for Registration Completion
-    const initialDeposit = params.initialDepositAmount !== undefined ? Number(params.initialDepositAmount) : 2000;
-    if (isNaN(initialDeposit) || initialDeposit < 2000) {
-      return {
-        success: false,
-        message: 'Registration Denied: A minimum partner security deposit of ₹2,000 is strictly required in your wallet before registration can be completed.'
-      };
-    }
-
-    const qualType = params.qualificationType || 'ITI Trade Certificate';
-    const qualReg = params.qualificationRegNumber || params.kycDocNumber || 'ITI-VERIFY-PENDING';
-    const qualInst = params.qualificationInstitute || `${params.city} Technical Trade Training Institute`;
-
-    const newTech: Technician = {
-      id: `tech-${Date.now()}`,
-      name: params.displayName,
-      phone: params.phoneNumber,
-      email: params.email,
-      trades: params.trades,
-      experienceYears: params.experienceYears,
-      city: params.city,
-      rating: 5.0,
-      totalJobsCompleted: 0,
-      avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80',
-      isOnline: false, // CANNOT go online until QuickFix Admin HQ clears the qualification audit
-      isVerified: false,
-      approvalStatus: 'pending_audit',
-      qualificationType: qualType,
-      qualificationRegNumber: qualReg,
-      qualificationInstitute: qualInst,
-      kycDocType: params.kycDocType,
-      kycDocNumber: params.kycDocNumber,
-      walletBalance: initialDeposit,
-      securityDepositRequired: 2000,
-      securityDepositPaid: true,
-      withdrawableBalance: Math.max(0, initialDeposit - 2000), // Base ₹2,000 is permanently locked and non-withdrawable
-      lifetimeCashCollected: 0,
-      lifetimeCommissionPaid: 0,
-      bankAccount: {
-        accountNumber: '•••• •••• 9921',
-        ifsc: 'HDFC0001200',
-        upiId: params.upiId
-      },
-      todayEarnings: 0,
-      totalEarnings: 0,
-      pendingPayout: 0
+    return {
+      success: false,
+      message: 'Partner registration is temporarily unavailable in this preview. No deposit has been collected or recorded. Secure server registration is required.'
     };
-
-    const initialTxn: WalletTransaction = {
-      id: `TXN-W${Date.now().toString().slice(-6)}`,
-      technicianId: newTech.id,
-      type: 'security_deposit',
-      amount: initialDeposit,
-      balanceAfter: initialDeposit,
-      description: 'Mandatory Partner Security Deposit (₹2,000 Non-withdrawable Base Reserve)',
-      timestamp: new Date().toISOString()
-    };
-    setWalletTransactions(prev => [initialTxn, ...prev]);
-
-    setTechnicians(prev => [newTech, ...prev]);
-    setCurrentTechnician(newTech);
-    setIsTechnicianLoggedIn(true);
-
-    // Sync to Firestore
-    try {
-      setDoc(doc(db, 'technicians', newTech.id), newTech).catch(err => {
-        console.warn('Firestore technician sync (offline/rules):', err);
-      });
-      setDoc(doc(db, 'wallet_transactions', initialTxn.id), initialTxn).catch(err => {
-        console.warn('Firestore transaction sync:', err);
-      });
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
-    const userObj: AppUser = {
-      uid: newTech.id,
-      phoneNumber: params.phoneNumber,
-      displayName: params.displayName,
-      email: params.email,
-      role: 'technician',
-      trades: params.trades,
-      experienceYears: params.experienceYears,
-      qualificationType: qualType,
-      qualificationRegNumber: qualReg,
-      qualificationInstitute: qualInst,
-      approvalStatus: 'pending_audit',
-      kycDocType: params.kycDocType,
-      kycDocNumber: params.kycDocNumber,
-      isVerified: false,
-      upiId: params.upiId,
-      city: params.city,
-      address: params.address,
-      createdAt: new Date().toISOString()
-    };
-
-    setCurrentUser(userObj);
-    setIsAuthenticated(true);
-
-    if (params.rememberMe) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(userObj));
-      } catch {
-        // ignore
-      }
-    }
-
-    return { success: true };
   };
 
   const logoutUser = () => {
