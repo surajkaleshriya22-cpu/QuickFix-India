@@ -35,7 +35,7 @@ fun TechnicianScreen(
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
-    val myBookings = bookings.filter { it.technicianName == "Ramesh Kumar" || it.technicianName == null }
+    val myBookings = bookings
 
     Scaffold(
         topBar = {
@@ -55,7 +55,7 @@ fun TechnicianScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "ONLINE",
+                                    "PARTNER PORTAL",
                                     color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
@@ -64,7 +64,7 @@ fun TechnicianScreen(
                             }
                         }
                         Text(
-                            "Ramesh Kumar • Electrician Specialist",
+                            "Signed-in partner account",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
                         )
@@ -112,7 +112,7 @@ fun TechnicianScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                "QuickFix Certified Electrician",
+                                "Trade Verification Status",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = DeepNavy
@@ -122,7 +122,7 @@ fun TechnicianScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "VERIFIED",
+                                    "NOT VERIFIED",
                                     color = Color(0xFF166534),
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold,
@@ -131,7 +131,7 @@ fun TechnicianScreen(
                             }
                         }
                         Text(
-                            "ITI Trade Certificate • ITI-KA-EL-2016-8812 • 8 Yrs Exp",
+                            "Your submitted trade and KYC details will appear here after registration and review.",
                             fontSize = 11.sp,
                             color = Color(0xFF1E40AF),
                             fontWeight = FontWeight.Medium
