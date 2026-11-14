@@ -682,113 +682,22 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   };
 
-  const updateServiceZoneRadius = (zoneId: string, newRadiusKm: number): { success: boolean; message: string } => {
-    setServiceZones(prev =>
-      prev.map(z => {
-        if (z.id === zoneId) {
-          const updated = {
-            ...z,
-            radiusKm: newRadiusKm,
-            ...calculateBoundingBox(z.center.lat, z.center.lng, newRadiusKm)
-          };
-          setDoc(doc(db, 'service_zones', zoneId), updated, { merge: true }).catch(err => console.warn(err));
-          return updated;
-        }
-        return z;
-      })
-    );
-    return { success: true, message: `Operating radius updated to ${newRadiusKm} km.` };
+  const updateServiceZoneRadius = (_zoneId: string, _newRadiusKm: number): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Service-zone radius changes require trusted server-side admin authorization. No zone setting was changed.'
+  });
+
+  const toggleServiceZoneActive = (_zoneId: string): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Service-zone changes require trusted server-side admin authorization. No zone setting was changed.'
+  });
+
+  const approveTechnicianQualification = (_techId: string) => {
+    console.warn('KYC approval is disabled: document review and server-side admin authorization are not configured. No partner was verified.');
   };
 
-  const toggleServiceZoneActive = (zoneId: string): { success: boolean; message: string } => {
-    let nextState = false;
-    setServiceZones(prev =>
-      prev.map(z => {
-        if (z.id === zoneId) {
-          nextState = !z.isActive;
-          const updated = { ...z, isActive: nextState };
-          setDoc(doc(db, 'service_zones', zoneId), updated, { merge: true }).catch(err => console.warn(err));
-          return updated;
-        }
-        return z;
-      })
-    );
-    return { success: true, message: `Service zone status toggled.` };
-  };
-
-  const approveTechnicianQualification = (techId: string) => {
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === techId
-          ? {
-              ...t,
-              isVerified: true,
-              approvalStatus: 'approved',
-              rejectionReason: undefined
-            }
-          : t
-      )
-    );
-    if (currentTechnician.id === techId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        isVerified: true,
-        approvalStatus: 'approved',
-        rejectionReason: undefined
-      }));
-    }
-    if (currentUser && currentUser.uid === techId) {
-      const updated: AppUser = {
-        ...currentUser,
-        isVerified: true,
-        approvalStatus: 'approved'
-      };
-      setCurrentUser(updated);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  const rejectTechnicianQualification = (techId: string, reason?: string) => {
-    const rejectionNote = reason || 'Trade qualification certificate could not be validated with state/NSDC register.';
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === techId
-          ? {
-              ...t,
-              isVerified: false,
-              isOnline: false,
-              approvalStatus: 'rejected',
-              rejectionReason: rejectionNote
-            }
-          : t
-      )
-    );
-    if (currentTechnician.id === techId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        isVerified: false,
-        isOnline: false,
-        approvalStatus: 'rejected',
-        rejectionReason: rejectionNote
-      }));
-    }
-    if (currentUser && currentUser.uid === techId) {
-      const updated: AppUser = {
-        ...currentUser,
-        isVerified: false,
-        approvalStatus: 'rejected'
-      };
-      setCurrentUser(updated);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-    }
+  const rejectTechnicianQualification = (_techId: string, _reason?: string) => {
+    console.warn('KYC rejection is disabled until trusted server-side admin authorization and an audit trail are configured. No partner record changed.');
   };
 
   const approveTechnicianKyc = (techId: string) => {
@@ -843,12 +752,12 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Commission & Payouts & Admin Payment Control
-  const updateCommissionSettings = (newSettings: Partial<CommissionSettings>) => {
-    setCommissionSettings(prev => ({ ...prev, ...newSettings }));
+  const updateCommissionSettings = (_newSettings: Partial<CommissionSettings>) => {
+    console.warn('Commission changes are disabled: trusted server-side admin authorization and audit logging are not configured. No settings changed.');
   };
 
-  const updateAdminPaymentConfig = (config: Partial<AdminMasterPaymentConfig>) => {
-    setAdminPaymentConfig(prev => ({ ...prev, ...config }));
+  const updateAdminPaymentConfig = (_config: Partial<AdminMasterPaymentConfig>) => {
+    console.warn('Payment configuration changes are disabled until a trusted server-side admin workflow is deployed. No settings changed.');
   };
 
   // Technician requests payout -> Held in Admin Escrow awaiting Admin Approval
