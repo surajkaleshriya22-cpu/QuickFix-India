@@ -10,7 +10,7 @@ interface ServiceBookingSheetProps {
   onSuccess: (bookingId: string) => void;
 }
 
-export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
+export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose }) => {
   const { customer, currentCity, commissionSettings } = useQuickFix();
 
   const [selectedDate, setSelectedDate] = useState('Today');
@@ -28,7 +28,6 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('upi');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isRecordingNote, setIsRecordingNote] = useState(false);
   const [isTranscribingNote, setIsTranscribingNote] = useState(false);
@@ -107,7 +106,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   // Do not simulate a successful booking before the trusted backend exists.
   const handleConfirm = () => {
-    window.alert('Online booking is temporarily unavailable while QuickFix completes secure booking setup. No booking has been created and no payment has been taken. Please try again later.');
+    window.alert(`Online booking is temporarily unavailable while QuickFix completes secure booking setup. Your selected payment option is ${paymentMethod.toUpperCase()}. No booking has been created and no payment has been taken. Please try again later.`);
   };
 
   return (
