@@ -27,6 +27,8 @@ service cloud.firestore {
       allow list: if isAdmin();
 
       allow create: if isOwner(userId)
+        && request.auth.token.phone_number != null
+        && request.resource.data.phoneNumber == request.auth.token.phone_number
         && request.resource.data.uid == userId
         && request.resource.data.role in ['CUSTOMER', 'TECHNICIAN']
         && request.resource.data.isVerified == false
@@ -71,6 +73,7 @@ service cloud.firestore {
     // They cannot assign a technician, issue a start OTP, or mark a payment as paid.
     match /bookings/{bookingId} {
       allow create: if signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'CUSTOMER'
         && request.resource.data.customerUid == request.auth.uid
         && request.resource.data.status == 'requested'
         && request.resource.data.startOtp == ''
