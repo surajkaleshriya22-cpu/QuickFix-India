@@ -45,9 +45,6 @@ fun AdminLoginScreen(
 
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var passcode by remember { mutableStateOf("") }
-    var token2FA by remember { mutableStateOf("") }
-    var showPasscode by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
     var localError by remember { mutableStateOf<String?>(null) }
     var failedCount by remember { mutableStateOf(0) }
@@ -224,54 +221,18 @@ fun AdminLoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
             )
 
-            OutlinedTextField(
-                value = passcode,
-                onValueChange = {
-                    passcode = it
-                    localError = null
-                },
-                label = { Text("Master Security Passcode") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
-                trailingIcon = {
-                    IconButton(onClick = { showPasscode = !showPasscode }) {
-                        Icon(
-                            if (showPasscode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = "Toggle Passcode",
-                            tint = Color(0xFF64748B)
-                        )
-                    }
-                },
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = if (showPasscode) VisualTransformation.None else PasswordVisualTransformation(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BrandBlue,
-                    unfocusedBorderColor = Slate800,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedLabelColor = BrandBlueLight,
-                    unfocusedLabelColor = Color(0xFF94A3B8)
-                ),
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = token2FA,
-                onValueChange = { token2FA = it },
-                label = { Text("Firebase Admin Verification") },
-                leadingIcon = { Icon(Icons.Default.Fingerprint, contentDescription = null, tint = Color(0xFF10B981)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF10B981),
-                    unfocusedBorderColor = Slate800,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedLabelColor = Color(0xFF34D399),
-                    unfocusedLabelColor = Color(0xFF94A3B8)
-                ),
-                singleLine = true
-            )
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFF1E293B)
+            ) {
+                Text(
+                    "Admin access is verified using Firebase Authentication and a server-issued admin claim. Static passcodes and PINs are not accepted.",
+                    color = Color(0xFFBFDBFE),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
 
             // Remember Me
             Row(
@@ -321,7 +282,7 @@ fun AdminLoginScreen(
                     localError = null
                     authViewModel.verifyAdminPasscode(
                         email = cleanEmail,
-                        passcode = passcode,
+                        passcode = "",
                         phone = phone,
                         onSuccess = {
                             navController.navigate("admin_dashboard") {
