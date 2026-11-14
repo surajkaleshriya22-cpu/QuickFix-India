@@ -738,19 +738,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
             <form onSubmit={handleVerifyAndComplete} className="space-y-4 text-xs">
               <div className="text-center py-2 space-y-1">
                 <p className="text-slate-600">
-                  Enter the 4-digit code sent via Firebase SMS Gateway:
+                  Enter the 6-digit code sent via Firebase SMS Gateway:
                 </p>
                 <div className="py-2">
                   <input
                     type="text"
-                    maxLength={4}
+                    maxLength={6}
+                    inputMode="numeric"
                     value={enteredOtp}
                     onChange={e => setEnteredOtp(e.target.value)}
                     className="w-36 mx-auto text-center font-mono tracking-widest text-2xl font-extrabold py-2 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-xs"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Demonstration verification OTP: <strong className="text-blue-600 font-mono">4821</strong>
+                  Use the 6-digit code received by SMS. Never share your OTP with anyone.
                 </p>
               </div>
 
@@ -773,8 +774,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                 <button
                   type="button"
                   onClick={() => {
-                    setEnteredOtp('4821');
-                    setCountdown(30);
+                    setFormError('To request a new code, return to the phone number step and request OTP again.');
+                    setIsOtpStep(false);
                   }}
                   className="text-slate-600 hover:text-slate-900 flex items-center gap-1"
                 >
