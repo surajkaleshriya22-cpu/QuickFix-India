@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getIdTokenResult } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import {
   Shield,
   Lock,
@@ -28,9 +30,6 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
 
   const [adminEmail, setAdminEmail] = useState('surajkaleshriya22@gmail.com');
   const [adminPhone, setAdminPhone] = useState('+91 98000 12345');
-  const [adminPasscode, setAdminPasscode] = useState('');
-  const [securityPin2FA, setSecurityPin2FA] = useState('992211');
-  const [showPasscode, setShowPasscode] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -50,7 +49,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
     return () => clearInterval(timer);
   }, [lockoutTimer]);
 
-  const handleAdminLogin = (e?: React.FormEvent) => {
+  const handleAdminLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
@@ -60,57 +59,44 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
       return;
     }
 
-    // Step 1: Whitelist Verification
-    if (!isAuthorizedAdminEmail(adminEmail)) {
-      const nextFail = failedAttempts + 1;
-      setFailedAttempts(nextFail);
-      if (nextFail >= 3) {
-        setLockoutTimer(60);
-      }
-      setErrorMessage(
-        `⛔ ACCESS DENIED: The account "${adminEmail}" is not on the QuickFix Super Admin Whitelist. Customers and Technicians are strictly prohibited from logging into this console.`
-      );
-      return;
-    }
-
-    // Step 2: Passcode Verification
-    if (adminPasscode.trim() !== 'ADMIN2026') {
-      const nextFail = failedAttempts + 1;
-      setFailedAttempts(nextFail);
-      if (nextFail >= 3) {
-        setLockoutTimer(60);
-      }
-      setErrorMessage('Invalid Master Security Passcode. Access attempt logged.');
-      return;
-    }
-
-    // Step 3: Dual-Factor Security PIN
-    if (securityPin2FA.trim() !== '992211') {
-      setErrorMessage('Invalid 2FA Security Token / PIN.');
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setErrorMessage('Admin sign-in required: first sign in through Firebase Authentication.');
       return;
     }
 
     setIsLoading(true);
-    setErrorMessage('');
-    setSuccessMessage('Credentials & Whitelist verified. Establishing encrypted Admin session...');
+    try {
+      const tokenResult = await getIdTokenResult(firebaseUser, true);
+      const tokenEmail = (tokenResult.claims.email as string | undefined) || firebaseUser.email || '';
+      const emailMatches = tokenEmail.trim().toLowerCase() === adminEmail.trim().toLowerCase();
+      if (tokenResult.claims.admin !== true || !emailMatches || !isAuthorizedAdminEmail(tokenEmail)) {
+        const nextFail = failedAttempts + 1;
+        setFailedAttempts(nextFail);
+        if (nextFail >= 3) setLockoutTimer(60);
+        setErrorMessage('Access denied. This signed-in Firebase account does not have the required administrator custom claim.');
+        return;
+      }
 
-    setTimeout(() => {
       const result = authenticateUser({
-        displayName: adminEmail.includes('suraj') ? 'Suraj (Super Admin Owner)' : 'QuickFix HQ Admin',
-        phoneNumber: adminPhone,
-        email: adminEmail,
+        displayName: firebaseUser.displayName || tokenEmail,
+        phoneNumber: firebaseUser.phoneNumber || adminPhone,
+        email: tokenEmail,
         role: 'admin',
         city: 'Bengaluru',
-        address: 'QuickFix Operations Hub, HSR Layout, Bengaluru - 560102',
-        rememberMe: rememberMe
+        rememberMe: false
       });
 
-      setIsLoading(false);
-
       if (!result.success) {
-        setErrorMessage(result.message || 'Authentication rejected by security policy.');
+        setErrorMessage(result.message || 'Admin authentication was rejected.');
+        return;
       }
-    }, 500);
+      setSuccessMessage('Firebase administrator identity verified.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Firebase admin verification failed.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -206,51 +192,8 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
             </div>
           </div>
 
-          {/* Passcode Field */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-semibold text-slate-300">
-                Master Security Passcode
-              </label>
-              <span className="text-[10px] text-blue-400 font-mono">Passcode: ADMIN2026</span>
-            </div>
-            <div className="relative">
-              <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-              <input
-                type={showPasscode ? 'text' : 'password'}
-                required
-                value={adminPasscode}
-                onChange={e => setAdminPasscode(e.target.value)}
-                placeholder="Enter ADMIN2026"
-                className="w-full pl-9 pr-10 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPasscode(!showPasscode)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
-              >
-                {showPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* 2FA Security Token */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
-                <span>2FA Security Token / PIN</span>
-              </label>
-              <span className="text-[10px] text-emerald-400 font-mono">PIN: 992211</span>
-            </div>
-            <input
-              type="text"
-              required
-              value={securityPin2FA}
-              onChange={e => setSecurityPin2FA(e.target.value)}
-              placeholder="Enter 2FA PIN (992211)"
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-            />
+          <div className="rounded-xl border border-blue-900 bg-blue-950/40 p-3 text-[11px] text-blue-200">
+            Admin access is verified by Firebase Authentication and a server-issued admin custom claim. Client-side passcodes and static PINs are not accepted.
           </div>
 
           {/* Remember Me */}
