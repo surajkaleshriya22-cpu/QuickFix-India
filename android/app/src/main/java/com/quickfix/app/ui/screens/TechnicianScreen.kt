@@ -31,11 +31,9 @@ fun TechnicianScreen(
     viewModel: QuickFixViewModel
 ) {
     val bookings by viewModel.bookings.collectAsState()
-    val adminConfig by viewModel.adminPaymentConfig.collectAsState()
 
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
-    var payoutRequested by remember { mutableStateOf(false) }
 
     val myBookings = bookings.filter { it.technicianName == "Ramesh Kumar" || it.technicianName == null }
 
@@ -142,52 +140,24 @@ fun TechnicianScreen(
                 }
             }
 
-            // Earnings Card
+            // Wallet and payouts remain unavailable until a trusted server ledger
+            // and payment provider are connected. Do not display sample balances.
             Card(
                 colors = CardDefaults.cardColors(containerColor = DeepNavy),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            Text("Wallet Balance (Net Share)", fontSize = 11.sp, color = Color(0xFF94A3B8))
-                            Text("₹1,450", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = Color.White)
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.requestTechnicianPayout("tech-1", "Ramesh Kumar", 1450, "ramesh.electric@okaxis")
-                                payoutRequested = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Request Payout", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Admin Escrow Explanatory Notice
-                    Surface(
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Payout Notice: All withdrawals are routed via QuickFix Admin HQ (${adminConfig.masterUpiVpa}). Funds are held in Admin Escrow and released after manual admin clearance.",
-                            color = Color(0xFFCBD5E1),
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-
-                    if (payoutRequested) {
-                        Text(
-                            "✓ Payout request submitted to Admin Escrow awaiting approval.",
-                            color = Color(0xFF34D399),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Partner Wallet", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Text("Wallet balance unavailable", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
+                    Text(
+                        "Top-ups and withdrawals will be enabled after secure server-side ledger and payment-provider integration. No demo balance or payout confirmation is shown.",
+                        color = Color(0xFFCBD5E1),
+                        fontSize = 11.sp
+                    )
                 }
             }
 
