@@ -36,7 +36,7 @@ import {
   calculateHaversineDistanceKm,
   updateTechnicianFirestoreStatus
 } from '../services/geofenceService';
-import { db, testFirestoreConnection } from '../lib/firebase';
+import { auth, db, testFirestoreConnection } from '../lib/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { getIdTokenResult } from 'firebase/auth';
 
