@@ -45,10 +45,10 @@ fun AuthScreen(
     var isSignUp by remember { mutableStateOf(false) }
 
     // Customer / Common Fields
-    var phone by remember { mutableStateOf("9845199221") }
-    var displayName by remember { mutableStateOf("Ananya Deshmukh") }
-    var email by remember { mutableStateOf("ananya.deshmukh@gmail.com") }
-    var address by remember { mutableStateOf("Flat 402, Sai Silver Woods, Koramangala 4th Block") }
+    var phone by remember { mutableStateOf("") }
+    var displayName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("Bengaluru") }
     var rememberMe by remember { mutableStateOf(true) }
 
@@ -56,14 +56,14 @@ fun AuthScreen(
     var tradeElectrician by remember { mutableStateOf(true) }
     var tradePlumber by remember { mutableStateOf(false) }
     var experienceYears by remember { mutableStateOf("7") }
-    var kycNumber by remember { mutableStateOf("SIC-EL-2019-8812") }
-    var upiId by remember { mutableStateOf("ramesh.partner@okaxis") }
+    var kycNumber by remember { mutableStateOf("") }
+    var upiId by remember { mutableStateOf("") }
 
     // Admin specific
-    var adminPasscode by remember { mutableStateOf("ADMIN2026") }
+    var adminPasscode by remember { mutableStateOf("") }
 
     // OTP
-    var otpCode by remember { mutableStateOf("4821") }
+    var otpCode by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
