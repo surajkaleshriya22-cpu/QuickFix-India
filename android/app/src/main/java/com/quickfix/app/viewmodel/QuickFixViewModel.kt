@@ -626,18 +626,9 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun requestTechnicianPayout(techId: String, techName: String, amount: Int, upiId: String) {
-        val newPayout = PayoutRecord(
-            id = "PAY-" + (9040 + _payouts.value.size + 1),
-            technicianId = techId,
-            technicianName = techName,
-            amount = amount,
-            status = "pending_approval",
-            requestedAt = "Just now",
-            adminApprovalStatus = "pending",
-            adminNote = "Held in QuickFix Admin Escrow awaiting HQ release",
-            upiId = upiId
-        )
-        _payouts.value = listOf(newPayout) + _payouts.value
+        // Deliberately fail closed: a client must not create a payout or debit a
+        // wallet without the trusted backend ledger and payment-provider workflow.
+        _firestoreSyncStatus.value = "Payouts unavailable: secure payment backend is not configured."
     }
 
     fun triggerFirestoreSync() {
