@@ -1238,9 +1238,18 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking) return { success: false, message: 'Booking not found' };
 
-    if (newStatus === 'in_progress' && otpProvided) {
-      if (otpProvided.trim() !== booking.startOtp) {
-        return { success: false, message: 'Invalid start OTP. Please ask the customer for the 4-digit code.' };
+    // Partner lifecycle transitions must be performed by a trusted server.
+    // Client-side wallet deductions, OTP checks, and payment settlement are not authoritative.
+    if (newStatus === 'technician_en_route' || newStatus === 'in_progress' || newStatus === 'completed') {
+      return {
+        success: false,
+        message: 'This booking action is temporarily unavailable until secure server-side booking, OTP, and wallet processing is deployed. No booking status or funds were changed.'
+      };
+    }
+
+    if (newStatus === 'in_progress') {
+      if (!otpProvided || otpProvided.trim().length !== 4 || otpProvided.trim() !== booking.startOtp) {
+        return { success: false, message: 'A valid 4-digit customer start OTP is required. No booking status was changed.' };
       }
     }
 
@@ -1347,9 +1356,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const updated: Booking = {
           ...b,
           status: newStatus,
-          paymentStatus: newStatus === 'completed' ? 'paid' : b.paymentStatus,
-          cashCommissionDeducted: newStatus === 'completed' && b.paymentMethod === 'cash' ? true : b.cashCommissionDeducted,
-          paidAt: newStatus === 'completed' ? (b.paidAt || now) : b.paidAt
+          paymentStatus: b.paymentStatus,
+          cashCommissionDeducted: b.cashCommissionDeducted,
+          paidAt: b.paidAt
         };
         return updated;
       })
