@@ -19,6 +19,9 @@ class AuthRepository(
     val currentUserUid: String?
         get() = auth.currentUser?.uid
 
+    val currentUserEmail: String?
+        get() = auth.currentUser?.email
+
     val isUserLoggedIn: Boolean
         get() = auth.currentUser != null
 
