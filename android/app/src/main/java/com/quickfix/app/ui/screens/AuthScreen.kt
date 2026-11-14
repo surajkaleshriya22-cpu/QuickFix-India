@@ -195,7 +195,7 @@ fun AuthScreen(
                         Button(
                             onClick = {
                                 val pendingUser = User(
-                                    phoneNumber = "+91 $phone",
+                                    phoneNumber = "+91${phone.filter { it.isDigit() }}",
                                     displayName = displayName,
                                     email = email,
                                     role = selectedRole,
