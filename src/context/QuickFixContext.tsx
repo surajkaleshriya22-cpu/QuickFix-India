@@ -214,38 +214,19 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedCategory, setSelectedCategory] = useState<'all' | ServiceCategoryType>('all');
 
   // Unified Firebase Auth Session state
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_AUTH_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // ignore
-    }
-    return {
-      uid: 'user-default-101',
-      phoneNumber: '+91 98451 99221',
-      displayName: 'Ananya Deshmukh',
-      email: 'ananya.deshmukh@gmail.com',
-      role: 'customer',
-      address: 'Flat 402, Sai Silver Woods, 5th Cross, Koramangala 4th Block',
-      city: 'Bengaluru',
-      pincode: '560034',
-      createdAt: '2026-11-03T08:00:00Z'
-    };
-  });
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  // Local storage is not an authentication authority. Sessions must be re-established
+  // by Firebase Authentication; in particular, never restore a client-stored admin role.
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   // Customer State
   const [customer, setCustomer] = useState<CustomerUser>(CURRENT_CUSTOMER);
-  const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(true);
+  const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false);
 
   // Technicians State
   const [technicians, setTechnicians] = useState<Technician[]>(INITIAL_TECHNICIANS);
   const [currentTechnician, setCurrentTechnician] = useState<Technician>(INITIAL_TECHNICIANS[0]);
-  const [isTechnicianLoggedIn, setIsTechnicianLoggedIn] = useState(true);
+  const [isTechnicianLoggedIn, setIsTechnicianLoggedIn] = useState(false);
 
   // Commissions & Payouts & Admin Gateway Control
   const [commissionSettings, setCommissionSettings] = useState<CommissionSettings>(INITIAL_COMMISSION_SETTINGS);
