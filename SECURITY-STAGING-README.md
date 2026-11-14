@@ -23,8 +23,7 @@ From a PC with Firebase CLI installed and signed in:
 
 ```bash
 firebase login
-firebase use quickfix-india
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules --project quickfix-india
 ```
 
 The root `firebase.json` points Firebase CLI to `firestore.rules`. Check the Firebase Console after deployment and confirm the published rules match this file.
