@@ -33,7 +33,7 @@ import {
 } from '../services/geofenceService';
 import { auth, db, testFirestoreConnection } from '../lib/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import { getIdTokenResult, User as FirebaseUser } from 'firebase/auth';
+import { getIdTokenResult, signOut, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
   // Role & View Mode
@@ -87,7 +87,7 @@ interface QuickFixContextType {
     initialDepositAmount?: number;
     rememberMe: boolean;
   }) => { success: boolean; message?: string };
-  logoutUser: () => void;
+  logoutUser: () => Promise<void>;
   updateCustomerAddress: (newAddr: {
     label: 'Home' | 'Work' | 'Other';
     addressLine: string;
@@ -448,15 +448,22 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     message: 'Channel Partner registration is temporarily unavailable until secure Firebase identity, KYC review, and verified ₹2,000 deposit processing are deployed. No account or deposit was created.'
   });
 
-  const logoutUser = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    setIsCustomerLoggedIn(false);
-    setIsTechnicianLoggedIn(false);
+  const logoutUser = async (): Promise<void> => {
     try {
-      localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
-    } catch {
-      // ignore
+      await signOut(auth);
+    } catch (error) {
+      console.warn('Firebase sign-out failed:', error);
+      throw error;
+    } finally {
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setIsCustomerLoggedIn(false);
+      setIsTechnicianLoggedIn(false);
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
+      } catch {
+        // ignore
+      }
     }
   };
 
