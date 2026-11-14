@@ -31,6 +31,18 @@ service cloud.firestore {
         && request.resource.data.phoneNumber == request.auth.token.phone_number
         && request.resource.data.uid == userId
         && request.resource.data.role in ['CUSTOMER', 'TECHNICIAN']
+        && (
+          request.resource.data.role == 'CUSTOMER'
+          || (
+            request.resource.data.role == 'TECHNICIAN'
+            && request.resource.data.experienceYears is int
+            && request.resource.data.experienceYears >= 2
+            && request.resource.data.trades is list
+            && request.resource.data.trades.size() > 0
+            && request.resource.data.kycDocNumber is string
+            && request.resource.data.kycDocNumber.size() > 0
+          )
+        )
         && request.resource.data.isVerified == false
         && request.resource.data.keys().hasOnly([
           'uid',
