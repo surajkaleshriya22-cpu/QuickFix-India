@@ -37,7 +37,7 @@ import {
   calculateHaversineDistanceKm,
   updateTechnicianFirestoreStatus
 } from '../services/geofenceService';
-import { db } from '../lib/firebase';
+import { db, testFirestoreConnection } from '../lib/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 interface QuickFixContextType {
@@ -961,201 +961,26 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Technician requests payout -> Held in Admin Escrow awaiting Admin Approval
   // Strict Enforcement: Cannot withdraw the mandatory ₹2,000 security reserve. Can ONLY withdraw amount above ₹2,000!
-  const requestPayout = (technicianId: string, amount: number): { success: boolean; message: string } => {
-    const tech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
-    if (!tech) return { success: false, message: 'Technician record not found' };
-
-    const currentBalance = tech.walletBalance ?? 0;
-    const withdrawable = Math.max(0, currentBalance - 2000);
-
-    if (amount <= 0) {
-      return { success: false, message: 'Please enter a valid withdrawal amount greater than ₹0.' };
-    }
-
-    if (currentBalance < 2000) {
-      return {
-        success: false,
-        message: `Withdrawal Denied: Wallet balance (₹${currentBalance}) is below the mandatory ₹2,000 security reserve. Please top-up to maintain minimum balance.`
-      };
-    }
-
-    if (amount > withdrawable) {
-      return {
-        success: false,
-        message: `Withdrawal Limit Exceeded: The base ₹2,000 security deposit is non-withdrawable. You can only withdraw earnings exceeding ₹2,000. Maximum withdrawable right now: ₹${withdrawable}.`
-      };
-    }
-
-    const newPayout: PayoutRecord = {
-      id: `PAY-${Date.now().toString().slice(-4)}`,
-      technicianId,
-      technicianName: tech.name,
-      amount,
-      upiId: tech.bankAccount.upiId,
-      status: 'pending',
-      adminApprovalStatus: 'pending_approval',
-      adminNote: 'Withdrawal requested by partner. Amount reserved from wallet. Awaiting Admin clearance.',
-      requestedAt: new Date().toISOString(),
-      referenceNumber: `REQ-PAY-${technicianId.slice(-4)}-${Date.now().toString().slice(-6)}`
-    };
-
-    const newTxn: WalletTransaction = {
-      id: `TXN-W${Date.now().toString().slice(-6)}`,
-      technicianId,
-      type: 'withdrawal',
-      amount,
-      balanceAfter: currentBalance - amount,
-      description: `Payout request of ₹${amount} submitted (reserved from wallet for UPI: ${tech.bankAccount.upiId})`,
-      timestamp: new Date().toISOString()
-    };
-
-    setPayouts(prev => [newPayout, ...prev]);
-    setWalletTransactions(prev => [newTxn, ...prev]);
-
-    const updatedWallet = currentBalance - amount;
-    const updatedWithdrawable = Math.max(0, updatedWallet - 2000);
-
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === technicianId
-          ? {
-              ...t,
-              walletBalance: updatedWallet,
-              withdrawableBalance: updatedWithdrawable,
-              securityDepositPaid: updatedWallet >= 2000,
-              pendingPayout: Math.max(0, t.pendingPayout - amount)
-            }
-          : t
-      )
-    );
-
-    if (currentTechnician.id === technicianId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        walletBalance: updatedWallet,
-        withdrawableBalance: updatedWithdrawable,
-        securityDepositPaid: updatedWallet >= 2000,
-        pendingPayout: Math.max(0, prev.pendingPayout - amount)
-      }));
-    }
-
-    // Sync payout request and transaction to Firestore
-    try {
-      setDoc(doc(db, 'payouts', newPayout.id), newPayout).catch(err => {
-        console.warn('Firestore payout sync:', err);
-      });
-      setDoc(doc(db, 'wallet_transactions', newTxn.id), newTxn).catch(err => {
-        console.warn('Firestore transaction sync:', err);
-      });
-      updateDoc(doc(db, 'technicians', technicianId), {
-        walletBalance: updatedWallet,
-        withdrawableBalance: updatedWithdrawable,
-        securityDepositPaid: updatedWallet >= 2000
-      }).catch(err => {
-        console.warn('Firestore tech balance sync:', err);
-      });
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
+  const requestPayout = (_technicianId: string, _amount: number): { success: boolean; message: string } => {
     return {
-      success: true,
-      message: `Payout request for ₹${amount} submitted! Amount reserved from wallet (₹2,000 security reserve preserved). Awaiting Admin HQ review.`
+      success: false,
+      message: 'Payout requests are temporarily disabled until the secure server-side wallet ledger and payment provider are configured. No funds have been reserved or transferred.'
     };
   };
 
-  // Top-up Technician Wallet (to fulfill or restore the ₹2,000 minimum reserve)
-  const topupTechnicianWallet = (technicianId: string, amount: number): { success: boolean; message: string } => {
-    if (amount <= 0) return { success: false, message: 'Invalid top-up amount' };
-    const tech = technicians.find(t => t.id === technicianId) || (currentTechnician.id === technicianId ? currentTechnician : null);
-    if (!tech) return { success: false, message: 'Technician record not found' };
-
-    const currentBal = tech.walletBalance ?? 0;
-    const newBalance = currentBal + amount;
-    const isDepositMet = newBalance >= 2000;
-    const newWithdrawable = Math.max(0, newBalance - 2000);
-
-    const newTxn: WalletTransaction = {
-      id: `TXN-W${Date.now().toString().slice(-6)}`,
-      technicianId,
-      type: currentBal < 2000 && isDepositMet ? 'security_deposit' : 'topup',
-      amount,
-      balanceAfter: newBalance,
-      description: `Technician Wallet Top-up via Fast UPI (+₹${amount})`,
-      timestamp: new Date().toISOString()
-    };
-
-    setWalletTransactions(prev => [newTxn, ...prev]);
-
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === technicianId
-          ? {
-              ...t,
-              walletBalance: newBalance,
-              securityDepositPaid: isDepositMet,
-              withdrawableBalance: newWithdrawable
-            }
-          : t
-      )
-    );
-
-    if (currentTechnician.id === technicianId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        walletBalance: newBalance,
-        securityDepositPaid: isDepositMet,
-        withdrawableBalance: newWithdrawable
-      }));
-    }
-
+  const topupTechnicianWallet = (_technicianId: string, _amount: number): { success: boolean; message: string } => {
     return {
-      success: true,
-      message: `₹${amount} added successfully to partner wallet! Balance: ₹${newBalance} (Withdrawable: ₹${newWithdrawable})`
+      success: false,
+      message: 'Wallet top-ups are not enabled yet. Connect a verified payment provider and server-side ledger first. No wallet balance has been changed.'
     };
   };
 
   // Admin approves payout: marks as 'processing' awaiting payment provider webhook confirmation
   // CRITICAL: Does NOT mark settled immediately and does NOT generate fake UTRs
-  const adminApprovePayout = (payoutId: string): { success: boolean; message: string } => {
-    const target = payouts.find(p => p.id === payoutId);
-    if (!target) return { success: false, message: 'Payout record not found' };
-    if (target.status === 'settled') {
-      return { success: false, message: 'Payout is already settled.' };
-    }
-
-    const approvedAt = new Date().toISOString();
-    const updatedPayout: PayoutRecord = {
-      ...target,
-      status: 'processing',
-      adminApprovalStatus: 'approved_and_released',
-      adminApprovedBy: currentUser?.email || 'HQ Admin Finance Operations',
-      adminApprovedAt: approvedAt,
-      adminNote: `Approved by Admin HQ. Queued for payment gateway dispatch. Awaiting verified payment-provider webhook confirmation.`,
-      payoutProvider: adminPaymentConfig?.gatewayProvider || 'Payment Gateway'
-    };
-
-    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
-
-    // Sync to Firestore
-    try {
-      updateDoc(doc(db, 'payouts', payoutId), {
-        status: 'processing',
-        adminApprovalStatus: 'approved_and_released',
-        adminApprovedBy: updatedPayout.adminApprovedBy,
-        adminApprovedAt: approvedAt,
-        adminNote: updatedPayout.adminNote,
-        payoutProvider: updatedPayout.payoutProvider
-      }).catch(err => console.warn('Firestore payout approval sync:', err));
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
-    return {
-      success: true,
-      message: `Payout #${payoutId} approved by Admin! State updated to Processing. Awaiting payment-provider webhook confirmation to mark settled.`
-    };
-  };
+  const adminApprovePayout = (_payoutId: string): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Payout release is disabled until a trusted server-side payment integration is deployed. No payout was approved or sent.'
+  });
 
   const adminHoldPayout = (payoutId: string, reason: string): { success: boolean; message: string } => {
     const target = payouts.find(p => p.id === payoutId);
@@ -1184,166 +1009,29 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Admin rejects payout: strictly restores the reserved amount to the technician's wallet balance
-  const adminRejectPayout = (payoutId: string, reason: string): { success: boolean; message: string } => {
-    const target = payouts.find(p => p.id === payoutId);
-    if (!target) return { success: false, message: 'Payout record not found' };
-    if (target.status === 'rejected') {
-      return { success: false, message: 'Payout has already been rejected.' };
-    }
-    if (target.status === 'settled') {
-      return { success: false, message: 'Cannot reject a payout that is already settled.' };
-    }
-
-    const tech = technicians.find(t => t.id === target.technicianId) || (currentTechnician.id === target.technicianId ? currentTechnician : null);
-    const techBal = tech?.walletBalance ?? 0;
-    const restoredBal = techBal + target.amount;
-    const restoredWithdrawable = Math.max(0, restoredBal - 2000);
-
-    const reversalTxnId = `TXN-REV-${Date.now().toString().slice(-6)}`;
-    const reversalTxn: WalletTransaction = {
-      id: reversalTxnId,
-      technicianId: target.technicianId,
-      type: 'payout_reversal',
-      amount: target.amount,
-      balanceAfter: restoredBal,
-      description: `Payout #${payoutId} rejected by Admin. ₹${target.amount} restored to wallet. Reason: ${reason || 'Admin rejected'}`,
-      timestamp: new Date().toISOString()
-    };
-
-    const updatedPayout: PayoutRecord = {
-      ...target,
-      status: 'rejected',
-      adminApprovalStatus: 'rejected_by_admin',
-      adminNote: reason || 'Disallowed: Quality policy violation or duplicate request',
-      reversalTxnId
-    };
-
-    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
-    setWalletTransactions(prev => [reversalTxn, ...prev]);
-
-    setTechnicians(prev =>
-      prev.map(t =>
-        t.id === target.technicianId
-          ? {
-              ...t,
-              walletBalance: restoredBal,
-              withdrawableBalance: restoredWithdrawable,
-              securityDepositPaid: restoredBal >= 2000
-            }
-          : t
-      )
-    );
-
-    if (currentTechnician.id === target.technicianId) {
-      setCurrentTechnician(prev => ({
-        ...prev,
-        walletBalance: restoredBal,
-        withdrawableBalance: restoredWithdrawable,
-        securityDepositPaid: restoredBal >= 2000
-      }));
-    }
-
-    try {
-      updateDoc(doc(db, 'payouts', payoutId), {
-        status: 'rejected',
-        adminApprovalStatus: 'rejected_by_admin',
-        adminNote: updatedPayout.adminNote,
-        reversalTxnId
-      }).catch(err => console.warn('Firestore payout reject sync:', err));
-
-      setDoc(doc(db, 'wallet_transactions', reversalTxn.id), reversalTxn).catch(err => console.warn('Firestore reversal txn sync:', err));
-
-      updateDoc(doc(db, 'technicians', target.technicianId), {
-        walletBalance: restoredBal,
-        withdrawableBalance: restoredWithdrawable,
-        securityDepositPaid: restoredBal >= 2000
-      }).catch(err => console.warn('Firestore tech balance restore sync:', err));
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
-    return {
-      success: true,
-      message: `Payout #${payoutId} rejected. Reserved amount of ₹${target.amount} has been restored to partner wallet balance.`
-    };
-  };
+  const adminRejectPayout = (_payoutId: string, _reason: string): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Payout rejection and wallet reversal require an atomic server-side ledger transaction. No wallet balance was changed.'
+  });
 
   // Payment Provider Webhook Confirmation: Only this marks payout as 'settled'
   const confirmPayoutSettlementWebhook = (
-    payoutId: string,
-    providerEventId: string,
-    gatewayProvider = 'Verified Payment Webhook'
-  ): { success: boolean; message: string } => {
-    const target = payouts.find(p => p.id === payoutId);
-    if (!target) return { success: false, message: 'Payout record not found' };
-    if (target.status !== 'processing') {
-      return { success: false, message: `Payout must be in processing status to settle. Current status is '${target.status}'.` };
-    }
-
-    const settledAt = new Date().toISOString();
-    const updatedPayout: PayoutRecord = {
-      ...target,
-      status: 'settled',
-      settledAt,
-      providerEventId,
-      payoutProvider: gatewayProvider,
-      webhookConfirmedAt: settledAt,
-      adminNote: `Settled via verified payment-provider webhook (${gatewayProvider}). Provider Ref: ${providerEventId}`
-    };
-
-    setPayouts(prev => prev.map(p => (p.id === payoutId ? updatedPayout : p)));
-
-    try {
-      updateDoc(doc(db, 'payouts', payoutId), {
-        status: 'settled',
-        settledAt,
-        providerEventId,
-        payoutProvider: gatewayProvider,
-        webhookConfirmedAt: settledAt,
-        adminNote: updatedPayout.adminNote
-      }).catch(err => console.warn('Firestore webhook settle sync:', err));
-    } catch (e) {
-      console.warn('Firestore sync err:', e);
-    }
-
-    return {
-      success: true,
-      message: `Payout #${payoutId} verified & settled by payment provider webhook. Provider Ref: ${providerEventId}`
-    };
-  };
+    _payoutId: string,
+    _providerEventId: string,
+    _gatewayProvider = 'Verified Payment Webhook'
+  ): { success: boolean; message: string } => ({
+    success: false,
+    message: 'A browser or Android client cannot verify a payment webhook. Only the server can validate the provider signature and settle a payout.'
+  });
 
   const adminIssueCustomerRefund = (
-    bookingId: string,
-    amount?: number,
-    reason?: string
-  ): { success: boolean; message: string } => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking) return { success: false, message: 'Booking not found' };
-
-    const refundAmount = amount || booking.totalAmount;
-    const refundRef = `REFUND/${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? {
-              ...b,
-              paymentStatus: 'refunded',
-              escrowStatus: 'refunded_to_customer',
-              refundAmount,
-              refundReason: reason || 'Customer refund issued directly from QuickFix Admin Master Account',
-              refundedAt: new Date().toISOString(),
-              transactionRef: refundRef
-            }
-          : b
-      )
-    );
-
-    return {
-      success: true,
-      message: `₹${refundAmount} refunded to ${booking.customerName} from QuickFix Admin Master Account. Ref: ${refundRef}`
-    };
-  };
+    _bookingId: string,
+    _amount?: number,
+    _reason?: string
+  ): { success: boolean; message: string } => ({
+    success: false,
+    message: 'Refunds are disabled until a verified payment-provider refund API and server-side audit trail are configured. No refund was sent.'
+  });
 
   const processPayout = (payoutId: string) => {
     adminApprovePayout(payoutId);
@@ -1777,9 +1465,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Customer Management
   const [customers, setCustomers] = useState<CustomerUser[]>(INITIAL_CUSTOMERS);
   const [firestoreSyncStatus, setFirestoreSyncStatus] = useState({
-    isConnected: true,
-    lastSynced: 'Just now',
-    latencyMs: 38
+    isConnected: false,
+    lastSynced: 'Not checked',
+    latencyMs: 0
   });
 
   const deleteCustomer = (customerId: string) => {
@@ -1857,12 +1545,16 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const triggerFirestoreSync = async () => {
-    setFirestoreSyncStatus(prev => ({ ...prev, latencyMs: 24, lastSynced: 'Syncing...' }));
-    await new Promise(r => setTimeout(r, 600));
+    setFirestoreSyncStatus(prev => ({ ...prev, lastSynced: 'Checking Firestore...', latencyMs: 0 }));
+    const startedAt = performance.now();
+    const connected = await testFirestoreConnection();
+    const latencyMs = Math.round(performance.now() - startedAt);
     setFirestoreSyncStatus({
-      isConnected: true,
-      lastSynced: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      latencyMs: Math.floor(25 + Math.random() * 20)
+      isConnected: connected,
+      lastSynced: connected
+        ? new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : 'Connection failed or access denied',
+      latencyMs: connected ? latencyMs : 0
     });
   };
 
@@ -1881,19 +1573,17 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateBookingPaymentStatus = (bookingId: string, status: PaymentStatus, transactionRef?: string) => {
+    // Payment success/refund states must come from a verified server callback,
+    // never from a client-generated reference or a UI action.
+    if (status === 'paid' || status === 'refunded') {
+      console.warn('Ignored client-side payment state change for booking:', bookingId, transactionRef);
+      return;
+    }
     setBookings(prev =>
-      prev.map(b => {
-        if (b.id === bookingId) {
-          const now = new Date().toISOString();
-          return {
-            ...b,
-            paymentStatus: status,
-            paidAt: status === 'paid' ? (b.paidAt || now) : undefined,
-            transactionRef: transactionRef || b.transactionRef || (status === 'paid' ? `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}` : b.transactionRef)
-          };
-        }
-        return b;
-      })
+      prev.map(b => b.id === bookingId
+        ? { ...b, paymentStatus: status, paidAt: undefined }
+        : b
+      )
     );
   };
 
