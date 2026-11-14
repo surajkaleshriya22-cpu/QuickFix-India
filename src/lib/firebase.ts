@@ -44,10 +44,9 @@ export async function testFirestoreConnection(): Promise<boolean> {
     await getDocFromServer(doc(db, '_quickfix_health', 'ping'));
     return true;
   } catch (err) {
-    if (err instanceof Error && err.message.includes('the client is offline')) {
-      console.warn('Firestore is running in offline cache mode.');
-      return false;
-    }
-    return true;
+    // Permission errors, missing configuration, and network failures must never
+    // be reported as a successful connection.
+    console.warn('Firestore health check failed:', err);
+    return false;
   }
 }
