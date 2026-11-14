@@ -15,7 +15,47 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: '25mb' }));
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '10mb' }));
+
+// Basic per-IP throttling limits accidental or automated Gemini quota exhaustion.
+// This in-memory preview guard is not a substitute for authenticated API access
+// or a shared rate limiter when the service runs across multiple instances.
+const apiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
+const API_WINDOW_MS = 60_000;
+const API_MAX_REQUESTS = 20;
+
+app.use('/api', (req: Request, res: Response, next) => {
+  const now = Date.now();
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
+  const bucket = apiRequestBuckets.get(key);
+
+  if (!bucket || now >= bucket.resetAt) {
+    apiRequestBuckets.set(key, { count: 1, resetAt: now + API_WINDOW_MS });
+    return next();
+  }
+
+  if (bucket.count >= API_MAX_REQUESTS) {
+    res.setHeader('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)));
+    return res.status(429).json({
+      success: false,
+      error: 'RATE_LIMITED',
+      message: 'Too many requests. Please wait a minute and try again.'
+    });
+  }
+
+  bucket.count += 1;
+  return next();
+});
+
+// Remove expired IP buckets so the in-memory preview guard remains bounded.
+const rateLimitCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of apiRequestBuckets) {
+    if (now >= bucket.resetAt) apiRequestBuckets.delete(key);
+  }
+}, API_WINDOW_MS);
+rateLimitCleanupTimer.unref();
 
 // Create Gemini client lazily so the web app can boot before an API key is configured.
 const getAI = () => {
