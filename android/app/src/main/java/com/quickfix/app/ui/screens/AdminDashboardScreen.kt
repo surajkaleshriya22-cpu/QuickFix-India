@@ -96,7 +96,7 @@ fun AdminDashboardScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
                             ) {
                                 Text(
-                                    "LIVE",
+                                    "NOT VERIFIED",
                                     color = Color(0xFF34D399),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -243,7 +243,7 @@ fun OverviewTab(
                         Text(firestoreStatus, color = Color(0xFF93C5FD), fontSize = 11.sp)
                     }
                 }
-                Text("Latency: ~12ms", color = Color(0xFFBAE6FD), fontSize = 11.sp)
+                Text("Live latency not measured", color = Color(0xFFBAE6FD), fontSize = 10.sp)
             }
         }
 
@@ -254,7 +254,7 @@ fun OverviewTab(
             KpiCard(
                 title = "Total Customers",
                 value = totalCustomers.toString(),
-                subtitle = "Active Verified Buyers",
+                subtitle = "Accounts in loaded data",
                 color = BrandBlue,
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.CUSTOMERS) }
@@ -262,7 +262,7 @@ fun OverviewTab(
             KpiCard(
                 title = "Total Bookings",
                 value = totalBookings.toString(),
-                subtitle = "Dispatched Orders",
+                subtitle = "Requests in loaded data",
                 color = Color(0xFF8B5CF6),
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.BOOKINGS) }
@@ -296,7 +296,7 @@ fun OverviewTab(
             modifier = Modifier.fillMaxWidth().clickable { onNavigateToTab(AdminTab.COMMISSIONS) }
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Total Revenue (Gross Merchandise Value)", fontSize = 12.sp, color = TextSecondary)
+                Text("Booking totals (not collected revenue)", fontSize = 12.sp, color = TextSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("₹$totalRevenueGmv", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
 
@@ -310,7 +310,7 @@ fun OverviewTab(
                         Text("₹$totalCommissionCut", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Technician Disbursed", fontSize = 11.sp, color = TextSecondary)
+                        Text("Estimated remainder (not paid out)", fontSize = 11.sp, color = TextSecondary)
                         Text("₹${totalRevenueGmv - totalCommissionCut}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                 }
@@ -549,7 +549,7 @@ fun BookingsTab(
                     Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary)
                     Text("Customer: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
                     Text("Assigned: ${booking.technicianName ?: "Pending Allocation"}", fontSize = 12.sp, color = TextSecondary)
-                    Text("Start OTP: ${booking.startOtp} • Total: ₹${booking.totalAmount}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                    Text("Booking total: ₹${booking.totalAmount}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -587,7 +587,6 @@ fun CommissionsTab(
     var elecPct by remember { mutableStateOf(settings.electricianCommissionPct.toString()) }
     var plumbPct by remember { mutableStateOf(settings.plumberCommissionPct.toString()) }
     var fee by remember { mutableStateOf(settings.convenienceFee.toString()) }
-    var savedMsg by remember { mutableStateOf(false) }
 
     var masterUpi by remember { mutableStateOf(adminConfig.masterUpiVpa) }
     var masterBank by remember { mutableStateOf(adminConfig.receivingBankName) }
@@ -597,8 +596,8 @@ fun CommissionsTab(
     var statusFilter by remember { mutableStateOf("all") } // "all", "paid", "pending", "failed"
     var reportMode by remember { mutableStateOf("daily") } // "daily", "monthly"
 
-    val totalReceived = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.totalAmount }
-    val pendingAmount = bookings.filter { it.status != "completed" && it.id != "QF-84920" }.sumOf { it.totalAmount }
+    val totalReceived = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
+    val pendingAmount = bookings.filter { it.paymentStatus != "paid" }.sumOf { it.totalAmount }
     val techPayments = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.technicianPayout }
     val platformComm = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.adminCommission }
     val pendingEscrowPayouts = payouts.filter { it.status == "pending_approval" || it.status == "held_in_escrow" }
@@ -1022,7 +1021,6 @@ fun CommissionsTab(
                             val p = plumbPct.toIntOrNull() ?: 15
                             val f = fee.toIntOrNull() ?: 29
                             onSave(e, p, f)
-                            savedMsg = true
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         modifier = Modifier.fillMaxWidth()
@@ -1030,9 +1028,7 @@ fun CommissionsTab(
                         Text("Save to Cloud Firestore", fontWeight = FontWeight.Bold)
                     }
 
-                    if (savedMsg) {
-                        Text("✓ Rates successfully saved to Firestore /system/commission_rules", color = Color(0xFF16A34A), fontSize = 12.sp)
-                    }
+                    Text("Saving is disabled until the trusted admin backend is configured. The button does not save rates.", color = Color(0xFFB45309), fontSize = 12.sp)
                 }
             }
         }
