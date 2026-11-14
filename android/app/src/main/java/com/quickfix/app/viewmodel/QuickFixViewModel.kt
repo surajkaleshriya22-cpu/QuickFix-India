@@ -2,6 +2,8 @@ package com.quickfix.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.quickfix.app.data.model.AdminMasterPaymentConfig
 import com.quickfix.app.data.model.Booking
@@ -535,42 +537,81 @@ class QuickFixViewModel : ViewModel() {
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
 
-    fun createBooking(
+    suspend fun createBooking(
         serviceTitle: String,
         category: String,
-        customerName: String,
         customerAddress: String,
-        price: Int
+        price: Int,
+        notes: String = ""
     ): Booking {
-        val convenience = _commissionSettings.value.convenienceFee
-        val gst = (price * _commissionSettings.value.gstPct) / 100
-        val total = price + convenience + gst
-        val commPct = if (category == "electrician") _commissionSettings.value.electricianCommissionPct else _commissionSettings.value.plumberCommissionPct
-        val commission = (price * commPct) / 100
-        val payout = total - commission
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
+            ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
+        require(customerAddress.isNotBlank()) { "Please enter your complete service address." }
+        require(price > 0) { "Invalid service price." }
 
+        val profile = firestore.collection("users").document(firebaseUser.uid).get().await()
+        val customerName = profile.getString("displayName")
+            ?: firebaseUser.displayName
+            ?: "QuickFix Customer"
+        val customerPhone = profile.getString("phoneNumber")
+            ?: firebaseUser.phoneNumber
+            ?: ""
+
+        val settings = _commissionSettings.value
+        val convenience = settings.convenienceFee
+        val gst = (price * settings.gstPct) / 100
+        val discount = 20
+        val total = (price + convenience + gst - discount).coerceAtLeast(0)
+        val bookingId = "QF-" + java.util.UUID.randomUUID().toString().take(8).uppercase()
+
+        // New requests are not assigned, paid, or OTP-enabled on the client.
+        // Assignment, start OTP and payment state must be set by trusted backend workflows.
         val newBooking = Booking(
-            id = "QF-" + (85000 + _bookings.value.size + 1),
+            id = bookingId,
             serviceTitle = serviceTitle,
             category = category,
             customerName = customerName,
-            customerAddress = customerAddress,
-            status = "assigned",
-            technicianName = if (category == "electrician") "Ramesh Kumar" else "Suresh Patel",
-            startOtp = ((1000..9999).random()).toString(),
+            customerAddress = customerAddress.trim(),
+            status = "requested",
+            technicianName = null,
+            startOtp = "",
             price = price,
             totalAmount = total,
-            technicianPayout = payout,
-            adminCommission = commission,
-            paymentStatus = "paid",
-            escrowStatus = "held_in_admin_escrow"
+            technicianPayout = 0,
+            adminCommission = 0,
+            paymentStatus = "pending",
+            escrowStatus = "not_funded"
         )
+
+        val bookingData = hashMapOf(
+            "id" to bookingId,
+            "customerUid" to firebaseUser.uid,
+            "customerName" to customerName,
+            "customerPhone" to customerPhone,
+            "customerAddress" to customerAddress.trim(),
+            "serviceTitle" to serviceTitle,
+            "category" to category,
+            "notes" to notes.trim(),
+            "status" to "requested",
+            "startOtp" to "",
+            "price" to price,
+            "convenienceFee" to convenience,
+            "discount" to discount,
+            "taxes" to gst,
+            "totalAmount" to total,
+            "paymentStatus" to "pending",
+            "escrowStatus" to "not_funded",
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+
+        firestore.collection("bookings").document(bookingId).set(bookingData).await()
         _bookings.value = listOf(newBooking) + _bookings.value
         return newBooking
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
         val target = _bookings.value.find { it.id == bookingId } ?: return false
+        if (target.startOtp.isBlank()) return false
         return if (target.startOtp == enteredOtp.trim()) {
             _bookings.value = _bookings.value.map { b ->
                 if (b.id == bookingId) b.copy(status = "in_progress") else b
