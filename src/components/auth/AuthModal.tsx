@@ -177,7 +177,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" aria-hidden="true" className="hidden" />
+      <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="absolute bottom-0 right-0" />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header with QuickFix Branding */}
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white p-5 relative">
