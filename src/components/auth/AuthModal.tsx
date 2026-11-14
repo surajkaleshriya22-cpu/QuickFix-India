@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import {
@@ -74,6 +74,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [formError, setFormError] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const recaptchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    return () => {
+      recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
+    };
+  }, []);
 
   const toggleTrade = (trade: ServiceCategoryType) => {
     if (partnerTrades.includes(trade)) {
@@ -100,14 +109,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
     setIsSendingOtp(true);
     try {
-      const verifier = new RecaptchaVerifier(auth, 'quickfix-recaptcha-container', { size: 'invisible' });
-      const result = await signInWithPhoneNumber(auth, '+91' + phone, verifier);
+      if (!recaptchaContainerRef.current) {
+        throw new Error('Phone verification container is unavailable.');
+      }
+      if (!recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'invisible' });
+      }
+      const result = await signInWithPhoneNumber(auth, '+91' + phone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setIsOtpStep(true);
       setEnteredOtp('');
       setFormError('');
     } catch (error: any) {
       console.warn('Firebase phone OTP send failed:', error);
+      recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
       setFormError(error?.code === 'auth/too-many-requests'
         ? 'Firebase SMS limit or abuse protection reached. Please try later; the free plan has a daily SMS quota.'
         : error?.code === 'auth/invalid-phone-number'
@@ -161,6 +177,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" aria-hidden="true" className="hidden" />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header with QuickFix Branding */}
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white p-5 relative">
