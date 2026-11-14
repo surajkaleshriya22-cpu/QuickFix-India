@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,22 +35,16 @@ fun ServiceBookingScreen(
     val services by viewModel.services.collectAsState()
     val currentCity by viewModel.currentCity.collectAsState()
     val commissionSettings by viewModel.commissionSettings.collectAsState()
-    val adminConfig by viewModel.adminPaymentConfig.collectAsState()
 
     val service = services.find { it.id == serviceId } ?: services.first()
 
-    val defaultAddress = when (currentCity) {
-        "Indore" -> "102, Shrivardhan Complex, RNT Marg, Indore"
-        "Bhopal" -> "E-3/42, Arera Colony, Near 10 No. Market, Bhopal"
-        "Dewas" -> "12, Chamunda Complex, AB Road, Dewas"
-        "Ujjain" -> "45, Freeganj Main Road, Near Tower Chowk, Ujjain"
-        else -> "Flat 402, Prestige Palms, Indiranagar, Bengaluru"
-    }
+    val defaultAddress = ""
 
     var address by remember { mutableStateOf(defaultAddress) }
     var notes by remember { mutableStateOf("") }
-    var paymentMode by remember { mutableStateOf("upi") }
     var isBooking by remember { mutableStateOf(false) }
+    var bookingError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val basePrice = service.startingPrice
     val visitFee = commissionSettings.convenienceFee
@@ -100,23 +95,38 @@ fun ServiceBookingScreen(
                     }
                     Button(
                         onClick = {
-                            isBooking = true
-                            val newB = viewModel.createBooking(
-                                serviceTitle = service.title,
-                                category = service.category,
-                                customerName = "Ananya Deshmukh",
-                                customerAddress = address,
-                                price = basePrice
-                            )
-                            navController.navigate("live_tracking/${newB.id}") {
-                                popUpTo("customer_home")
+                            if (address.isBlank()) {
+                                bookingError = "Please enter your complete service address."
+                            } else {
+                                isBooking = true
+                                bookingError = null
+                                scope.launch {
+                                    try {
+                                        val newB = viewModel.createBooking(
+                                            serviceTitle = service.title,
+                                            category = service.category,
+                                            customerAddress = address,
+                                            price = basePrice,
+                                            notes = notes
+                                        )
+                                        navController.navigate("live_tracking/${newB.id}") {
+                                            popUpTo("customer_home")
+                                        }
+                                    } catch (error: Exception) {
+                                        bookingError = error.localizedMessage
+                                            ?: "Booking could not be saved. Please sign in and try again."
+                                    } finally {
+                                        isBooking = false
+                                    }
+                                }
                             }
                         },
+                        enabled = !isBooking && address.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            if (isBooking) "Confirming..." else "Confirm Booking →",
+                            if (isBooking) "Saving Request..." else "Request Service →",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -133,6 +143,15 @@ fun ServiceBookingScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            bookingError?.let { message ->
+                Text(
+                    message,
+                    color = Color(0xFFDC2626),
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             // Selected Service Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
@@ -147,7 +166,7 @@ fun ServiceBookingScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Estimated arrival: 45 Mins • ${service.warrantyDays}-Day QuickFix Guarantee",
+                        "A verified partner will be assigned after accepting your request. ${service.warrantyDays}-Day QuickFix Guarantee",
                         fontSize = 12.sp,
                         color = BrandBlue,
                         fontWeight = FontWeight.Medium
@@ -209,7 +228,7 @@ fun ServiceBookingScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "QuickFix Admin Escrow Protected",
+                                "Secure Booking Request",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = TextPrimary
@@ -220,7 +239,7 @@ fun ServiceBookingScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "HQ SECURED",
+                                    "PAYMENT PENDING",
                                     color = Color.White,
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold,
@@ -229,7 +248,7 @@ fun ServiceBookingScreen(
                             }
                         }
                         Text(
-                            "100% of payment routes to Admin Master Account (${adminConfig.masterUpiVpa}). Partner payouts are released only after service completion.",
+                            "Your service request is saved first. No payment is taken or held at this stage. Payment will be enabled after a verified payment provider is connected.",
                             fontSize = 11.sp,
                             color = Color(0xFF1E40AF),
                             lineHeight = 15.sp
