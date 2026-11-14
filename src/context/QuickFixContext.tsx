@@ -15,8 +15,6 @@ import {
   UserRole,
   AdminMasterPaymentConfig,
   WalletTransaction,
-  isAuthorizedAdminEmail,
-  AUTHORIZED_ADMIN_EMAILS,
   ServiceZone,
   GeofenceValidationResult
 } from '../types';
