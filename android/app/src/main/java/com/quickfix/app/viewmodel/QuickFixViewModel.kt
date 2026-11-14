@@ -242,30 +242,22 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun approveTechnicianKyc(techUid: String) {
-        _technicians.value = _technicians.value.map { tech ->
-            if (tech.uid == techUid) tech.copy(isVerified = true) else tech
-        }
+        _firestoreSyncStatus.value = "KYC approval unavailable: trusted server-side admin workflow is not configured."
     }
 
     fun rejectTechnicianKyc(techUid: String) {
-        _technicians.value = _technicians.value.map { tech ->
-            if (tech.uid == techUid) tech.copy(isVerified = false) else tech
-        }
+        _firestoreSyncStatus.value = "KYC rejection unavailable: trusted server-side admin workflow is not configured."
     }
 
     fun reassignBooking(bookingId: String, newTechnicianName: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(technicianName = newTechnicianName, status = "assigned") else b
-        }
+        _firestoreSyncStatus.value = "Booking assignment unavailable: trusted dispatch backend is not configured."
     }
 
     fun updateBookingStatus(bookingId: String, newStatus: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(status = newStatus) else b
-        }
+        _firestoreSyncStatus.value = "Booking status changes are server-controlled and are not enabled in this build."
     }
 
-    private val _currentCity = MutableStateFlow("Indore")
+  private val _currentCity = MutableStateFlow("Indore")
     val currentCity: StateFlow<String> = _currentCity.asStateFlow()
 
     fun setCity(city: String) {
@@ -434,9 +426,7 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun completeJob(bookingId: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(status = "completed") else b
-        }
+        _firestoreSyncStatus.value = "Job completion is disabled until server-side OTP verification is deployed."
     }
 
     fun requestTechnicianPayout(techId: String, techName: String, amount: Int, upiId: String) {

@@ -77,7 +77,7 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
     .filter(p => p.status === 'settled')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  // Handlers with Firestore synchronization
+  // Preview-only handlers: these context actions are not backed by a server ledger.
   const handleApprove = (payoutId: string) => {
     setIsProcessingId(payoutId);
     try {
@@ -139,12 +139,12 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
         <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-              Settled via Webhooks
+              Settlement backend status
             </span>
             <div className="text-xl font-extrabold font-mono text-emerald-400 mt-0.5">
               ₹{totalSettledAmount.toLocaleString('en-IN')}
             </div>
-            <span className="text-[11px] text-slate-400">{settledCount} confirmed disbursements</span>
+            <span className="text-[11px] text-slate-400">{settledCount} records shown (not live-verified)</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-950/60 text-emerald-400 flex items-center justify-center border border-emerald-800/50">
             <CheckCircle className="w-5 h-5" />
@@ -176,7 +176,7 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
           <span>Secure Payout Protocol & Webhook Settlement Gate</span>
         </div>
         <p className="text-[11px] text-blue-200 leading-relaxed">
-          Admin approval queues requests in <strong>Processing</strong> state. In accordance with zero-fake-settlement security rules, payouts are never marked <strong>Settled</strong> until a verified payment-provider webhook confirmation arrives. Rejection immediately restores the reserved funds to the partner’s wallet.
+          This screen currently displays local preview data only. The secure payout backend and verified payment-provider webhook are not connected. Do not approve, reject, or treat any amount here as a real wallet balance or completed payment. No settlement is confirmed by this preview.
         </p>
       </div>
 

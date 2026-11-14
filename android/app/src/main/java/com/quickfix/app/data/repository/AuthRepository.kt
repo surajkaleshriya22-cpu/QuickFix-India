@@ -144,6 +144,20 @@ class AuthRepository(
         )
     }
 
+    suspend fun signInAdminWithEmailPassword(email: String, password: String): User {
+        require(email.isNotBlank() && password.isNotBlank()) {
+            "Enter the administrator email and password."
+        }
+        auth.signInWithEmailAndPassword(email.trim(), password).await()
+        return try {
+            getAdminUser(email)
+                ?: throw SecurityException("Admin access denied. This Firebase account does not have the server-issued admin claim.")
+        } catch (error: Exception) {
+            auth.signOut()
+            throw error
+        }
+    }
+
     /**
      * Admin access is granted only by a Firebase Admin SDK custom claim.
      * A client-side passcode or email whitelist is never sufficient.

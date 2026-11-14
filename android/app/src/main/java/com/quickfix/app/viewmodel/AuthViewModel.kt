@@ -102,6 +102,14 @@ class AuthViewModel(
                 val userToPersist = if (existingProfile != null) {
                     existingProfile
                 } else {
+                    if (pendingUser.role == UserRole.TECHNICIAN) {
+                        require(pendingUser.experienceYears >= 2) {
+                            "Partner registration requires at least 2 years of trade experience."
+                        }
+                        require(pendingUser.trades.isNotEmpty() && pendingUser.kycDocNumber.isNotBlank()) {
+                            "Partner registration requires at least one trade and a KYC document number."
+                        }
+                    }
                     val newProfile = pendingUser.copy(uid = uid)
                     repository.saveUserProfile(newProfile)
                     newProfile
@@ -111,6 +119,20 @@ class AuthViewModel(
                 onSuccess(userToPersist)
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.localizedMessage ?: "Invalid OTP verification code")
+            }
+        }
+    }
+
+    fun signInAdmin(email: String, password: String) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val adminUser = repository.signInAdminWithEmailPassword(email, password)
+                _authState.value = AuthState.Authenticated(adminUser)
+            } catch (error: Exception) {
+                _authState.value = AuthState.Error(
+                    error.localizedMessage ?: "Firebase admin sign-in failed."
+                )
             }
         }
     }

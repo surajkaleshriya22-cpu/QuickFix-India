@@ -200,23 +200,7 @@ export const AdminDashboard: React.FC = () => {
 
   const handleAdminUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminKeyInput.trim() === 'ADMIN2026') {
-      const result = authenticateUser({
-        displayName: 'Suraj (Super Admin Owner)',
-        phoneNumber: '+91 98000 12345',
-        email: 'surajkaleshriya22@gmail.com',
-        role: 'admin',
-        city: 'Bengaluru',
-        rememberMe: true
-      });
-      if (!result.success) {
-        setAdminAuthError(result.message || 'Access Denied: Only whitelisted administrators can unlock.');
-        return;
-      }
-      setAdminAuthError('');
-    } else {
-      setAdminAuthError('Invalid Admin Passcode. Access attempt blocked.');
-    }
+    setAdminAuthError('Passcode-only admin access is disabled. Sign in through Firebase with an Admin SDK-issued admin claim.');
   };
 
   const handleSaveCommission = (e: React.FormEvent) => {

@@ -1,6 +1,7 @@
 package com.quickfix.app.ui.screens
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,8 +60,9 @@ fun AuthScreen(
     var kycNumber by remember { mutableStateOf("") }
     var upiId by remember { mutableStateOf("") }
 
-    // Admin specific
-    var adminPasscode by remember { mutableStateOf("") }
+    // Admin credentials are verified by Firebase Auth and an Admin SDK custom claim.
+    var adminEmail by remember { mutableStateOf("") }
+    var adminPassword by remember { mutableStateOf("") }
 
     // OTP
     var otpCode by remember { mutableStateOf("") }
@@ -184,12 +186,6 @@ fun AuthScreen(
                             fontSize = 14.sp,
                             color = Color(0xFF1E293B)
                         )
-                        Text(
-                            text = "Demonstration OTP code is 4821",
-                            fontSize = 11.sp,
-                            color = Color(0xFF2563EB)
-                        )
-
                         OutlinedTextField(
                             value = otpCode,
                             onValueChange = { if (it.length <= 6) otpCode = it },
@@ -201,7 +197,7 @@ fun AuthScreen(
                         Button(
                             onClick = {
                                 val pendingUser = User(
-                                    phoneNumber = "+91 $phone",
+                                    phoneNumber = "+91${phone.filter { it.isDigit() }}",
                                     displayName = displayName,
                                     email = email,
                                     role = selectedRole,
@@ -231,34 +227,37 @@ fun AuthScreen(
                     } else if (selectedRole == UserRole.ADMIN) {
                         // ADMIN AUTHENTICATION
                         Text("HQ Administration Security Gate", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("Role-Based Access: Requires Master Administrative Passcode", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            "Secure Firebase sign-in. Admin access is allowed only for accounts with an Admin SDK-issued admin claim.",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
 
                         OutlinedTextField(
-                            value = adminPasscode,
-                            onValueChange = { adminPasscode = it },
-                            label = { Text("Admin Security Passcode") },
-                            visualTransformation = PasswordVisualTransformation(),
+                            value = adminEmail,
+                            onValueChange = { adminEmail = it.trim() },
+                            label = { Text("Authorized Admin Email") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
-                            value = phone,
-                            onValueChange = { phone = it },
-                            label = { Text("Authorized Phone (+91)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            value = adminPassword,
+                            onValueChange = { adminPassword = it },
+                            label = { Text("Firebase Account Password") },
+                            visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Button(
                             onClick = {
-                                authViewModel.verifyAdminPasscode(adminPasscode, "+91 $phone") {
-                                    navController.navigate("admin_dashboard")
-                                }
+                                authViewModel.signInAdmin(adminEmail, adminPassword)
                             },
+                            enabled = adminEmail.isNotBlank() && adminPassword.isNotBlank() && authState !is AuthState.Loading,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Unlock Admin Console", fontWeight = FontWeight.Bold)
+                            Text("Sign In to Admin Console", fontWeight = FontWeight.Bold)
                         }
                     } else {
                         // CUSTOMER & PARTNER FORM
@@ -330,9 +329,16 @@ fun AuthScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 OutlinedTextField(
+                                    value = experienceYears,
+                                    onValueChange = { value -> if (value.all { it.isDigit() } && value.length <= 2) experienceYears = value },
+                                    label = { Text("Trade experience (minimum 2 years)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OutlinedTextField(
                                     value = upiId,
                                     onValueChange = { upiId = it },
-                                    label = { Text("UPI ID for Instant Payouts") },
+                                    label = { Text("UPI ID (payouts not active yet)") },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -356,8 +362,23 @@ fun AuthScreen(
 
                         Button(
                             onClick = {
-                                activity?.let { act ->
-                                    authViewModel.sendOtp("+91 $phone", act)
+                                val phoneDigits = phone.filter { it.isDigit() }
+                                val hasTrade = tradeElectrician || tradePlumber
+                                val years = experienceYears.toIntOrNull() ?: 0
+                                val validationMessage = when {
+                                    phoneDigits.length != 10 -> "Enter a valid 10-digit mobile number."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && displayName.isBlank() -> "Enter your full name."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && !hasTrade -> "Select at least one trade."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && years < 2 -> "At least 2 years of trade experience is required."
+                                    selectedRole == UserRole.TECHNICIAN && isSignUp && kycNumber.isBlank() -> "Enter your KYC document number."
+                                    else -> null
+                                }
+                                if (validationMessage != null) {
+                                    Toast.makeText(context, validationMessage, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    activity?.let { act ->
+                                        authViewModel.sendOtp("+91$phoneDigits", act)
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),

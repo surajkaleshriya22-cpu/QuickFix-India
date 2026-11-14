@@ -155,7 +155,7 @@ fun CustomerHomeScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "VERIFIED TECHS IN $currentCity",
+                                    "SERVICE REQUESTS IN $currentCity",
                                     color = Color.White,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -165,13 +165,13 @@ fun CustomerHomeScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "Instant Electricians & Plumbers at Your Doorstep",
+                            "Book trusted home repair services",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Text(
-                            "Arrives in 45 mins • 30-day warranty • 100% Escrow Protected",
+                            "Live partner assignment and payment protection are not active yet.",
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
