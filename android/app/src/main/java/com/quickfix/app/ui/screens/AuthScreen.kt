@@ -185,7 +185,7 @@ fun AuthScreen(
                             color = Color(0xFF1E293B)
                         )
                         Text(
-                            text = "Demonstration OTP code is 4821",
+                            text = "Enter the SMS code sent by Firebase. No demo or fixed OTP is accepted.",
                             fontSize = 11.sp,
                             color = Color(0xFF2563EB)
                         )
