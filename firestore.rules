@@ -119,6 +119,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Admin-only application configuration (never wallet balances or payouts).
+    match /system/{documentId} {
+      allow read, write: if isAdmin();
+    }
+
     // Service coverage is public read-only data. Only trusted admins may edit it.
     match /service_zones/{zoneId} {
       allow read: if true;
