@@ -237,10 +237,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Commissions & Payouts & Admin Gateway Control
   const [commissionSettings, setCommissionSettings] = useState<CommissionSettings>(INITIAL_COMMISSION_SETTINGS);
-  const [payouts, setPayouts] = useState<PayoutRecord[]>(INITIAL_PAYOUTS);
+  const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
   const [adminPaymentConfig, setAdminPaymentConfig] = useState<AdminMasterPaymentConfig>(INITIAL_ADMIN_PAYMENT_CONFIG);
-  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(INITIAL_WALLET_TRANSACTIONS);
-  const [adminWalletBalance, setAdminWalletBalance] = useState<number>(4580);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
+  const [adminWalletBalance, setAdminWalletBalance] = useState<number>(0);
   const [serviceZones, setServiceZones] = useState<ServiceZone[]>(INITIAL_SERVICE_ZONES);
 
   // Initialize service zones from Firestore / seed defaults on boot
@@ -253,8 +253,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   // Bookings State
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
-  const [activeBookingId, setActiveBookingId] = useState<string | null>('QF-7049');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
 
   // Sync customer details when currentUser changes
   useEffect(() => {
