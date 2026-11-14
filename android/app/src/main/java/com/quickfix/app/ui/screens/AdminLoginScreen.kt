@@ -43,10 +43,10 @@ fun AdminLoginScreen(
 ) {
     val authState by authViewModel.authState.collectAsState()
 
-    var email by remember { mutableStateOf("surajkaleshriya22@gmail.com") }
-    var phone by remember { mutableStateOf("+91 98000 12345") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var passcode by remember { mutableStateOf("") }
-    var token2FA by remember { mutableStateOf("992211") }
+    var token2FA by remember { mutableStateOf("") }
     var showPasscode by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
     var localError by remember { mutableStateOf<String?>(null) }
@@ -164,7 +164,7 @@ fun AdminLoginScreen(
                     }
 
                     Text(
-                        "Only the following verified administrator accounts are granted access. All other email accounts are permanently blocked:",
+                        "Only Firebase accounts granted the admin security claim by the project administrator can access this console.",
                         color = Color(0xFF94A3B8),
                         fontSize = 11.sp
                     )
@@ -258,7 +258,7 @@ fun AdminLoginScreen(
             OutlinedTextField(
                 value = token2FA,
                 onValueChange = { token2FA = it },
-                label = { Text("2FA Security Token / PIN (992211)") },
+                label = { Text("Firebase Admin Verification") },
                 leadingIcon = { Icon(Icons.Default.Fingerprint, contentDescription = null, tint = Color(0xFF10B981)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -325,12 +325,7 @@ fun AdminLoginScreen(
                         return@Button
                     }
 
-                    if (token2FA.trim() != "992211") {
-                        localError = "Invalid 2FA Security Token / PIN."
-                        return@Button
-                    }
-
-                    localError = null
+                                        localError = null
                     authViewModel.verifyAdminPasscode(
                         email = cleanEmail,
                         passcode = passcode,
