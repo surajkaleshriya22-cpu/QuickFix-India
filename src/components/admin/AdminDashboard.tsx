@@ -200,23 +200,7 @@ export const AdminDashboard: React.FC = () => {
 
   const handleAdminUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminKeyInput.trim() === 'ADMIN2026') {
-      const result = authenticateUser({
-        displayName: 'Suraj (Super Admin Owner)',
-        phoneNumber: '+91 98000 12345',
-        email: 'surajkaleshriya22@gmail.com',
-        role: 'admin',
-        city: 'Bengaluru',
-        rememberMe: true
-      });
-      if (!result.success) {
-        setAdminAuthError(result.message || 'Access Denied: Only whitelisted administrators can unlock.');
-        return;
-      }
-      setAdminAuthError('');
-    } else {
-      setAdminAuthError('Invalid Admin Passcode. Access attempt blocked.');
-    }
+    setAdminAuthError('Demo passcode login is disabled. Admin access requires a signed-in Firebase account with a verified admin custom claim.');
   };
 
   const handleSaveCommission = (e: React.FormEvent) => {
@@ -395,7 +379,7 @@ export const AdminDashboard: React.FC = () => {
                 required
                 value={adminKeyInput}
                 onChange={e => setAdminKeyInput(e.target.value)}
-                placeholder="Enter ADMIN2026"
+                placeholder="Demo passcode disabled"
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
               {adminAuthError && (
@@ -412,7 +396,7 @@ export const AdminDashboard: React.FC = () => {
           </form>
 
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>Passcode: <strong className="font-mono text-blue-400">ADMIN2026</strong></span>
+            <span className="text-amber-300">Demo passcode login disabled</span>
             <button
               onClick={() => setShowAuthModal(true)}
               className="text-blue-400 hover:underline font-semibold"
