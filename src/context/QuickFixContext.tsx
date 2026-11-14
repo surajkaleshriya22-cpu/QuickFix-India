@@ -24,7 +24,6 @@ import {
   INITIAL_COMMISSION_SETTINGS,
   INITIAL_SERVICES,
   INITIAL_TECHNICIANS,
-  INITIAL_CUSTOMERS,
   INITIAL_ADMIN_PAYMENT_CONFIG
 } from '../data/mockData';
 import { INITIAL_SERVICE_ZONES, calculateBoundingBox } from '../data/serviceZones';
