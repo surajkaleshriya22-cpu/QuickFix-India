@@ -1235,19 +1235,20 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     newStatus: BookingStatus,
     otpProvided?: string
   ): { success: boolean; message?: string } => {
+    const requestedStatus: string = newStatus;
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking) return { success: false, message: 'Booking not found' };
 
     // Partner lifecycle transitions must be performed by a trusted server.
     // Client-side wallet deductions, OTP checks, and payment settlement are not authoritative.
-    if (newStatus === 'technician_en_route' || newStatus === 'in_progress' || newStatus === 'completed') {
+    if (requestedStatus === 'technician_en_route' || requestedStatus === 'in_progress' || requestedStatus === 'completed') {
       return {
         success: false,
         message: 'This booking action is temporarily unavailable until secure server-side booking, OTP, and wallet processing is deployed. No booking status or funds were changed.'
       };
     }
 
-    if (newStatus === 'in_progress') {
+    if (requestedStatus === 'in_progress') {
       if (!otpProvided || otpProvided.trim().length !== 4 || otpProvided.trim() !== booking.startOtp) {
         return { success: false, message: 'A valid 4-digit customer start OTP is required. No booking status was changed.' };
       }
@@ -1259,7 +1260,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // GATE 1: Service notification acceptance validation
     // Occurs when booking moves from unaccepted state (requested/assigned) to accepted (technician_en_route or in_progress)
-    const isAcceptingJob = (newStatus === 'technician_en_route' || newStatus === 'in_progress') &&
+    const isAcceptingJob = (requestedStatus === 'technician_en_route' || requestedStatus === 'in_progress') &&
       (booking.status === 'requested' || booking.status === 'assigned');
 
     if (isAcceptingJob && tech) {
@@ -1364,7 +1365,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })
     );
 
-    if (newStatus === 'completed' && booking.technicianId) {
+    if (requestedStatus === 'completed' && booking.technicianId) {
       const isCash = booking.paymentMethod === 'cash';
       const commission = booking.adminCommission;
       const payout = booking.technicianPayout;
