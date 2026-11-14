@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { extractBearerToken } from './src/lib/serverAuth.ts';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -54,13 +55,12 @@ const authenticateFirebaseUser = async (req: Request, res: Response, next: NextF
   if (!firebaseAdminApp) {
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
-  const header = req.headers.authorization || '';
-  const match = header.match(/^Bearer\\s+(.+)$/i);
-  if (!match) {
+  const token = extractBearerToken(req.headers.authorization);
+  if (!token) {
     return res.status(401).json({ success: false, error: 'A valid Firebase ID token is required.' });
   }
   try {
-    (req as AuthenticatedRequest).firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+    (req as AuthenticatedRequest).firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(token, true);
     return next();
   } catch {
     return res.status(401).json({ success: false, error: 'Firebase ID token is invalid or expired.' });

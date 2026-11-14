@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Search, Loader2, X, Mic, MicOff, Check, Sparkles } from 'lucide-react';
 import { MP_LOCALITIES, CityLocality } from '../../data/localities';
+import { firebaseJsonHeaders } from '../../lib/apiClient';
 
 interface PlaceAutocompleteInputProps {
   initialValue?: string;
@@ -115,7 +116,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
             const base64Data = (reader.result as string).split(',')[1];
             const response = await fetch('/api/audio/transcribe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: await firebaseJsonHeaders(),
               body: JSON.stringify({ audioBase64: base64Data, mimeType: 'audio/webm' }),
             });
             const data = await response.json();
