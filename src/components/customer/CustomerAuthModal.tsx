@@ -54,7 +54,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose })
           <p className="text-xs text-blue-100 mt-0.5">
             {otpStep
               ? `We sent a 4-digit OTP to +91 ${phone}`
-              : 'India’s trusted marketplace for verified technicians'}
+              : 'Home repair services with secure sign-in'}
           </p>
         </div>
 
