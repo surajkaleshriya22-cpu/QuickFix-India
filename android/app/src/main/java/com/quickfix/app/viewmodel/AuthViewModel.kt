@@ -102,6 +102,14 @@ class AuthViewModel(
                 val userToPersist = if (existingProfile != null) {
                     existingProfile
                 } else {
+                    if (pendingUser.role == UserRole.TECHNICIAN) {
+                        require(pendingUser.experienceYears >= 2) {
+                            "Partner registration requires at least 2 years of trade experience."
+                        }
+                        require(pendingUser.trades.isNotEmpty() && pendingUser.kycDocNumber.isNotBlank()) {
+                            "Partner registration requires at least one trade and a KYC document number."
+                        }
+                    }
                     val newProfile = pendingUser.copy(uid = uid)
                     repository.saveUserProfile(newProfile)
                     newProfile
