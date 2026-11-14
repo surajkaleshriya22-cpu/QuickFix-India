@@ -181,12 +181,7 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun updateAdminPaymentConfig(updated: AdminMasterPaymentConfig) {
-        _adminPaymentConfig.value = updated
-        viewModelScope.launch {
-            try {
-                firestore.collection("system").document("admin_payment_gateway").set(updated)
-            } catch (_: Exception) {}
-        }
+        _firestoreSyncStatus.value = "Payment settings not saved: trusted admin backend is not configured."
     }
 
     fun adminApprovePayout(payoutId: String) {
@@ -228,41 +223,23 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun updateCommissionSettings(electricianPct: Int, plumberPct: Int, convenienceFee: Int) {
-        val updated = _commissionSettings.value.copy(
-            electricianCommissionPct = electricianPct,
-            plumberCommissionPct = plumberPct,
-            convenienceFee = convenienceFee
-        )
-        _commissionSettings.value = updated
-        viewModelScope.launch {
-            try {
-                firestore.collection("system").document("commission_rules").set(updated)
-            } catch (_: Exception) {}
-        }
+        _firestoreSyncStatus.value = "Commission settings not saved: trusted admin backend is not configured."
     }
 
     fun approveTechnicianKyc(techUid: String) {
-        _technicians.value = _technicians.value.map { tech ->
-            if (tech.uid == techUid) tech.copy(isVerified = true) else tech
-        }
+        _firestoreSyncStatus.value = "KYC approval not applied: trusted admin backend is not configured."
     }
 
     fun rejectTechnicianKyc(techUid: String) {
-        _technicians.value = _technicians.value.map { tech ->
-            if (tech.uid == techUid) tech.copy(isVerified = false) else tech
-        }
+        _firestoreSyncStatus.value = "KYC decision not applied: trusted admin backend is not configured."
     }
 
     fun reassignBooking(bookingId: String, newTechnicianName: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(technicianName = newTechnicianName, status = "assigned") else b
-        }
+        _firestoreSyncStatus.value = "Booking not reassigned: trusted dispatch backend is not configured."
     }
 
     fun updateBookingStatus(bookingId: String, newStatus: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(status = newStatus) else b
-        }
+        _firestoreSyncStatus.value = "Booking status not changed: trusted server workflow is not configured."
     }
 
     private val _currentCity = MutableStateFlow("Indore")
@@ -423,20 +400,12 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
-        val target = _bookings.value.find { it.id == bookingId } ?: return false
-        if (target.startOtp.isBlank()) return false
-        return if (target.startOtp == enteredOtp.trim()) {
-            _bookings.value = _bookings.value.map { b ->
-                if (b.id == bookingId) b.copy(status = "in_progress") else b
-            }
-            true
-        } else false
+        _firestoreSyncStatus.value = "OTP not verified: secure server-side OTP workflow is not configured. No booking status changed."
+        return false
     }
 
     fun completeJob(bookingId: String) {
-        _bookings.value = _bookings.value.map { b ->
-            if (b.id == bookingId) b.copy(status = "completed") else b
-        }
+        _firestoreSyncStatus.value = "Job not marked complete: trusted server workflow is not configured. No booking status changed."
     }
 
     fun requestTechnicianPayout(techId: String, techName: String, amount: Int, upiId: String) {
