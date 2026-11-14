@@ -6,7 +6,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.Timestamp
 import com.quickfix.app.data.model.User
 import com.quickfix.app.data.model.UserRole
 import kotlinx.coroutines.tasks.await
@@ -81,7 +83,7 @@ class AuthRepository(
     }
 
     suspend fun saveUserProfile(user: User) {
-        val userMap = hashMapOf(
+        val userMap = hashMapOf<String, Any>(
             "uid" to user.uid,
             "phoneNumber" to user.phoneNumber,
             "displayName" to user.displayName,
@@ -96,7 +98,7 @@ class AuthRepository(
             "kycDocNumber" to user.kycDocNumber,
             "isVerified" to user.isVerified,
             "upiId" to user.upiId,
-            "createdAt" to user.createdAt
+            "createdAt" to FieldValue.serverTimestamp()
         )
         firestore.collection("users")
             .document(user.uid)
@@ -136,7 +138,9 @@ class AuthRepository(
             kycDocNumber = data["kycDocNumber"] as? String ?: "",
             isVerified = data["isVerified"] as? Boolean ?: false,
             upiId = data["upiId"] as? String ?: "",
-            createdAt = (data["createdAt"] as? Long) ?: System.currentTimeMillis()
+            createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time
+                ?: (data["createdAt"] as? Long)
+                ?: System.currentTimeMillis()
         )
     }
 
