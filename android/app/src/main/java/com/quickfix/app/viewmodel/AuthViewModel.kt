@@ -123,6 +123,20 @@ class AuthViewModel(
         }
     }
 
+    fun signInAdmin(email: String, password: String) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val adminUser = repository.signInAdminWithEmailPassword(email, password)
+                _authState.value = AuthState.Authenticated(adminUser)
+            } catch (error: Exception) {
+                _authState.value = AuthState.Error(
+                    error.localizedMessage ?: "Firebase admin sign-in failed."
+                )
+            }
+        }
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun verifyAdminPasscode(
         email: String,
