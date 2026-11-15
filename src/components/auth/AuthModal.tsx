@@ -548,7 +548,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                           Your basic profile will be submitted for review. Government ID, certificates, UPI details and any deposit are not collected at this stage. Do not send money during registration.
                         </p>
                       </div>
-                    
+                    </>
                   ) : null}
 
                   <div>
