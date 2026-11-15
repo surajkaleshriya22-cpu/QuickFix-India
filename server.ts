@@ -113,6 +113,104 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
+// Channel Partner onboarding: Firebase Phone Auth proves phone ownership; the server
+// creates a pending profile. No KYC numbers, UPI IDs, deposits, or verification flags
+// are accepted from the browser.
+app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { displayName, trades, experienceYears, qualificationType, qualificationRegNumber, qualificationInstitute, city } = req.body ?? {};
+    const allowedTrades = ['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'home_care'];
+    const allowedQualifications = ['ITI Trade Certificate', 'Skill India / NSDC Certified', 'State Wireman/Plumber License', 'Govt Polytechnic Diploma'];
+    if (!identity.phone_number || !/^\\+91\\d{10}$/.test(identity.phone_number) ||
+        typeof displayName !== 'string' || displayName.trim().length < 2 || displayName.trim().length > 100 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 12 ||
+        trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.includes(trade)) ||
+        !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 50 ||
+        !allowedQualifications.includes(qualificationType) ||
+        typeof qualificationRegNumber !== 'string' || qualificationRegNumber.trim().length < 2 || qualificationRegNumber.length > 100 ||
+        typeof qualificationInstitute !== 'string' || qualificationInstitute.trim().length < 2 || qualificationInstitute.length > 120 ||
+        typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100) {
+      return res.status(400).json({ success: false, error: 'Partner registration details are incomplete or invalid.' });
+    }
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner registration is temporarily unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const result = await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(userRef);
+      if (existing.exists) return 'exists';
+      transaction.create(userRef, {
+        uid: identity.uid,
+        role: 'CHANNEL_PARTNER',
+        displayName: displayName.trim(),
+        phoneNumber: identity.phone_number,
+        email: typeof identity.email === 'string' ? identity.email : '',
+        city: city.trim(),
+        trades: [...new Set(trades)],
+        experienceYears,
+        qualificationType,
+        qualificationRegNumber: qualificationRegNumber.trim(),
+        qualificationInstitute: qualificationInstitute.trim(),
+        approvalStatus: 'pending_audit',
+        isVerified: false,
+        accountStatus: 'pending',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      return 'created';
+    });
+    if (result === 'exists') return res.status(409).json({ success: false, error: 'A QuickFix profile already exists for this account. Please contact support to link partner access safely.' });
+    return res.status(201).json({ success: true, status: 'pending_audit', message: 'Phone verified. Partner application submitted for Admin KYC review. No deposit has been collected.' });
+  } catch (error) {
+    console.error('Partner registration failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner application could not be saved. Please retry.' });
+  }
+});
+
+// Only a Firebase custom-claim Admin can approve or reject a pending partner.
+// Approval changes are audited; this endpoint never handles deposits or payouts.
+app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    const { decision, reason } = req.body ?? {};
+    if (!['approve', 'reject'].includes(decision) ||
+        (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'A valid approval decision and optional reason are required.' });
+    }
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner review is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(req.params.partnerUid);
+    const auditRef = db.collection('adminAuditLogs').doc();
+    const outcome = await db.runTransaction(async (transaction) => {
+      const partner = await transaction.get(partnerRef);
+      if (!partner.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.data()?.role))) return 'not_found';
+      if (partner.data()?.approvalStatus !== 'pending_audit') return 'not_pending';
+      const approved = decision === 'approve';
+      transaction.update(partnerRef, {
+        approvalStatus: approved ? 'approved' : 'rejected',
+        isVerified: approved,
+        accountStatus: approved ? 'active' : 'rejected',
+        reviewReason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '',
+        reviewedAt: FieldValue.serverTimestamp(),
+        reviewedBy: identity.uid,
+      });
+      transaction.create(auditRef, {
+        action: approved ? 'partner_approved' : 'partner_rejected',
+        targetUid: req.params.partnerUid,
+        adminUid: identity.uid,
+        reason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      return 'updated';
+    });
+    if (outcome === 'not_found') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (outcome === 'not_pending') return res.status(409).json({ success: false, error: 'Only pending partner applications can be reviewed.' });
+    return res.json({ success: true, approvalStatus: decision === 'approve' ? 'approved' : 'rejected' });
+  } catch (error) {
+    console.error('Partner review failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner review could not be saved.' });
+  }
+});
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
