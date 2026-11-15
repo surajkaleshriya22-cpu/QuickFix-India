@@ -131,6 +131,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
         !Array.isArray(trades) || trades.length < 1 || trades.length > 4 ||
+        new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
         typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100 ||
