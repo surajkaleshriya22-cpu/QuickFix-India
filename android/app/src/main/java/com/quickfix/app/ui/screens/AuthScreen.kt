@@ -156,7 +156,7 @@ fun AuthScreen(
                     LaunchedEffect(state.user) {
                         when (state.user.role) {
                             UserRole.CUSTOMER -> navController.navigate("customer_home")
-                            UserRole.CHANNEL_PARTNER -> navController.navigate("technician_portal")
+                            UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> navController.navigate("technician_portal")
                             UserRole.ADMIN -> navController.navigate("admin_dashboard")
                         }
                     }
