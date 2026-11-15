@@ -64,7 +64,8 @@ class QuickFixViewModel : ViewModel() {
                 val token = firebaseUser.getIdToken(true).await()
                 val isAdmin = token.claims["admin"] == true
                 val ownProfile = firestore.collection("users").document(firebaseUser.uid).get().await()
-                val isTechnician = ownProfile.getString("role") == "TECHNICIAN"
+                val ownRole = ownProfile.getString("role")
+                val isTechnician = ownRole == "CHANNEL_PARTNER" || ownRole == "TECHNICIAN"
                 val bookingQuery = when {
                     isAdmin -> firestore.collection("bookings")
                     isTechnician -> firestore.collection("bookings").whereEqualTo("technicianUid", firebaseUser.uid)
@@ -106,7 +107,7 @@ class QuickFixViewModel : ViewModel() {
                         }
                         val users = snapshot?.documents?.mapNotNull { document ->
                             val data = document.data ?: return@mapNotNull null
-                            val role = if (data["role"] == "TECHNICIAN") UserRole.TECHNICIAN else UserRole.CUSTOMER
+                            val role = if (data["role"] == "CHANNEL_PARTNER") UserRole.CHANNEL_PARTNER else if (data["role"] == "TECHNICIAN") UserRole.TECHNICIAN else UserRole.CUSTOMER
                             User(
                                 uid = document.id,
                                 phoneNumber = data["phoneNumber"] as? String ?: "",
@@ -125,7 +126,7 @@ class QuickFixViewModel : ViewModel() {
                             )
                         } ?: emptyList()
                         _customers.value = users.filter { it.role == UserRole.CUSTOMER }
-                        _technicians.value = users.filter { it.role == UserRole.TECHNICIAN }
+                        _technicians.value = users.filter { it.role == UserRole.CHANNEL_PARTNER || it.role == UserRole.TECHNICIAN }
                     }
                 }
                 _firestoreSyncStatus.value = if (isAdmin) {
