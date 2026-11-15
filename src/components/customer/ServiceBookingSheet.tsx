@@ -12,7 +12,7 @@ interface ServiceBookingSheetProps {
 }
 
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
-  const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
+  const { customer, currentCity, setCurrentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState('Today');
