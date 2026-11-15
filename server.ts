@@ -189,6 +189,62 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 });
 
 
+// Admin-only partner assignment. The authenticated Firebase UID is taken from a verified
+// TECHNICIAN profile, never from a legacy local/demo technicianId supplied by the client.
+app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    const partnerUid = req.body?.partnerUid;
+    if (typeof partnerUid !== 'string' || partnerUid.length < 10 || partnerUid.length > 128) {
+      return res.status(400).json({ success: false, error: 'A valid Channel Partner Firebase UID is required.' });
+    }
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure assignment is temporarily unavailable.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(req.params.bookingId);
+    const partnerRef = db.collection('users').doc(partnerUid);
+    const result = await db.runTransaction(async (transaction) => {
+      const [bookingSnap, partnerSnap] = await Promise.all([
+        transaction.get(bookingRef),
+        transaction.get(partnerRef),
+      ]);
+      if (!bookingSnap.exists) return { error: 'BOOKING_NOT_FOUND' as const };
+      if (!partnerSnap.exists) return { error: 'PARTNER_NOT_FOUND' as const };
+
+      const booking = bookingSnap.data()!;
+      const partner = partnerSnap.data()!;
+      if (booking.status !== 'requested' || booking.technicianUid || booking.assignedPartnerUid) {
+        return { error: 'BOOKING_NOT_ASSIGNABLE' as const };
+      }
+      if (partner.role !== 'TECHNICIAN' || partner.isVerified !== true || partner.accountStatus === 'suspended') {
+        return { error: 'PARTNER_NOT_ELIGIBLE' as const };
+      }
+
+      transaction.update(bookingRef, {
+        technicianUid: partnerUid,
+        assignedPartnerUid: partnerUid,
+        technicianName: String(partner.displayName || '').slice(0, 100),
+        technicianPhone: String(partner.phoneNumber || '').slice(0, 30),
+        status: 'assigned',
+        assignedAt: FieldValue.serverTimestamp(),
+        assignedBy: (req as AuthenticatedRequest).firebaseUser!.uid,
+      });
+      return { success: true as const };
+    });
+
+    if ('error' in result) {
+      const status = result.error === 'BOOKING_NOT_FOUND' || result.error === 'PARTNER_NOT_FOUND' ? 404
+        : result.error === 'BOOKING_NOT_ASSIGNABLE' ? 409 : 403;
+      return res.status(status).json({ success: false, error: result.error });
+    }
+    return res.json({ success: true, bookingId: req.params.bookingId, partnerUid });
+  } catch (error) {
+    console.error('Secure partner assignment failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner could not be assigned securely.' });
+  }
+});
+
 // Consent-based live location API. Coordinates are server-owned and never exposed
 // through direct client Firestore access. Both booking participants must opt in.
 const liveLocationStatuses = new Set(['assigned', 'technician_en_route']);
