@@ -28,8 +28,18 @@ service cloud.firestore {
 
       allow create: if isOwner(userId)
         && request.resource.data.uid == userId
-        && request.resource.data.role in ['CUSTOMER', 'TECHNICIAN']
+        && request.resource.data.role in ['CUSTOMER', 'CHANNEL_PARTNER']
         && request.resource.data.isVerified == false
+        && (request.resource.data.role == 'CUSTOMER'
+          ? (!('trades' in request.resource.data) || request.resource.data.trades.size() == 0)
+          : request.resource.data.trades is list
+            && request.resource.data.trades.size() >= 1
+            && request.resource.data.trades.size() <= 10
+            && request.resource.data.trades.toSet().size() == request.resource.data.trades.size()
+            && request.resource.data.trades.toSet().hasOnly([
+              'electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic',
+              'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'
+            ]))
         && request.resource.data.keys().hasOnly([
           'uid',
           'phoneNumber',
