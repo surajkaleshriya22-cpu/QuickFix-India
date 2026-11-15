@@ -360,9 +360,21 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       else localStorage.removeItem(LOCAL_STORAGE_AUTH_KEY);
       setActiveRole('customer');
       return { success: true };
-    } catch (error) {
-      console.warn('Firebase customer profile save failed:', error);
-      return { success: false, message: 'Phone verified, but the customer profile could not be saved. Check Firestore rules and try again.' };
+    } catch (error: any) {
+      const code = typeof error?.code === 'string' ? error.code : 'unknown';
+      // Log only the Firebase error code; never log phone numbers or profile data.
+      console.warn('Firebase customer profile save failed:', code);
+      const messages: Record<string, string> = {
+        'permission-denied': 'Phone verified, but Firestore denied saving your profile. The latest firestore.rules must be published to the quickfix-india Firebase project.',
+        'unauthenticated': 'Phone verified, but Firebase no longer sees an authenticated session. Refresh and sign in again.',
+        'unavailable': 'Phone verified, but Firestore is temporarily unavailable. Check your internet and try again.',
+        'already-exists': 'A profile already exists for this account. Sign out and sign in again.',
+        'failed-precondition': 'Phone verified, but Firestore is not ready. Check that the default Firestore database exists.'
+      };
+      return {
+        success: false,
+        message: messages[code] || `Phone verified, but the customer profile could not be saved (Firestore: ${code}). Please retry; if it continues, share only this error code.`
+      };
     }
   };
 
