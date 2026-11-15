@@ -32,7 +32,7 @@ import {
   updateTechnicianFirestoreStatus
 } from '../services/geofenceService';
 import { auth, db, testFirestoreConnection } from '../lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, Timestamp, collection } from 'firebase/firestore';
 import { getIdTokenResult, signOut, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
@@ -121,6 +121,7 @@ interface QuickFixContextType {
     notes?: string;
     paymentMethod: PaymentMethod;
   }) => Booking;
+  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
   addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
 
@@ -771,6 +772,82 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return newBooking;
   };
 
+  // Persist a safe customer booking request. Assignment, OTP, payment and wallet
+  // transitions remain server-owned; selecting UPI/cash never collects money.
+  const submitCustomerBooking = async ({
+    serviceId,
+    scheduledDate,
+    scheduledTimeSlot,
+    address,
+    notes,
+    paymentMethod
+  }: {
+    serviceId: string;
+    scheduledDate: string;
+    scheduledTimeSlot: string;
+    address: string;
+    notes?: string;
+    paymentMethod: PaymentMethod;
+  }): Promise<{ success: boolean; bookingId?: string; message?: string }> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !isAuthenticated || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
+      return { success: false, message: 'Please sign in with your verified customer account before booking.' };
+    }
+    if (!address.trim() || !scheduledDate.trim() || !scheduledTimeSlot.trim()) {
+      return { success: false, message: 'Please select a service date, time slot and complete address.' };
+    }
+    const service = services.find(item => item.id === serviceId);
+    if (!service) return { success: false, message: 'Selected service was not found. Please choose it again.' };
+
+    const visitingCharges = commissionSettings.platformConvenienceFee;
+    const price = service.startingPrice;
+    const discount = 20;
+    const taxableSubtotal = price + visitingCharges - discount;
+    const taxes = Math.round((taxableSubtotal * commissionSettings.gstPct) / 100);
+    const totalAmount = taxableSubtotal + taxes;
+    const bookingRef = doc(collection(db, 'bookings'));
+
+    try {
+      await setDoc(bookingRef, {
+        id: bookingRef.id,
+        customerUid: firebaseUser.uid,
+        customerName: currentUser.displayName,
+        customerPhone: firebaseUser.phoneNumber || currentUser.phoneNumber || '',
+        customerAddress: address.trim(),
+        serviceTitle: service.title,
+        category: service.category,
+        notes: (notes || '').trim().slice(0, 500),
+        scheduledDate,
+        scheduledTimeSlot,
+        city: currentCity,
+        pincode: currentUser.pincode || '',
+        paymentMethod,
+        status: 'requested',
+        startOtp: '',
+        price,
+        convenienceFee: visitingCharges,
+        discount,
+        taxes,
+        totalAmount,
+        paymentStatus: 'pending',
+        escrowStatus: 'not_funded',
+        createdAt: Timestamp.now()
+      });
+      setActiveBookingId(bookingRef.id);
+      return { success: true, bookingId: bookingRef.id };
+    } catch (error: any) {
+      const code = typeof error?.code === 'string' ? error.code : 'unknown';
+      console.warn('Customer booking request failed:', code);
+      const messages: Record<string, string> = {
+        'permission-denied': 'Firestore rules ne booking request allow nahi ki. Confirm karein ki latest firestore.rules publish hain.',
+        'unauthenticated': 'Customer sign-in session expire ho gaya. Dobara sign in karein.',
+        'unavailable': 'Firestore abhi reachable nahi hai. Internet check karke retry karein.',
+        'failed-precondition': 'Firestore database ready nahi hai. Default database check karein.'
+      };
+      return { success: false, message: messages[code] || `Booking save nahi hui (Firestore: ${code}). Please retry.` };
+    }
+  };
+
   // Update Booking Status & Handle Real-Time Wallet / Commission Settlements
   const updateBookingStatus = (
     bookingId: string,
@@ -1215,6 +1292,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         activeBookingId,
         setActiveBookingId,
         createBooking,
+        submitCustomerBooking,
         updateBookingStatus,
         addReview,
         technicians,
