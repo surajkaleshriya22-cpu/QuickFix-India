@@ -67,48 +67,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Customers may create a request only for their own Firebase UID.
-    // They cannot assign a technician, issue a start OTP, or mark a payment as paid.
+    // Booking documents are created only by the authenticated server API.
+    // Firebase Admin SDK writes bypass client rules; clients cannot forge prices or booking state.
     match /bookings/{bookingId} {
-      allow create: if signedIn()
-        && request.resource.data.customerUid == request.auth.uid
-        && request.resource.data.status == 'requested'
-        && request.resource.data.startOtp == ''
-        && request.resource.data.paymentStatus == 'pending'
-        && request.resource.data.escrowStatus == 'not_funded'
-        && request.resource.data.price is number
-        && request.resource.data.totalAmount is number
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.scheduledDate is string
-        && request.resource.data.scheduledTimeSlot is string
-        && request.resource.data.city is string
-        && request.resource.data.pincode is string
-        && request.resource.data.paymentMethod in ['upi', 'cash']
-        && request.resource.data.keys().hasOnly([
-          'id',
-          'customerUid',
-          'customerName',
-          'customerPhone',
-          'customerAddress',
-          'serviceTitle',
-          'category',
-          'notes',
-          'scheduledDate',
-          'scheduledTimeSlot',
-          'city',
-          'pincode',
-          'paymentMethod',
-          'status',
-          'startOtp',
-          'price',
-          'convenienceFee',
-          'discount',
-          'taxes',
-          'totalAmount',
-          'paymentStatus',
-          'escrowStatus',
-          'createdAt'
-        ]);
+      allow create: if false;
 
       allow get, list: if isAdmin()
         || (signedIn() && (
