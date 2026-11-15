@@ -79,6 +79,11 @@ service cloud.firestore {
         && request.resource.data.price is number
         && request.resource.data.totalAmount is number
         && request.resource.data.createdAt is timestamp
+        && request.resource.data.scheduledDate is string
+        && request.resource.data.scheduledTimeSlot is string
+        && request.resource.data.city is string
+        && request.resource.data.pincode is string
+        && request.resource.data.paymentMethod in ['upi', 'cash']
         && request.resource.data.keys().hasOnly([
           'id',
           'customerUid',
@@ -88,6 +93,11 @@ service cloud.firestore {
           'serviceTitle',
           'category',
           'notes',
+          'scheduledDate',
+          'scheduledTimeSlot',
+          'city',
+          'pincode',
+          'paymentMethod',
           'status',
           'startOtp',
           'price',
