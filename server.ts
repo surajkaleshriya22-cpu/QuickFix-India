@@ -22,7 +22,40 @@ const PORT = Number(process.env.PORT) || 3000;
 // Render terminates TLS at its proxy. Trust only the first proxy hop for client IPs.
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Firebase Phone Auth loads Google's reCAPTCHA frame and calls Identity Toolkit.
+  // Helmet's default CSP blocks these cross-origin resources, preventing OTP verification.
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "connect-src": [
+        "'self'",
+        "https://identitytoolkit.googleapis.com",
+        "https://securetoken.googleapis.com",
+        "https://www.googleapis.com",
+        "https://firebaseinstallations.googleapis.com",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://recaptchaenterprise.googleapis.com",
+        "https://quickfix-india.firebaseapp.com",
+      ],
+      "frame-src": [
+        "'self'",
+        "https://www.google.com",
+        "https://recaptcha.google.com",
+        "https://www.recaptcha.net",
+        "https://quickfix-india.firebaseapp.com",
+      ],
+      "script-src": [
+        "'self'",
+        "'unsafe-inline'",
+        "https://www.google.com/recaptcha/",
+        "https://www.gstatic.com/recaptcha/",
+      ],
+    },
+  },
+}));
 app.use(express.json({ limit: '12mb' }));
 
 let firebaseAdminApp: App | null = null;
