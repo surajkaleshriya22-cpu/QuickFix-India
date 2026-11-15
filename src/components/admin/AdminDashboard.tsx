@@ -177,6 +177,7 @@ export const AdminDashboard: React.FC = () => {
   const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
   const [partnerReviewMessage, setPartnerReviewMessage] = useState('');
   const [partnerReviewError, setPartnerReviewError] = useState('');
+  const [adminServerAuthStatus, setAdminServerAuthStatus] = useState<'checking' | 'authorized' | 'denied' | 'unavailable'>('checking');
 
 
   // Primary Metrics Calculations
@@ -365,61 +366,39 @@ export const AdminDashboard: React.FC = () => {
     setReplyTextMap(prev => ({ ...prev, [bookingId]: '' }));
   };
 
-  // Role Gate: Protect console if current user is not logged in as Admin
-  if (currentUser?.role !== 'admin') {
-    return (
-      <div className="flex-1 bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-5 font-sans">
-        <div className="w-full max-w-sm bg-slate-950 rounded-2xl border border-slate-800 p-6 shadow-2xl space-y-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto shadow-md">
-            <Shield className="w-7 h-7" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">QuickFix HQ Admin Console</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Role-Based Access Control: Restricted to platform executives and dispatch managers.
-            </p>
-          </div>
 
-          <form onSubmit={handleAdminUnlock} className="space-y-3 pt-1 text-xs text-left">
-            <div>
-              <label className="text-[11px] font-bold text-slate-300 block mb-1">
-                Admin Security Passcode
-              </label>
-              <input
-                type="password"
-                required
-                value={adminKeyInput}
-                onChange={e => setAdminKeyInput(e.target.value)}
-                placeholder="Demo passcode disabled"
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-              {adminAuthError && (
-                <p className="text-[11px] text-red-400 font-semibold mt-1.5">{adminAuthError}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-blue-600/30 transition-all active:scale-98"
-            >
-              Unlock Administration Console
-            </button>
-          </form>
-
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span className="text-amber-300">Demo passcode login disabled</span>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="text-blue-400 hover:underline font-semibold"
-            >
-              Sign In via Mobile OTP
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  const checkAdminServerAuthorization = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setAdminServerAuthStatus('denied');
+      setPartnerReviewError('Firebase admin session not found. Sign in with the authorized admin account.');
+      return false;
+    }
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/health', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        if (result.success && result.authorization === 'server_verified_admin_claim') {
+          setAdminServerAuthStatus('authorized');
+          return true;
+        }
+      }
+      setAdminServerAuthStatus(response.status === 403 || response.status === 401 ? 'denied' : 'unavailable');
+      setPartnerReviewError(response.status === 403
+        ? 'This Firebase account does not have the server-side admin custom claim.'
+        : response.status === 401
+          ? 'Admin session expired. Sign in again.'
+          : 'Secure admin service is unavailable. Check the Render backend configuration.');
+      return false;
+    } catch {
+      setAdminServerAuthStatus('unavailable');
+      setPartnerReviewError('Could not reach the secure admin service. Check the backend connection.');
+      return false;
+    }
+  };
 
   const loadPendingPartners = async () => {
     const firebaseUser = auth.currentUser;
@@ -487,10 +466,75 @@ export const AdminDashboard: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (activeTab === 'technicians' && currentUser?.role === 'admin') {
-      void loadPendingPartners();
-    }
+    if (currentUser?.role !== 'admin') return;
+    let cancelled = false;
+    const verifyAndLoad = async () => {
+      const authorized = await checkAdminServerAuthorization();
+      if (authorized && !cancelled && activeTab === 'technicians') {
+        await loadPendingPartners();
+      }
+    };
+    void verifyAndLoad();
+    return () => { cancelled = true; };
   }, [activeTab, currentUser?.uid, currentUser?.role]);
+
+  // Role Gate: Protect console if current user is not logged in as Admin
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div className="flex-1 bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-5 font-sans">
+        <div className="w-full max-w-sm bg-slate-950 rounded-2xl border border-slate-800 p-6 shadow-2xl space-y-4 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto shadow-md">
+            <Shield className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">QuickFix HQ Admin Console</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Role-Based Access Control: Restricted to platform executives and dispatch managers.
+            </p>
+          </div>
+
+          <form onSubmit={handleAdminUnlock} className="space-y-3 pt-1 text-xs text-left">
+            <div>
+              <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                Admin Security Passcode
+              </label>
+              <input
+                type="password"
+                required
+                value={adminKeyInput}
+                onChange={e => setAdminKeyInput(e.target.value)}
+                placeholder="Demo passcode disabled"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              {adminAuthError && (
+                <p className="text-[11px] text-red-400 font-semibold mt-1.5">{adminAuthError}</p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-blue-600/30 transition-all active:scale-98"
+            >
+              Unlock Administration Console
+            </button>
+          </form>
+
+          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span className="text-amber-300">Demo passcode login disabled</span>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="text-blue-400 hover:underline font-semibold"
+            >
+              Sign In via Mobile OTP
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
 
   // Filter Bookings
   const filteredBookings = bookings.filter(b => {
@@ -930,6 +974,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-white">Pending Channel Partner Profiles</h3>
+                  <p className={`text-[10px] mt-1 ${adminServerAuthStatus === 'authorized' ? 'text-emerald-400' : adminServerAuthStatus === 'checking' ? 'text-amber-300' : 'text-rose-300'}`}>Server admin authorization: {adminServerAuthStatus === 'authorized' ? 'Verified' : adminServerAuthStatus === 'checking' ? 'Checking…' : adminServerAuthStatus === 'denied' ? 'Not authorized' : 'Unavailable'}</p>
                   <p className="text-[10px] text-slate-400 mt-1">Basic profile review only. Approval does not verify KYC, qualifications, or enable job acceptance.</p>
                 </div>
                 <button onClick={() => void loadPendingPartners()} disabled={partnerReviewLoading} className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-white disabled:opacity-50">
