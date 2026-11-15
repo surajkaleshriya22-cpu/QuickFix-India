@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { Booking, BookingStatus, ServiceCategoryType, WalletTransaction } from '../../types';
-import { INDIAN_CITIES } from '../../data/mockData';
 import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
