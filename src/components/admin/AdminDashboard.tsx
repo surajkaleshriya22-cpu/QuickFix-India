@@ -241,7 +241,7 @@ export const AdminDashboard: React.FC = () => {
       }
       setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
       setPartnerReviewNotice(decision === 'approve'
-        ? 'Partner approved. Dispatch eligibility is now enabled, subject to the remaining wallet and operational checks.'
+        ? 'Application accepted. Partner remains unverified and cannot receive bookings until identity/KYC documents are securely verified.'
         : 'Partner application rejected and the decision was recorded.');
       await triggerFirestoreSync();
     } catch (error) {
@@ -1019,7 +1019,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-amber-200">Pending Channel Partner Applications</h3>
-                  <p className="text-[11px] text-slate-400">Review trade qualification details before approving a partner.</p>
+                  <p className="text-[11px] text-slate-400">Review the submitted application details. This step does not verify identity documents or enable dispatch.</p>
                 </div>
                 <span className="rounded-full bg-amber-900/60 px-2.5 py-1 text-xs font-bold text-amber-200">{pendingPartnerApplications.length} pending</span>
               </div>
