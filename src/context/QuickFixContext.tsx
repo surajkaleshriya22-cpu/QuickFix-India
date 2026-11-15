@@ -799,52 +799,32 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const service = services.find(item => item.id === serviceId);
     if (!service) return { success: false, message: 'Selected service was not found. Please choose it again.' };
 
-    const visitingCharges = commissionSettings.platformConvenienceFee;
-    const price = service.startingPrice;
-    const discount = 20;
-    const taxableSubtotal = price + visitingCharges - discount;
-    const taxes = Math.round((taxableSubtotal * commissionSettings.gstPct) / 100);
-    const totalAmount = taxableSubtotal + taxes;
-    const bookingRef = doc(collection(db, 'bookings'));
-
     try {
-      await setDoc(bookingRef, {
-        id: bookingRef.id,
-        customerUid: firebaseUser.uid,
-        customerName: currentUser.displayName,
-        customerPhone: firebaseUser.phoneNumber || currentUser.phoneNumber || '',
-        customerAddress: address.trim(),
-        serviceTitle: service.title,
-        category: service.category,
-        notes: (notes || '').trim().slice(0, 500),
-        scheduledDate,
-        scheduledTimeSlot,
-        city: currentCity,
-        pincode: currentUser.pincode || '',
-        paymentMethod,
-        status: 'requested',
-        startOtp: '',
-        price,
-        convenienceFee: visitingCharges,
-        discount,
-        taxes,
-        totalAmount,
-        paymentStatus: 'pending',
-        escrowStatus: 'not_funded',
-        createdAt: Timestamp.now()
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          serviceId,
+          scheduledDate,
+          scheduledTimeSlot,
+          address: address.trim(),
+          notes: (notes || '').trim().slice(0, 500),
+          paymentMethod
+        })
       });
-      setActiveBookingId(bookingRef.id);
-      return { success: true, bookingId: bookingRef.id };
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.bookingId) {
+        return { success: false, message: result.error || 'Secure booking could not be created. Please retry.' };
+      }
+      setActiveBookingId(result.bookingId);
+      return { success: true, bookingId: result.bookingId };
     } catch (error: any) {
-      const code = typeof error?.code === 'string' ? error.code : 'unknown';
-      console.warn('Customer booking request failed:', code);
-      const messages: Record<string, string> = {
-        'permission-denied': 'Firestore rules ne booking request allow nahi ki. Confirm karein ki latest firestore.rules publish hain.',
-        'unauthenticated': 'Customer sign-in session expire ho gaya. Dobara sign in karein.',
-        'unavailable': 'Firestore abhi reachable nahi hai. Internet check karke retry karein.',
-        'failed-precondition': 'Firestore database ready nahi hai. Default database check karein.'
-      };
-      return { success: false, message: messages[code] || `Booking save nahi hui (Firestore: ${code}). Please retry.` };
+      console.warn('Customer booking request failed:', error?.message || error);
+      return { success: false, message: 'Secure booking service is unavailable. Please check your internet and retry.' };
     }
   };
 
