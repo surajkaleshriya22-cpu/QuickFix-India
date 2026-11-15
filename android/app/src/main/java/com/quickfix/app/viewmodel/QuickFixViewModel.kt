@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
 data class AdminMetrics(
@@ -302,73 +304,85 @@ class QuickFixViewModel : ViewModel() {
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
 
     suspend fun createBooking(
+        serviceId: String,
         serviceTitle: String,
         category: String,
         customerAddress: String,
-        price: Int,
+        scheduledDate: String,
+        scheduledTimeSlot: String,
         notes: String = ""
     ): Booking {
-        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        val firebaseUser = auth.currentUser
             ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
         require(customerAddress.isNotBlank()) { "Please enter your complete service address." }
-        require(price > 0) { "Invalid service price." }
+        require(scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { "Date must be in YYYY-MM-DD format." }
+        require(scheduledTimeSlot.isNotBlank()) { "Please select a service time slot." }
+
+        // Keep Android's legacy service IDs compatible with the trusted server catalogue.
+        val serverServiceId = when (serviceId) {
+            "plumb-drain" -> "plumb-block"
+            "plumb-flush" -> "plumb-toilet"
+            else -> serviceId
+        }
+        val idToken = firebaseUser.getIdToken(true).await().token
+            ?: throw SecurityException("Could not obtain a secure sign-in token.")
+
+        val responseBody = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val connection = java.net.URL("https://quickfix-india-1.onrender.com/api/bookings")
+                .openConnection() as java.net.HttpURLConnection
+            try {
+                connection.requestMethod = "POST"
+                connection.connectTimeout = 15000
+                connection.readTimeout = 20000
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Authorization", "Bearer $idToken")
+                val payload = org.json.JSONObject()
+                    .put("serviceId", serverServiceId)
+                    .put("scheduledDate", scheduledDate)
+                    .put("scheduledTimeSlot", scheduledTimeSlot)
+                    .put("paymentMethod", "cash")
+                    .put("address", customerAddress.trim())
+                    .put("notes", notes.trim())
+                connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                val status = connection.responseCode
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (status !in 200..299) {
+                    val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                    throw IllegalStateException(message?.takeIf { it.isNotBlank() }
+                        ?: "Secure booking service returned HTTP $status.")
+                }
+                body
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+        val result = org.json.JSONObject(responseBody)
+        val bookingId = result.optString("bookingId")
+        if (!result.optBoolean("success") || bookingId.isBlank()) {
+            throw IllegalStateException("Server did not confirm the booking. Please retry.")
+        }
 
         val profile = firestore.collection("users").document(firebaseUser.uid).get().await()
-        val customerName = profile.getString("displayName")
-            ?: firebaseUser.displayName
-            ?: "QuickFix Customer"
-        val customerPhone = profile.getString("phoneNumber")
-            ?: firebaseUser.phoneNumber
-            ?: ""
-
-        val settings = _commissionSettings.value
-        val convenience = settings.convenienceFee
-        val gst = (price * settings.gstPct) / 100
-        val discount = 20
-        val total = (price + convenience + gst - discount).coerceAtLeast(0)
-        val bookingId = "QF-" + java.util.UUID.randomUUID().toString().take(8).uppercase()
-
-        // New requests are not assigned, paid, or OTP-enabled on the client.
-        // Assignment, start OTP and payment state must be set by trusted backend workflows.
         val newBooking = Booking(
             id = bookingId,
             serviceTitle = serviceTitle,
             category = category,
-            customerName = customerName,
+            customerName = profile.getString("displayName") ?: firebaseUser.displayName ?: "QuickFix Customer",
             customerAddress = customerAddress.trim(),
             status = "requested",
             technicianName = null,
             startOtp = "",
-            price = price,
-            totalAmount = total,
+            price = 0,
+            totalAmount = 0,
             technicianPayout = 0,
             adminCommission = 0,
             paymentStatus = "pending",
             escrowStatus = "not_funded"
         )
-
-        val bookingData = hashMapOf(
-            "id" to bookingId,
-            "customerUid" to firebaseUser.uid,
-            "customerName" to customerName,
-            "customerPhone" to customerPhone,
-            "customerAddress" to customerAddress.trim(),
-            "serviceTitle" to serviceTitle,
-            "category" to category,
-            "notes" to notes.trim(),
-            "status" to "requested",
-            "startOtp" to "",
-            "price" to price,
-            "convenienceFee" to convenience,
-            "discount" to discount,
-            "taxes" to gst,
-            "totalAmount" to total,
-            "paymentStatus" to "pending",
-            "escrowStatus" to "not_funded",
-            "createdAt" to FieldValue.serverTimestamp()
-        )
-
-        firestore.collection("bookings").document(bookingId).set(bookingData).await()
+        // The Firestore listener remains the source of the server-calculated price and booking state.
         _bookings.value = listOf(newBooking) + _bookings.value
         return newBooking
     }
