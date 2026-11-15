@@ -206,7 +206,7 @@ fun AuthScreen(
                                     role = selectedRole,
                                     address = address,
                                     city = city,
-                                    trades = selectedTrades.toList(),
+                                    trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
                                     experienceYears = experienceYears.toIntOrNull() ?: 5,
                                     kycDocNumber = kycNumber,
                                     upiId = upiId
@@ -214,7 +214,7 @@ fun AuthScreen(
                                 authViewModel.verifyOtp(otpCode, pendingUser) { verifiedUser ->
                                     when (verifiedUser.role) {
                                         UserRole.CUSTOMER -> navController.navigate("customer_home")
-                                        UserRole.CHANNEL_PARTNER -> navController.navigate("technician_portal")
+                                        UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> navController.navigate("technician_portal")
                                         UserRole.ADMIN -> navController.navigate("admin_dashboard")
                                     }
                                 }
