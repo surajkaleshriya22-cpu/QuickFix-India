@@ -6,17 +6,45 @@ export type IndiaLocation = { state: string; district: string; tehsil: string; s
 
 const API_BASE = 'https://india-lgd-index-api.vercel.app/v1';
 const cache = new Map<string, LgdRow[]>();
+const CACHE_PREFIX = 'quickfix.india.lgd-cache.v1.';
+const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+type CachedRows = { savedAt: number; rows: LgdRow[] };
+
+function readPersistentCache(key: string): LgdRow[] | null {
+  try {
+    const raw = localStorage.getItem(`${CACHE_PREFIX}${key}`);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as CachedRows;
+    if (!cached || !Number.isFinite(cached.savedAt) || Date.now() - cached.savedAt > CACHE_MAX_AGE_MS || !Array.isArray(cached.rows)) return null;
+    const rows = cached.rows.filter(row => row && typeof row.code === 'string' && typeof row.name === 'string');
+    return rows.length ? rows : null;
+  } catch {
+    return null;
+  }
+}
 
 async function loadRows(key: string, path: string): Promise<LgdRow[]> {
   if (cache.has(key)) return cache.get(key)!;
-  const response = await fetch(`${API_BASE}${path}`, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`Location directory unavailable (${response.status})`);
-  const payload = await response.json() as ApiResponse;
-  if (!payload.success || !Array.isArray(payload.data)) throw new Error(payload.error?.message || 'Location list could not be loaded.');
-  const rows = payload.data.filter(row => row && typeof row.code === 'string' && typeof row.name === 'string')
-    .sort((a, b) => a.name.localeCompare(b.name));
-  cache.set(key, rows);
-  return rows;
+  const savedRows = readPersistentCache(key);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Location directory unavailable (${response.status})`);
+    const payload = await response.json() as ApiResponse;
+    if (!payload.success || !Array.isArray(payload.data)) throw new Error(payload.error?.message || 'Location list could not be loaded.');
+    const rows = payload.data.filter(row => row && typeof row.code === 'string' && typeof row.name === 'string')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!rows.length) throw new Error('Location directory returned no valid entries.');
+    cache.set(key, rows);
+    try { localStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify({ savedAt: Date.now(), rows } satisfies CachedRows)); } catch { /* Continue with in-memory cache when storage is unavailable. */ }
+    return rows;
+  } catch (error) {
+    if (savedRows) {
+      cache.set(key, savedRows);
+      return savedRows;
+    }
+    throw error;
+  }
 }
 
 const STORAGE_KEY = 'quickfix.india.location.v1';
