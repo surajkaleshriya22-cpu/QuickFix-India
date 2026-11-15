@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - main
+      - android-partner-registration
     paths:
       - "android/**"
       - ".github/workflows/android.yml"
