@@ -53,8 +53,7 @@ fun AuthScreen(
     var rememberMe by remember { mutableStateOf(true) }
 
     // Partner specific
-    var tradeElectrician by remember { mutableStateOf(true) }
-    var tradePlumber by remember { mutableStateOf(false) }
+    val selectedTrades = remember { mutableStateListOf("electrician") }
     var experienceYears by remember { mutableStateOf("7") }
     var kycNumber by remember { mutableStateOf("") }
     var upiId by remember { mutableStateOf("") }
@@ -207,10 +206,7 @@ fun AuthScreen(
                                     role = selectedRole,
                                     address = address,
                                     city = city,
-                                    trades = buildList {
-                                        if (tradeElectrician) add("electrician")
-                                        if (tradePlumber) add("plumber")
-                                    },
+                                    trades = selectedTrades.toList(),
                                     experienceYears = experienceYears.toIntOrNull() ?: 5,
                                     kycDocNumber = kycNumber,
                                     upiId = upiId
@@ -310,18 +306,44 @@ fun AuthScreen(
                             }
 
                             if (selectedRole == UserRole.TECHNICIAN) {
-                                Text("Select Trade Services:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    FilterChip(
-                                        selected = tradeElectrician,
-                                        onClick = { tradeElectrician = !tradeElectrician },
-                                        label = { Text("Electrician") }
-                                    )
-                                    FilterChip(
-                                        selected = tradePlumber,
-                                        onClick = { tradePlumber = !tradePlumber },
-                                        label = { Text("Plumber") }
-                                    )
+                                Text("KYC details will be reviewed before activation. A ₹2,000 reserve is required only through a verified payment flow; this screen does not collect money.", fontSize = 11.sp, color = Color(0xFF92400E))
+                                Text("Select Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                val partnerTrades = listOf(
+                                    "electrician" to "Electrician",
+                                    "ac_fridge" to "AC / Fridge",
+                                    "plumber" to "Plumber",
+                                    "welder" to "Welder",
+                                    "mechanic" to "Mechanic",
+                                    "driver" to "Driver",
+                                    "tourist_guide" to "Tourist Guide",
+                                    "contractor" to "Contractor",
+                                    "bike_rider" to "Bike Rider Captain"
+                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    partnerTrades.chunked(2).forEach { rowTrades ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            rowTrades.forEach { (tradeId, tradeLabel) ->
+                                                FilterChip(
+                                                    selected = tradeId in selectedTrades,
+                                                    onClick = {
+                                                        if (tradeId in selectedTrades) selectedTrades.remove(tradeId)
+                                                        else selectedTrades.add(tradeId)
+                                                    },
+                                                    label = { Text(tradeLabel, fontSize = 11.sp) }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = experienceYears,
+                                    onValueChange = { experienceYears = it.filter { ch -> ch.isDigit() }.take(2) },
+                                    label = { Text("Work Experience (years)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (selectedTrades.isEmpty()) {
+                                    Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
                                 OutlinedTextField(
                                     value = kycNumber,
@@ -355,6 +377,7 @@ fun AuthScreen(
                         }
 
                         Button(
+                            enabled = selectedRole != UserRole.TECHNICIAN || !isSignUp || selectedTrades.isNotEmpty(),
                             onClick = {
                                 activity?.let { act ->
                                     authViewModel.sendOtp("+91 $phone", act)
