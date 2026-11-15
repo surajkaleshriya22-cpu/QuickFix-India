@@ -301,6 +301,24 @@ class QuickFixViewModel : ViewModel() {
             )
             ,
             ServiceItem(
+                id = "ac-jet-clean",
+                category = "ac_repair",
+                title = "Split / Window AC Deep Jet Service",
+                hindiTitle = "एसी जेट वाश और केमिकल सर्विस",
+                startingPrice = 499,
+                rating = 4.92,
+                warrantyDays = 30
+            ),
+            ServiceItem(
+                id = "fridge-cooling-fix",
+                category = "fridge_repair",
+                title = "Refrigerator Not Cooling / Compressor Check",
+                hindiTitle = "फ्रिज कूलिंग व कंप्रेसर जांच",
+                startingPrice = 299,
+                rating = 4.87,
+                warrantyDays = 30
+            ),
+            ServiceItem(
                 id = "weld-gate",
                 category = "welder",
                 title = "Gate, Grill & Railing Welding",
