@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Booking, BookingStatus } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
+import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 import { NearbyStoresModal } from './NearbyStoresModal';
 
 interface LiveTrackingSheetProps {
@@ -31,25 +31,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
   const { updateBookingStatus } = useQuickFix();
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
-  const [liveRouteInfo, setLiveRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
-
-  const cityBaseCoords: Record<string, { lat: number; lng: number }> = {
-    Indore: { lat: 22.7196, lng: 75.8577 },
-    Bhopal: { lat: 23.2599, lng: 77.4126 },
-    Ujjain: { lat: 23.1765, lng: 75.7885 },
-    Dewas: { lat: 22.9676, lng: 76.0534 },
-  };
-
-  const centerCoords = cityBaseCoords[booking.city] || cityBaseCoords['Indore'];
-  // Technician simulated nearby position ~2-3 km away
-  const technicianCoords = {
-    lat: centerCoords.lat + 0.015,
-    lng: centerCoords.lng - 0.012,
-  };
-  const customerCoords = {
-    lat: centerCoords.lat - 0.008,
-    lng: centerCoords.lng + 0.009,
-  };
 
   const steps: { key: BookingStatus; label: string; desc: string }[] = [
     { key: 'requested', label: 'Booking Placed', desc: 'Order received and logged in dispatch system' },
@@ -111,32 +92,17 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Real Interactive Google Maps Route & Live Tracking */}
+        {/* Consent-based live GPS sharing; never show fabricated coordinates. */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
               <Navigation className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-              <span>Live Navigation Map ({booking.city})</span>
+              <span>Booking Location Sharing</span>
             </div>
-            {liveRouteInfo ? (
-              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                {liveRouteInfo.distanceKm} km · ~{liveRouteInfo.durationMins} mins
-              </span>
-            ) : booking.status === 'technician_en_route' ? (
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ETA ~{booking.technicianEtaMinutes || 12} mins
-              </span>
-            ) : null}
+
           </div>
 
-          <TechnicianRouteMap
-            originCoords={technicianCoords}
-            destinationCoords={customerCoords}
-            destinationAddress={booking.customerAddress}
-            technicianName={booking.technicianName || 'Technician'}
-            height="210px"
-            onRouteCalculated={(dist, mins) => setLiveRouteInfo({ distanceKm: dist, durationMins: mins })}
-          />
+          <LiveLocationPanel bookingId={booking.id} role="customer" active={booking.status === 'assigned' || booking.status === 'technician_en_route'} />
 
           {/* Quick link to Nearby Hardware & Spare Parts Stores */}
           <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs shadow-2xs">
