@@ -125,16 +125,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setEnteredOtp('');
       setFormError('');
     } catch (error: any) {
-      console.warn('Firebase phone OTP send failed:', error);
+      const errorCode = typeof error?.code === 'string' ? error.code : 'auth/unknown';
+      // Log only the Firebase error code; never log the user's phone number or OTP.
+      console.warn('Firebase phone OTP send failed:', errorCode);
       recaptchaVerifierRef.current?.clear();
       recaptchaVerifierRef.current = null;
-      setFormError(error?.code === 'auth/too-many-requests'
-        ? 'Firebase SMS limit or abuse protection reached. Please try later; the free plan has a daily SMS quota.'
-        : error?.code === 'auth/invalid-phone-number'
-        ? 'The mobile number is invalid. Please check it and try again.'
-        : error?.code === 'auth/captcha-check-failed'
-        ? 'reCAPTCHA verification failed. Refresh the page and try again.'
-        : 'Firebase could not send the SMS. Check the authorized domain, Phone provider and SMS quota in Firebase Console.');
+      const messages: Record<string, string> = {
+        'auth/too-many-requests': 'Firebase has temporarily blocked requests or the SMS quota is exhausted. Wait before trying again.',
+        'auth/quota-exceeded': 'Firebase SMS quota is exhausted. Try again after the quota resets.',
+        'auth/invalid-phone-number': 'The mobile number is invalid. Please check the 10-digit number.',
+        'auth/captcha-check-failed': 'reCAPTCHA verification failed. Refresh the page and try again.',
+        'auth/invalid-app-credential': 'Firebase rejected the app verification credential. Check the Firebase web app configuration and reCAPTCHA setup.',
+        'auth/missing-app-credential': 'Firebase did not receive the app verification credential. Check reCAPTCHA and the authorized domain.',
+        'auth/unauthorized-domain': 'This website domain is not authorized in Firebase Authentication.',
+        'auth/operation-not-allowed': 'Phone sign-in is not enabled for this Firebase project.',
+        'auth/app-not-authorized': 'This app is not authorized to use Firebase Authentication. Verify the Firebase API key and app configuration.',
+        'auth/network-request-failed': 'Network request failed. Check the internet connection and try again.',
+        'auth/internal-error': 'Firebase returned an internal error. Check the Firebase Authentication configuration and try again.'
+      };
+      const explanation = messages[errorCode] || 'Firebase could not send the SMS. Use the error code below to identify the exact Firebase issue.';
+      setFormError(`${explanation} ( ${errorCode} )`);
     } finally {
       setIsSendingOtp(false);
     }
@@ -172,10 +182,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setActiveRole('customer');
       onClose();
     } catch (error: any) {
-      console.warn('Firebase OTP verification failed:', error);
-      setFormError(error?.code === 'auth/invalid-verification-code'
-        ? 'Incorrect OTP. Please check the SMS and try again.'
-        : 'OTP verification failed or expired. Please request a new code.');
+      const errorCode = typeof error?.code === 'string' ? error.code : 'auth/unknown';
+      console.warn('Firebase OTP verification failed:', errorCode);
+      const verifyMessages: Record<string, string> = {
+        'auth/invalid-verification-code': 'Incorrect OTP. Please check the SMS and try again.',
+        'auth/code-expired': 'This OTP has expired. Request a new code.',
+        'auth/session-expired': 'The verification session expired. Request a new code.',
+        'auth/too-many-requests': 'Too many verification attempts. Wait before trying again.',
+        'auth/network-request-failed': 'Network request failed. Check the internet connection and try again.'
+      };
+      setFormError(`${verifyMessages[errorCode] || 'OTP verification failed. Please request a new code.'} ( ${errorCode} )`);
     }
   };
 
