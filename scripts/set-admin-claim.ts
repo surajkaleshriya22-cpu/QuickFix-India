@@ -1,4 +1,4 @@
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 const expectedProjectId = 'quickfix-india';
@@ -26,4 +26,4 @@ if (verifiedUser.customClaims?.admin !== true) {
 }
 
 console.log(`Admin custom claim successfully set and verified for UID ${uid} in project ${expectedProjectId}.`);
-await app.delete();
+await deleteApp(app);
