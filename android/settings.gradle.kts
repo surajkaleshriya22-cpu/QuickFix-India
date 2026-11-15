@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QuickFix"
+rootProject.name = "QuickFix India"
 include(":app")
