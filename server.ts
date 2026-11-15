@@ -215,8 +215,10 @@ app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, req
       const approved = decision === 'approve';
       transaction.update(partnerRef, {
         approvalStatus: approved ? 'approved' : 'rejected',
-        isVerified: approved,
-        accountStatus: approved ? 'active' : 'rejected',
+        // Application approval is not identity/KYC verification. Keep dispatch disabled
+        // until a separate verified document-review flow is implemented.
+        isVerified: false,
+        accountStatus: approved ? 'pending_kyc' : 'rejected',
         reviewReason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '',
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: identity.uid,
