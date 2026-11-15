@@ -268,12 +268,16 @@ app.get('/api/bookings/:bookingId/location', authenticateFirebaseUser, async (re
       return res.status(403).json({ success: false, error: 'Location is visible only after both participants opt in.' });
     }
     const db = getFirestore(firebaseAdminApp!);
+    const partnerUid = participant.booking.technicianUid || participant.booking.assignedPartnerUid;
+    if (typeof partnerUid !== 'string' || !partnerUid) {
+      return res.status(409).json({ success: false, error: 'This booking has no authenticated Channel Partner assignment yet.' });
+    }
     const [customerSnap, partnerSnap] = await Promise.all([
       participant.ref.collection('liveLocations').doc(participant.booking.customerUid).get(),
-      participant.ref.collection('liveLocations').doc(participant.booking.technicianUid || participant.booking.assignedPartnerUid).get(),
+      participant.ref.collection('liveLocations').doc(partnerUid).get(),
     ]);
     const now = Date.now();
-    const serialize = (snap: FirebaseFirestore.DocumentSnapshot) => {
+    const serialize = (snap: any) => {
       if (!snap.exists) return null;
       const data = snap.data()!;
       const updatedAt = data.updatedAt?.toDate?.();
