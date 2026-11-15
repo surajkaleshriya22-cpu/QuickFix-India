@@ -117,11 +117,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         throw new Error('Phone verification container is unavailable.');
       }
       if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'normal' });
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'invisible' });
       }
-      // Render a visible checkbox challenge before requesting SMS. This avoids
-      // invisible reCAPTCHA failures on mobile browsers and embedded webviews.
-      await recaptchaVerifierRef.current.render();
       const result = await signInWithPhoneNumber(auth, '+91' + phone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setIsOtpStep(true);
@@ -404,10 +401,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                       />
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                    <p className="text-[11px] text-slate-600 mb-2">SMS सुरक्षा जाँच: नीचे reCAPTCHA checkbox पूरा करें।</p>
-                    <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="min-h-[78px] flex justify-center" />
-                  </div>
+                  <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="hidden" aria-hidden="true" />
                 </>
               )}
 
