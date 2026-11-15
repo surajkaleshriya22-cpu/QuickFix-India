@@ -53,6 +53,7 @@ fun QuickFixNavHost(
     val startDest = when (val state = authState) {
         is AuthState.Authenticated -> when (state.user.role) {
             com.quickfix.app.data.model.UserRole.CUSTOMER -> "customer_home"
+            com.quickfix.app.data.model.UserRole.CHANNEL_PARTNER,
             com.quickfix.app.data.model.UserRole.TECHNICIAN -> "technician_portal"
             com.quickfix.app.data.model.UserRole.ADMIN -> "admin_dashboard"
         }

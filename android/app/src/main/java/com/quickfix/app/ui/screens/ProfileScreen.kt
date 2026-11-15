@@ -86,7 +86,7 @@ fun ProfileScreen(
                         shape = RoundedCornerShape(20.dp),
                         color = when (user.role) {
                             UserRole.ADMIN -> Color(0xFFFEE2E2)
-                            UserRole.TECHNICIAN -> Color(0xFFDBEAFE)
+                            UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> Color(0xFFDBEAFE)
                             UserRole.CUSTOMER -> Color(0xFFD1FAE5)
                         }
                     ) {
@@ -97,7 +97,7 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold,
                             color = when (user.role) {
                                 UserRole.ADMIN -> Color(0xFF991B1B)
-                                UserRole.TECHNICIAN -> Color(0xFF1E40AF)
+                                UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> Color(0xFF1E40AF)
                                 UserRole.CUSTOMER -> Color(0xFF065F46)
                             }
                         )
@@ -119,7 +119,7 @@ fun ProfileScreen(
                     ProfileItemRow(icon = Icons.Default.LocationOn, label = "Address", value = user.address.ifEmpty { "Default Bangalore address" })
                     ProfileItemRow(icon = Icons.Default.Place, label = "City", value = user.city)
 
-                    if (user.role == UserRole.TECHNICIAN) {
+                    if (user.role == UserRole.CHANNEL_PARTNER || user.role == UserRole.TECHNICIAN) {
                         ProfileItemRow(icon = Icons.Default.Build, label = "Trades", value = user.trades.joinToString(", "))
                         ProfileItemRow(icon = Icons.Default.CheckCircle, label = "KYC Status", value = if (user.isVerified) "Verified" else "Pending Review")
                     }

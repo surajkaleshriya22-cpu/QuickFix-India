@@ -2,6 +2,8 @@ package com.quickfix.app.data.model
 
 enum class UserRole {
     CUSTOMER,
+    CHANNEL_PARTNER,
+    // Legacy role retained so existing TECHNICIAN profiles continue to sign in.
     TECHNICIAN,
     ADMIN
 }
