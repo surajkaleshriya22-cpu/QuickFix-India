@@ -299,6 +299,61 @@ class QuickFixViewModel : ViewModel() {
                 rating = 4.91,
                 warrantyDays = 45
             )
+            ,
+            ServiceItem(
+                id = "weld-gate",
+                category = "welder",
+                title = "Gate, Grill & Railing Welding",
+                hindiTitle = "गेट, ग्रिल और रेलिंग वेल्डिंग",
+                startingPrice = 399,
+                rating = 4.80,
+                warrantyDays = 30
+            ),
+            ServiceItem(
+                id = "mech-bike",
+                category = "mechanic",
+                title = "Two-Wheeler Breakdown & Basic Repair",
+                hindiTitle = "बाइक और स्कूटर की बेसिक मरम्मत",
+                startingPrice = 249,
+                rating = 4.82,
+                warrantyDays = 7
+            ),
+            ServiceItem(
+                id = "driver-local",
+                category = "driver",
+                title = "Local Hourly Driver",
+                hindiTitle = "लोकल घंटे के हिसाब से ड्राइवर",
+                startingPrice = 399,
+                rating = 4.86,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "guide-city",
+                category = "tourist_guide",
+                title = "Local City Sightseeing Guide",
+                hindiTitle = "शहर घूमने के लिए लोकल गाइड",
+                startingPrice = 599,
+                rating = 4.88,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "contractor-inspection",
+                category = "contractor",
+                title = "Home Repair & Renovation Site Visit",
+                hindiTitle = "घर की मरम्मत और रिनोवेशन साइट विजिट",
+                startingPrice = 499,
+                rating = 4.83,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "bike-pickup",
+                category = "bike_rider",
+                title = "Bike Pickup & Local Delivery",
+                hindiTitle = "बाइक से पिकअप और लोकल डिलीवरी",
+                startingPrice = 99,
+                rating = 4.85,
+                warrantyDays = 0
+            )
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
