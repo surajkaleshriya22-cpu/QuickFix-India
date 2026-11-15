@@ -2,6 +2,9 @@ name: Repair Bun Lock and Set Admin Claim
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/repair-bun-lock-and-admin.yml'
 
 permissions:
   contents: write
