@@ -125,7 +125,7 @@ export const AdminDashboard: React.FC = () => {
   const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence'>('history');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'paid' | 'pending' | 'failed' | 'refunded'>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'upi' | 'card' | 'cash' | 'netbanking'>('all');
-  const [paymentCategoryFilter, setPaymentCategoryFilter] = useState<'all' | 'electrician' | 'plumber'>('all');
+  const [paymentCategoryFilter, setPaymentCategoryFilter] = useState<'all' | ServiceCategoryType>('all');
   const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
   const [reportPeriod, setReportPeriod] = useState<'daily' | 'monthly'>('daily');
   const [simulatorAmount, setSimulatorAmount] = useState<number>(500);
@@ -230,7 +230,7 @@ export const AdminDashboard: React.FC = () => {
   const totalRevenueGMV = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
   const totalCommissionCut = bookings.reduce((sum, b) => sum + b.adminCommission, 0);
   const totalDisbursedNet = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + b.technicianPayout, 0);
-  const pendingKycCount = technicians.filter(t => !t.isVerified).length;
+  const pendingKycCount = technicians.filter(t => t.approvalStatus !== 'approved' || !t.isVerified).length;
 
   // Granular Payment & Commission Calculations
   const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
@@ -967,7 +967,7 @@ export const AdminDashboard: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-white">{tech.name}</h4>
-                          {tech.approvalStatus === 'approved' || (tech.isVerified && tech.approvalStatus !== 'rejected') ? (
+                          {tech.approvalStatus === 'approved' && tech.isVerified ? (
                             <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.2 rounded-full flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3 text-emerald-400" />
                               <span>Certified & Verified</span>
@@ -1637,7 +1637,7 @@ export const AdminDashboard: React.FC = () => {
 
                     {/* Category Filter */}
                     <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-                      {(['all', 'electrician', 'plumber'] as const).map(cat => (
+                      {(['all', 'electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'home_care'] as const).map(cat => (
                         <button
                           key={cat}
                           onClick={() => setPaymentCategoryFilter(cat)}
