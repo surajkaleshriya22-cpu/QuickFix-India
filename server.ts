@@ -166,6 +166,34 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   }
 });
 
+app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner review is temporarily unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('users').where('approvalStatus', '==', 'pending_audit').limit(100).get();
+    const partners = snapshot.docs.flatMap((doc) => {
+      const profile = doc.data();
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.role))) return [];
+      return [{
+        uid: doc.id,
+        name: String(profile.displayName || 'Channel Partner').slice(0, 100),
+        phone: String(profile.phoneNumber || '').slice(0, 30),
+        city: String(profile.city || '').slice(0, 100),
+        trades: Array.isArray(profile.trades) ? profile.trades.filter((trade: unknown) => typeof trade === 'string').slice(0, 12) : [],
+        experienceYears: Number.isInteger(profile.experienceYears) ? profile.experienceYears : 0,
+        qualificationType: String(profile.qualificationType || '').slice(0, 80),
+        qualificationRegNumber: String(profile.qualificationRegNumber || '').slice(0, 100),
+        qualificationInstitute: String(profile.qualificationInstitute || '').slice(0, 120),
+        createdAt: profile.createdAt?.toDate?.()?.toISOString?.() || null,
+      }];
+    });
+    return res.json({ success: true, partners });
+  } catch (error) {
+    console.error('Pending partner lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Pending partner applications could not be loaded.' });
+  }
+});
+
 // Only a Firebase custom-claim Admin can approve or reject a pending partner.
 // Approval changes are audited; this endpoint never handles deposits or payouts.
 app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
