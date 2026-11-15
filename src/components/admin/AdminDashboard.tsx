@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   TrendingUp,
   Percent,
@@ -62,6 +62,8 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
+import { auth } from '../../lib/firebase';
+import { getIdToken } from 'firebase/auth';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -160,6 +162,56 @@ export const AdminDashboard: React.FC = () => {
 
   // Reassignment Modal state
   const [reassignBookingId, setReassignBookingId] = useState<string | null>(null);
+  const [dispatchPartners, setDispatchPartners] = useState<Array<{ uid: string; name: string; phone: string; trades: string[]; city: string }>>([]);
+  const [dispatchLoading, setDispatchLoading] = useState(false);
+  const [dispatchError, setDispatchError] = useState('');
+  const [dispatchingUid, setDispatchingUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!reassignBookingId) return;
+    let cancelled = false;
+    const loadVerifiedPartners = async () => {
+      setDispatchLoading(true); setDispatchError(''); setDispatchPartners([]);
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+        const token = await getIdToken(user);
+        const response = await fetch('/api/admin/partners/verified', { headers: { Authorization: 'Bearer ' + token } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.success !== true || !Array.isArray(payload.partners)) throw new Error(typeof payload.error === 'string' ? payload.error : 'Verified partner list could not be loaded.');
+        if (!cancelled) setDispatchPartners(payload.partners);
+      } catch (error) {
+        if (!cancelled) setDispatchError(error instanceof Error ? error.message : 'Verified partner list could not be loaded.');
+      } finally { if (!cancelled) setDispatchLoading(false); }
+    };
+    void loadVerifiedPartners();
+    return () => { cancelled = true; };
+  }, [reassignBookingId]);
+
+  const handleSecurePartnerAssignment = async (partnerUid: string) => {
+    if (!reassignBookingId || dispatchingUid) return;
+    setDispatchingUid(partnerUid); setDispatchError('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/bookings/' + encodeURIComponent(reassignBookingId) + '/assign-partner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ partnerUid })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) {
+        const messages: Record<string, string> = { BOOKING_NOT_FOUND: 'Booking nahi mili.', PARTNER_NOT_FOUND: 'Channel Partner profile nahi mili.', BOOKING_NOT_ASSIGNABLE: 'Yeh booking ab assign nahi ho sakti. Booking refresh karke dekhein.', PARTNER_NOT_ELIGIBLE: 'Yeh partner verified/approved nahi hai ya suspended hai.' };
+        throw new Error(messages[payload.error] || (typeof payload.error === 'string' ? payload.error : 'Assignment failed.'));
+      }
+      setStatusUpdateSuccessMsg('Booking securely assigned to the selected verified Channel Partner.');
+      setReassignBookingId(null);
+      await triggerFirestoreSync();
+    } catch (error) {
+      setDispatchError(error instanceof Error ? error.message : 'Secure assignment failed.');
+    } finally { setDispatchingUid(null); }
+  };
 
   // Review reply state
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -1324,37 +1376,25 @@ export const AdminDashboard: React.FC = () => {
               ))}
             </div>
 
-            {/* Reassignment Modal */}
+            {/* Secure Reassignment Modal: candidates and assignment are server-verified. */}
             {reassignBookingId && (
               <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
                 <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-white text-sm">Reassign Booking {reassignBookingId}</h3>
-                    <button
-                      onClick={() => setReassignBookingId(null)}
-                      className="w-7 h-7 rounded-full bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <h3 className="font-bold text-white text-sm">Assign Booking {reassignBookingId}</h3>
+                    <button onClick={() => setReassignBookingId(null)} disabled={Boolean(dispatchingUid)} className="w-7 h-7 rounded-full bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center"><X className="w-4 h-4" /></button>
                   </div>
-
-                  <p className="text-xs text-slate-400">Select an online verified technician to dispatch:</p>
-
+                  <p className="text-xs text-slate-400">Only server-verified and approved Channel Partners are shown.</p>
+                  {dispatchLoading && <p className="text-xs text-blue-300">Loading verified partners…</p>}
+                  {dispatchError && <div role="alert" className="rounded-lg border border-rose-800 bg-rose-950/50 p-2.5 text-xs text-rose-300">{dispatchError}</div>}
+                  {!dispatchLoading && !dispatchError && dispatchPartners.length === 0 && <p className="rounded-lg border border-amber-800 bg-amber-950/40 p-3 text-xs text-amber-200">No verified and approved Channel Partners are currently available. No assignment was made.</p>}
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {technicians.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          reassignBookingTechnician(reassignBookingId, t.id);
-                          setReassignBookingId(null);
-                        }}
-                        className="w-full text-left p-2.5 rounded-xl border border-slate-800 hover:border-blue-500 hover:bg-slate-900 flex items-center justify-between text-xs transition-colors"
-                      >
-                        <div>
-                          <div className="font-bold text-white">{t.name}</div>
-                          <div className="text-[10px] text-slate-400 capitalize">{t.trades.join(', ')} · {t.city}</div>
-                        </div>
-                        <span className="text-amber-400 font-bold">{t.rating} ★</span>
+                    {dispatchPartners.map(partner => (
+                      <button key={partner.uid} type="button" disabled={Boolean(dispatchingUid) || dispatchLoading} onClick={() => void handleSecurePartnerAssignment(partner.uid)} className="w-full text-left p-2.5 rounded-xl border border-slate-800 hover:border-blue-500 hover:bg-slate-900 disabled:opacity-50 text-xs transition-colors">
+                        <div className="font-bold text-white">{partner.name}</div>
+                        <div className="text-[10px] text-slate-400 capitalize">{partner.trades.join(', ') || 'Trade not listed'} · {partner.city || 'Location not listed'}</div>
+                        {partner.phone && <div className="text-[10px] text-slate-500">{partner.phone}</div>}
+                        {dispatchingUid === partner.uid && <div className="mt-1 text-[10px] text-blue-300">Assigning securely…</div>}
                       </button>
                     ))}
                   </div>
