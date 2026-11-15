@@ -166,6 +166,11 @@ export const AdminDashboard: React.FC = () => {
   const [dispatchLoading, setDispatchLoading] = useState(false);
   const [dispatchError, setDispatchError] = useState('');
   const [dispatchingUid, setDispatchingUid] = useState<string | null>(null);
+  const [pendingPartnerApplications, setPendingPartnerApplications] = useState<Array<{ uid: string; name: string; phone: string; city: string; trades: string[]; experienceYears: number; qualificationType: string; qualificationRegNumber: string; qualificationInstitute: string }>>([]);
+  const [pendingPartnersLoading, setPendingPartnersLoading] = useState(false);
+  const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
+  const [partnerReviewError, setPartnerReviewError] = useState('');
+  const [partnerReviewNotice, setPartnerReviewNotice] = useState('');
 
   useEffect(() => {
     if (!reassignBookingId) return;
@@ -187,6 +192,64 @@ export const AdminDashboard: React.FC = () => {
     void loadVerifiedPartners();
     return () => { cancelled = true; };
   }, [reassignBookingId]);
+
+  useEffect(() => {
+    if (activeTab !== 'technicians') return;
+    let cancelled = false;
+    const loadPendingPartnerApplications = async () => {
+      setPendingPartnersLoading(true);
+      setPartnerReviewError('');
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+        const token = await getIdToken(user);
+        const response = await fetch('/api/admin/partners/pending', { headers: { Authorization: 'Bearer ' + token } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.success !== true || !Array.isArray(payload.partners)) {
+          throw new Error(typeof payload.error === 'string' ? payload.error : 'Pending applications could not be loaded.');
+        }
+        if (!cancelled) setPendingPartnerApplications(payload.partners);
+      } catch (error) {
+        if (!cancelled) setPartnerReviewError(error instanceof Error ? error.message : 'Pending applications could not be loaded.');
+      } finally {
+        if (!cancelled) setPendingPartnersLoading(false);
+      }
+    };
+    void loadPendingPartnerApplications();
+    return () => { cancelled = true; };
+  }, [activeTab]);
+
+  const handlePartnerReview = async (partnerUid: string, decision: 'approve' | 'reject') => {
+    if (partnerReviewBusyUid) return;
+    const reason = decision === 'reject' ? window.prompt('Rejection reason (required):') : '';
+    if (decision === 'reject' && !reason?.trim()) return;
+    setPartnerReviewBusyUid(partnerUid);
+    setPartnerReviewError('');
+    setPartnerReviewNotice('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/partners/' + encodeURIComponent(partnerUid) + '/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ decision, reason: reason || undefined })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) {
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'Partner review could not be saved.');
+      }
+      setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
+      setPartnerReviewNotice(decision === 'approve'
+        ? 'Partner approved. Dispatch eligibility is now enabled, subject to the remaining wallet and operational checks.'
+        : 'Partner application rejected and the decision was recorded.');
+      await triggerFirestoreSync();
+    } catch (error) {
+      setPartnerReviewError(error instanceof Error ? error.message : 'Partner review could not be saved.');
+    } finally {
+      setPartnerReviewBusyUid(null);
+    }
+  };
 
   const handleSecurePartnerAssignment = async (partnerUid: string) => {
     if (!reassignBookingId || dispatchingUid) return;
@@ -951,6 +1014,45 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
             </div>
+
+            <section className="mb-4 rounded-2xl border border-amber-700/60 bg-amber-950/20 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-amber-200">Pending Channel Partner Applications</h3>
+                  <p className="text-[11px] text-slate-400">Review trade qualification details before approving a partner.</p>
+                </div>
+                <span className="rounded-full bg-amber-900/60 px-2.5 py-1 text-xs font-bold text-amber-200">{pendingPartnerApplications.length} pending</span>
+              </div>
+              {partnerReviewError && <p className="text-xs text-rose-300">{partnerReviewError}</p>}
+              {partnerReviewNotice && <p className="text-xs text-emerald-300">{partnerReviewNotice}</p>}
+              {pendingPartnersLoading ? (
+                <p className="text-xs text-slate-400">Loading secure applications…</p>
+              ) : pendingPartnerApplications.length === 0 ? (
+                <p className="text-xs text-slate-400">No pending applications found.</p>
+              ) : pendingPartnerApplications.map(application => (
+                <div key={application.uid} className="rounded-xl border border-slate-700 bg-slate-950 p-3 space-y-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-white">{application.name}</p>
+                      <p className="text-[11px] text-slate-400">{application.phone} · {application.city}</p>
+                    </div>
+                    <span className="text-[10px] rounded-full bg-amber-900/50 px-2 py-1 text-amber-200">Pending KYC review</span>
+                  </div>
+                  <p className="text-xs text-slate-300">Trades: {application.trades.join(', ')}</p>
+                  <p className="text-xs text-slate-300">Experience: {application.experienceYears} years</p>
+                  <p className="text-xs text-slate-300">Certificate: {application.qualificationType} · {application.qualificationRegNumber}</p>
+                  <p className="text-xs text-slate-300">Institute: {application.qualificationInstitute}</p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                      {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Approve'}
+                    </button>
+                    <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'reject')} className="rounded-lg border border-rose-700 bg-rose-950 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-50">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
 
             {/* Technicians List */}
             <div className="space-y-3">
