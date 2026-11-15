@@ -10,8 +10,9 @@ interface ServiceBookingSheetProps {
   onSuccess: (bookingId: string) => void;
 }
 
-export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose }) => {
-  const { customer, currentCity, commissionSettings } = useQuickFix();
+export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
+  const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState('Today');
   const [selectedSlot, setSelectedSlot] = useState('Express (Within 45 Mins)');
@@ -104,9 +105,27 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     '06:00 PM - 09:00 PM'
   ];
 
-  // Do not simulate a successful booking before the trusted backend exists.
-  const handleConfirm = () => {
-    window.alert(`Online booking is temporarily unavailable while QuickFix completes secure booking setup. Your selected payment option is ${paymentMethod.toUpperCase()}. No booking has been created and no payment has been taken. Please try again later.`);
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitCustomerBooking({
+        serviceId: service.id,
+        scheduledDate: selectedDate,
+        scheduledTimeSlot: selectedSlot,
+        address: selectedAddress,
+        notes,
+        paymentMethod
+      });
+      if (!result.success || !result.bookingId) {
+        window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
+        return;
+      }
+      window.alert(`Booking request successfully save ho gayi. Request ID: ${result.bookingId}. Abhi koi payment collect nahi hui hai; payment status pending rahega.`);
+      onSuccess(result.bookingId);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -351,10 +370,10 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <button
             type="button"
             onClick={handleConfirm}
-            disabled
+            disabled={isSubmitting}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            <span>Booking Temporarily Unavailable</span>
+            {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving Request...</> : <span>Confirm Service Request</span>}
           </button>
         </div>
       </div>
