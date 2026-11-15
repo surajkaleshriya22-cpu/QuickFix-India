@@ -122,7 +122,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
     // Validate a real calendar date and reject dates earlier than today in India.
     const dateMatch = typeof scheduledDate === 'string'
-      ? scheduledDate.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/)
+      ? scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
       : null;
     const validCalendarDate = !!dateMatch && (() => {
       const year = Number(dateMatch[1]);
