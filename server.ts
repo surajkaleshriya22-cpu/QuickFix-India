@@ -189,6 +189,25 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 });
 
 
+// Return only the minimum profile fields needed by the Admin dispatch picker.
+app.get('/api/admin/partners/verified', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner lookup is temporarily unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('users').where('isVerified', '==', true).get();
+    const partners = snapshot.docs.flatMap((doc) => {
+      const profile = doc.data();
+      const supportedRole = profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN';
+      const approved = profile.approvalStatus === undefined || profile.approvalStatus === 'approved';
+      if (!supportedRole || !approved || profile.accountStatus === 'suspended' || profile.isSuspended === true) return [];
+      return [{ uid: doc.id, name: String(profile.displayName || 'Channel Partner').slice(0, 100), phone: String(profile.phoneNumber || '').slice(0, 30), trades: Array.isArray(profile.trades) ? profile.trades.filter((trade: unknown) => typeof trade === 'string').slice(0, 12) : [], city: String(profile.city || '').slice(0, 100) }];
+    });
+    return res.json({ success: true, partners });
+  } catch (error) {
+    console.error('Verified partner lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Verified partners could not be loaded.' });
+  }
+});
 // Admin-only partner assignment. The authenticated Firebase UID is taken from a verified
 // TECHNICIAN profile, never from a legacy local/demo technicianId supplied by the client.
 app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
@@ -217,7 +236,9 @@ app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUs
       if (booking.status !== 'requested' || booking.technicianUid || booking.assignedPartnerUid) {
         return { error: 'BOOKING_NOT_ASSIGNABLE' as const };
       }
-      if (partner.role !== 'TECHNICIAN' || partner.isVerified !== true || partner.accountStatus === 'suspended') {
+      const supportedRole = partner.role === 'CHANNEL_PARTNER' || partner.role === 'TECHNICIAN';
+      const approved = partner.approvalStatus === undefined || partner.approvalStatus === 'approved';
+      if (!supportedRole || partner.isVerified !== true || !approved || partner.accountStatus === 'suspended' || partner.isSuspended === true) {
         return { error: 'PARTNER_NOT_ELIGIBLE' as const };
       }
 
