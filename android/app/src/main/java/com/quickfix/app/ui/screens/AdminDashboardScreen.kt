@@ -397,7 +397,7 @@ fun TechniciansTab(
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // Trade filter chips
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             listOf(
                 "all" to "All Partners",
                 "electrician" to "Electricians",
