@@ -99,10 +99,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (selectedRoleTab !== 'customer') {
+    if (selectedRoleTab === 'admin' || (selectedRoleTab === 'technician' && !isSignupMode)) {
       setFormError(selectedRoleTab === 'admin'
         ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
-        : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
+        : 'Existing partner sign-in is not enabled yet. Use the registered customer account or contact support.');
       return;
     }
     if (!isFirebaseConfigured) {
@@ -182,6 +182,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
     try {
       const credential = await confirmationResult.confirm(enteredOtp.trim());
+      if (selectedRoleTab === 'technician') {
+        if (!isSignupMode) {
+          setFormError('Existing partner sign-in is not enabled yet.');
+          return;
+        }
+        const result = await registerNewPartner({
+          displayName,
+          phoneNumber: credential.user.phoneNumber || '+91' + phone,
+          email,
+          trades: partnerTrades,
+          experienceYears,
+          city: currentCity,
+          address,
+          rememberMe
+        });
+        if (!result.success) {
+          setFormError(result.message || 'Unable to complete partner registration.');
+          return;
+        }
+        setActiveRole('technician');
+        setFormError(result.message || 'Basic partner profile created. Approval is pending.');
+        onClose();
+        return;
+      }
       if (selectedRoleTab !== 'customer') {
         setFormError('This account type cannot be completed through customer phone sign-in.');
         return;
