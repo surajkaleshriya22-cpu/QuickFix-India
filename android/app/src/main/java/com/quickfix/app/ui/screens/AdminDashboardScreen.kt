@@ -3,6 +3,7 @@ package com.quickfix.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -397,8 +398,19 @@ fun TechniciansTab(
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // Trade filter chips
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            listOf("all" to "All Partners", "electrician" to "Electricians", "plumber" to "Plumbers").forEach { (key, label) ->
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            listOf(
+                "all" to "All Partners",
+                "electrician" to "Electricians",
+                "ac_fridge" to "AC / Fridge",
+                "plumber" to "Plumbers",
+                "welder" to "Welders",
+                "mechanic" to "Mechanics",
+                "driver" to "Drivers",
+                "tourist_guide" to "Tourist Guides",
+                "contractor" to "Contractors",
+                "bike_rider" to "Bike Rider Captains"
+            ).forEach { (key, label) ->
                 FilterChip(
                     selected = selectedFilter == key,
                     onClick = { onFilterChange(key) },

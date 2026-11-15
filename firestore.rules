@@ -78,12 +78,17 @@ service cloud.firestore {
         && request.resource.data.escrowStatus == 'not_funded'
         && request.resource.data.price is number
         && request.resource.data.totalAmount is number
+        && request.resource.data.customerAddress is string
+        && request.resource.data.serviceTitle is string
+        && request.resource.data.category is string
         && request.resource.data.createdAt is timestamp
-        && request.resource.data.scheduledDate is string
-        && request.resource.data.scheduledTimeSlot is string
-        && request.resource.data.city is string
-        && request.resource.data.pincode is string
-        && request.resource.data.paymentMethod in ['upi', 'cash']
+        // Scheduling and area fields are optional for the current Android form.
+        // When supplied by a client, they must still have the expected type.
+        && (!('scheduledDate' in request.resource.data) || request.resource.data.scheduledDate is string)
+        && (!('scheduledTimeSlot' in request.resource.data) || request.resource.data.scheduledTimeSlot is string)
+        && (!('city' in request.resource.data) || request.resource.data.city is string)
+        && (!('pincode' in request.resource.data) || request.resource.data.pincode is string)
+        && (!('paymentMethod' in request.resource.data) || request.resource.data.paymentMethod in ['upi', 'cash'])
         && request.resource.data.keys().hasOnly([
           'id',
           'customerUid',
