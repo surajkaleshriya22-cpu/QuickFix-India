@@ -296,7 +296,16 @@ class QuickFixViewModel : ViewModel() {
                 startingPrice = 349,
                 rating = 4.91,
                 warrantyDays = 45
-            )
+            ),
+            ServiceItem("ac-service", "ac_fridge", "AC Service & Repair", "एसी सर्विस और मरम्मत", 399, 4.80, 30),
+            ServiceItem("fridge-repair", "ac_fridge", "Refrigerator Repair", "फ्रिज मरम्मत", 299, 4.78, 30),
+            ServiceItem("welding-gate", "welder", "Gate & Grill Welding", "गेट और ग्रिल वेल्डिंग", 499, 4.75, 15),
+            ServiceItem("car-mechanic", "mechanic", "Car Breakdown / Basic Repair", "कार मैकेनिक सेवा", 399, 4.76, 15),
+            ServiceItem("bike-mechanic", "mechanic", "Two-Wheeler Repair", "बाइक मरम्मत", 199, 4.79, 15),
+            ServiceItem("driver-booking", "driver", "Driver on Demand", "ड्राइवर सेवा", 499, 4.70, 0),
+            ServiceItem("tour-guide", "tourist_guide", "Local Tourist Guide", "स्थानीय टूरिस्ट गाइड", 599, 4.70, 0),
+            ServiceItem("contractor-visit", "contractor", "Contractor Site Visit", "कॉन्ट्रैक्टर साइट विजिट", 499, 4.72, 15),
+            ServiceItem("bike-rider", "bike_rider", "Bike Rider / Pickup Service", "बाइक राइडर सेवा", 99, 4.70, 0)
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
