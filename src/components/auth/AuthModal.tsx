@@ -34,7 +34,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const {
     authenticateUser,
     authenticateFirebaseCustomer,
-    registerNewPartner,
     currentCity,
     setCurrentCity,
     setActiveRole
@@ -56,13 +55,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   // Partner Specific Fields
   const [partnerTrades, setPartnerTrades] = useState<ServiceCategoryType[]>(['electrician']);
   const [experienceYears, setExperienceYears] = useState(7);
-  const [kycType, setKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
-  const [kycNumber, setKycNumber] = useState('');
   const [qualificationType, setQualificationType] = useState<'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma'>('ITI Trade Certificate');
   const [qualificationRegNumber, setQualificationRegNumber] = useState('');
   const [qualificationInstitute, setQualificationInstitute] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [partnerDeposit, setPartnerDeposit] = useState<number>(2000);
 
   // Admin Specific Fields
   const [adminPasscode, setAdminPasscode] = useState('');
@@ -74,6 +69,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [enteredOtp, setEnteredOtp] = useState('');
   const [countdown, setCountdown] = useState(30);
   const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const recaptchaContainerRef = useRef<HTMLDivElement | null>(null);
@@ -99,11 +95,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (selectedRoleTab !== 'customer') {
-      setFormError(selectedRoleTab === 'admin'
-        ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
-        : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
+    setSuccessMessage('');
+    if (selectedRoleTab === 'admin') {
+      setFormError('Admin sign-in must use the dedicated secure Admin Login screen.');
       return;
+    }
+    if (selectedRoleTab === 'technician') {
+      if (!isSignupMode) {
+        setFormError('Partner sign-in is not enabled yet. Choose Register as Service Partner to submit a new application.');
+        return;
+      }
+      if (displayName.trim().length < 2 || partnerTrades.length < 1 ||
+          qualificationRegNumber.trim().length < 2 || qualificationInstitute.trim().length < 2 ||
+          !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 50) {
+        setFormError('Please complete your name, at least one trade, qualification details and experience.');
+        return;
+      }
     }
     if (!isFirebaseConfigured) {
       setFormError('Firebase is not configured for this deployment. Please contact support; no SMS was sent.');
@@ -182,8 +189,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
     try {
       const credential = await confirmationResult.confirm(enteredOtp.trim());
+      if (selectedRoleTab === 'technician') {
+        const idToken = await credential.user.getIdToken();
+        const response = await fetch('/api/partners/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            displayName: displayName.trim(),
+            trades: partnerTrades,
+            experienceYears,
+            qualificationType,
+            qualificationRegNumber: qualificationRegNumber.trim(),
+            qualificationInstitute: qualificationInstitute.trim(),
+            city: currentCity
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.success !== true) {
+          setFormError(payload.error || 'Partner application could not be submitted. Please retry.');
+          return;
+        }
+        setSuccessMessage(payload.message || 'Application submitted for Admin review. No deposit has been collected.');
+        setIsOtpStep(false);
+        setConfirmationResult(null);
+        return;
+      }
       if (selectedRoleTab !== 'customer') {
-        setFormError('This account type cannot be completed through customer phone sign-in.');
+        setFormError('This account type cannot be completed through this sign-in flow.');
         return;
       }
       const result = await authenticateFirebaseCustomer({
@@ -308,6 +340,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
         {/* Body Content */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {successMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
           {formError && (
             <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -569,87 +607,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         </div>
                       </div>
 
-                      {/* Government KYC ID */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Govt Identity Proof
-                          </label>
-                          <select
-                            value={kycType}
-                            onChange={e => setKycType(e.target.value as any)}
-                            className="w-full px-2 py-2 rounded-xl border border-slate-300 bg-white text-xs"
-                          >
-                            <option value="Skill India Certificate">Skill India ID</option>
-                            <option value="Aadhaar">Aadhaar Card</option>
-                            <option value="PAN">PAN Card</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Doc Number
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={kycNumber}
-                            onChange={e => setKycNumber(e.target.value)}
-                            placeholder="e.g. SIC-EL-9941"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          UPI ID for Direct Bank Payouts
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={upiId}
-                          onChange={e => setUpiId(e.target.value)}
-                          placeholder="name@okaxis or paytm"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                        />
-                      </div>
-
-                      {/* Mandatory Partner Security Deposit of ₹2,000 */}
-                      <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-bold text-amber-950 text-xs">
-                            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span>Mandatory Security Deposit: ₹2,000</span>
-                          </div>
-                          <span className="text-[10px] font-bold uppercase bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">
-                            Non-Withdrawable
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-amber-800 leading-relaxed">
-                          To complete registration, partners must maintain a minimum wallet balance of <strong>₹2,000</strong>. This base deposit remains locked as a security guarantee for platform cash commissions and cannot be withdrawn. Only earnings above ₹2,000 are eligible for withdrawal.
-                        </p>
-                        <div className="pt-1">
-                          <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
-                            Initial Wallet Balance to Fund:
-                          </label>
-                          <div className="flex gap-2">
-                            {[2000, 3000, 5000].map(amt => (
-                              <button
-                                key={amt}
-                                type="button"
-                                onClick={() => setPartnerDeposit(amt)}
-                                className={`flex-1 py-1.5 rounded-lg border text-center font-mono font-bold text-xs transition-colors ${
-                                  partnerDeposit === amt
-                                    ? 'bg-amber-600 text-white border-amber-700 shadow-2xs'
-                                    : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100'
-                                }`}
-                              >
-                                ₹{amt} {amt === 2000 ? '(Min)' : ''}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+                        <strong className="block mb-1">KYC and payment safety</strong>
+                        Do not enter Aadhaar/PAN numbers or UPI details here. Identity documents are requested only through a verified secure KYC process after application review. No security deposit or payment is collected during registration.
                       </div>
                     </>
                   ) : null}
