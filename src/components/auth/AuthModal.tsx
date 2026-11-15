@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import {
   X,
   Phone,
@@ -101,6 +101,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setFormError(selectedRoleTab === 'admin'
         ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
         : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
+      return;
+    }
+    if (!isFirebaseConfigured) {
+      setFormError('Firebase is not configured for this deployment. Please contact support; no SMS was sent.');
       return;
     }
     if (!/^\d{10}$/.test(phone)) {
