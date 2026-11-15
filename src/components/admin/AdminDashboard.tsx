@@ -62,6 +62,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
+import { auth } from '../../lib/firebase';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -167,6 +168,16 @@ export const AdminDashboard: React.FC = () => {
   // Admin login passcode state
   const [adminKeyInput, setAdminKeyInput] = useState('');
   const [adminAuthError, setAdminAuthError] = useState('');
+  const [pendingPartners, setPendingPartners] = useState<Array<{
+    uid: string; displayName?: string; email?: string; phoneNumber?: string;
+    city?: string; trades?: string[]; experienceYears?: number;
+    createdAt?: string; approvalStatus?: string; kycStatus?: string;
+  }>>([]);
+  const [partnerReviewLoading, setPartnerReviewLoading] = useState(false);
+  const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
+  const [partnerReviewMessage, setPartnerReviewMessage] = useState('');
+  const [partnerReviewError, setPartnerReviewError] = useState('');
+
 
   // Primary Metrics Calculations
   const totalCustomers = customers.length;
@@ -408,6 +419,78 @@ export const AdminDashboard: React.FC = () => {
       </div>
     );
   }
+
+
+  const loadPendingPartners = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setPartnerReviewError('Firebase admin session not found. Please sign in again.');
+      return;
+    }
+    setPartnerReviewLoading(true);
+    setPartnerReviewError('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/partners/pending', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Pending partner list could not be loaded.');
+      }
+      setPendingPartners(Array.isArray(result.partners) ? result.partners : []);
+    } catch (error: any) {
+      setPartnerReviewError(error?.message || 'Unable to load pending partners.');
+    } finally {
+      setPartnerReviewLoading(false);
+    }
+  };
+
+  const reviewPendingPartner = async (partnerUid: string, decision: 'approve_profile' | 'reject') => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setPartnerReviewError('Firebase admin session not found. Please sign in again.');
+      return;
+    }
+    let reason: string | undefined;
+    if (decision === 'reject') {
+      reason = window.prompt('Rejection reason (required):')?.trim();
+      if (!reason) return;
+      if (reason.length > 500) {
+        setPartnerReviewError('Reason must be 500 characters or less.');
+        return;
+      }
+    }
+    setPartnerReviewBusyUid(partnerUid);
+    setPartnerReviewError('');
+    setPartnerReviewMessage('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch(`/api/admin/partners/${encodeURIComponent(partnerUid)}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ decision, ...(reason ? { reason } : {}) })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Partner review could not be saved.');
+      }
+      setPartnerReviewMessage(decision === 'approve_profile'
+        ? 'Basic profile review approved. KYC and qualification are still pending.'
+        : 'Partner profile rejected.');
+      await loadPendingPartners();
+    } catch (error: any) {
+      setPartnerReviewError(error?.message || 'Partner review failed.');
+    } finally {
+      setPartnerReviewBusyUid(null);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'technicians' && currentUser?.role === 'admin') {
+      void loadPendingPartners();
+    }
+  }, [activeTab, currentUser?.uid, currentUser?.role]);
 
   // Filter Bookings
   const filteredBookings = bookings.filter(b => {
@@ -843,6 +926,43 @@ export const AdminDashboard: React.FC = () => {
         {/* ================= TAB 3: MANAGE TECHNICIANS ================= */}
         {activeTab === 'technicians' && (
           <div className="space-y-3">
+            <section className="bg-slate-950 border border-blue-800/60 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Pending Channel Partner Profiles</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">Basic profile review only. Approval does not verify KYC, qualifications, or enable job acceptance.</p>
+                </div>
+                <button onClick={() => void loadPendingPartners()} disabled={partnerReviewLoading} className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-white disabled:opacity-50">
+                  {partnerReviewLoading ? 'Loading…' : 'Refresh'}
+                </button>
+              </div>
+              {partnerReviewError && <p role="alert" className="text-xs text-rose-300 bg-rose-950/40 p-2 rounded-lg">{partnerReviewError}</p>}
+              {partnerReviewMessage && <p role="status" className="text-xs text-emerald-300 bg-emerald-950/40 p-2 rounded-lg">{partnerReviewMessage}</p>}
+              {!partnerReviewLoading && pendingPartners.length === 0 && !partnerReviewError && (
+                <p className="text-xs text-slate-400">No pending partner profiles found.</p>
+              )}
+              {pendingPartners.map(partner => (
+                <div key={partner.uid} className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{partner.displayName || 'Name not provided'}</p>
+                      <p className="text-[11px] text-slate-400">{partner.city || 'City not provided'} · {partner.experienceYears ?? 0} years experience</p>
+                    </div>
+                    <span className="text-[10px] rounded-full px-2 py-1 bg-amber-950 text-amber-300 border border-amber-800">Pending review</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">Trades: {(partner.trades || []).join(', ') || 'Not provided'}</p>
+                  <p className="text-[10px] text-slate-500">KYC status: {partner.kycStatus || 'not submitted'}</p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button disabled={partnerReviewBusyUid === partner.uid} onClick={() => void reviewPendingPartner(partner.uid, 'approve_profile')} className="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-bold text-white disabled:opacity-50">
+                      {partnerReviewBusyUid === partner.uid ? 'Saving…' : 'Approve Basic Profile'}
+                    </button>
+                    <button disabled={partnerReviewBusyUid === partner.uid} onClick={() => void reviewPendingPartner(partner.uid, 'reject')} className="px-3 py-2 rounded-lg bg-rose-900 hover:bg-rose-800 text-xs font-bold text-white disabled:opacity-50">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto no-scrollbar">
