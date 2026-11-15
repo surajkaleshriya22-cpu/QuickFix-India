@@ -364,6 +364,24 @@ class QuickFixViewModel : ViewModel() {
                 warrantyDays = 0
             ),
             ServiceItem(
+                id = "labour-helper",
+                category = "labour",
+                title = "General Helper / Daily Labour",
+                hindiTitle = "सामान्य मजदूर / रोज़ाना लेबर",
+                startingPrice = 499,
+                rating = 4.80,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "labour-construction",
+                category = "labour",
+                title = "Construction & Site Labour",
+                hindiTitle = "निर्माण कार्य और साइट मजदूर",
+                startingPrice = 599,
+                rating = 4.82,
+                warrantyDays = 0
+            ),
+            ServiceItem(
                 id = "bike-pickup",
                 category = "bike_rider",
                 title = "Bike Pickup & Local Delivery",
