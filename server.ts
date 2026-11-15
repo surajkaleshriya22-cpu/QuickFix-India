@@ -110,6 +110,9 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
   return next();
 };
 
+// Apply the API rate limit before registering any API route, including booking creation.
+app.use('/api', apiRateLimit);
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -185,9 +188,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
   }
 });
 
-// All API requests are rate-limited and require a verified Firebase identity.
-// Admin-only operations must additionally use requireServerAdmin.
-app.use('/api', apiRateLimit);
+// API routes must verify Firebase identity; admin routes must additionally use requireServerAdmin.
 app.use('/api/places', authenticateFirebaseUser);
 app.use('/api/audio', authenticateFirebaseUser);
 app.use('/api/music', authenticateFirebaseUser);
