@@ -113,6 +113,71 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
+// Secure Channel Partner registration. Only basic profile data is accepted here;
+// government IDs, certificates, UPI details and deposits remain out of scope until
+// a compliant restricted KYC workflow and verified payment provider are deployed.
+app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure registration is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const verifiedPhone = identity.phone_number;
+    const { displayName, email, trades, experienceYears, city, address } = req.body ?? {};
+    const allowedTrades = new Set(['electrician', 'plumber', 'ac_repair', 'fridge_repair']);
+
+    if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
+        displayName.trim().length > 100 ||
+        typeof email !== 'string' || email.trim().length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 4 ||
+        trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
+        !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
+        typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100 ||
+        (address !== undefined && (typeof address !== 'string' || address.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Partner profile details are invalid.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(userRef);
+      if (existing.exists) {
+        throw new Error('PROFILE_ALREADY_EXISTS');
+      }
+      transaction.create(userRef, {
+        uid: identity.uid,
+        phoneNumber: verifiedPhone,
+        displayName: displayName.trim(),
+        email: email.trim().toLowerCase(),
+        role: 'CHANNEL_PARTNER',
+        city: city.trim(),
+        address: typeof address === 'string' ? address.trim() : '',
+        trades: [...new Set(trades)],
+        experienceYears,
+        isVerified: false,
+        approvalStatus: 'pending_audit',
+        kycStatus: 'not_submitted',
+        securityDepositPaid: false,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+
+    return res.status(201).json({
+      success: true,
+      approvalStatus: 'pending_audit',
+      message: 'Basic partner profile created. KYC and approval are still pending; no deposit was collected.'
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'PROFILE_ALREADY_EXISTS') {
+      return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
+    }
+    console.error('Secure partner registration failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
+  }
+});
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
