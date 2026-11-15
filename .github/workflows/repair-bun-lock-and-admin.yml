@@ -40,13 +40,13 @@ jobs:
             echo "bun.lock already matches package.json"
           fi
 
-      - name: Set Firebase admin custom claim
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+      - name: Set Firebase admin custom claim when credential is available
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           QUICKFIX_ADMIN_UID: DXUshx5V2agHnQgK41bxByo3ZiC2
-        run: bun run set-admin-claim
-
-      - name: Explain missing Firebase Admin credential
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON == '' }}
-        run: echo "Lockfile repaired and build verified. Add FIREBASE_SERVICE_ACCOUNT_JSON as a GitHub Actions secret, then rerun this workflow to set the admin claim."
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            bun run set-admin-claim
+          else
+            echo "FIREBASE_SERVICE_ACCOUNT_JSON is not configured; skipping admin claim."
+          fi
