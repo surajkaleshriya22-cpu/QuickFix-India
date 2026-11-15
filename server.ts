@@ -170,7 +170,7 @@ app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAd
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner review is temporarily unavailable.' });
     const db = getFirestore(firebaseAdminApp);
-    const snapshot = await db.collection('users').limit(300).get();
+    const snapshot = await db.collection('users').where('approvalStatus', 'in', ['pending_audit', 'approved']).limit(300).get();
     const partners = snapshot.docs.flatMap((doc) => {
       const profile = doc.data();
       const awaitingApplicationReview = profile.approvalStatus === 'pending_audit';
