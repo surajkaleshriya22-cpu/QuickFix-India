@@ -166,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
   const [dispatchLoading, setDispatchLoading] = useState(false);
   const [dispatchError, setDispatchError] = useState('');
   const [dispatchingUid, setDispatchingUid] = useState<string | null>(null);
-  const [pendingPartnerApplications, setPendingPartnerApplications] = useState<Array<{ uid: string; name: string; phone: string; city: string; trades: string[]; experienceYears: number; qualificationType: string; qualificationRegNumber: string; qualificationInstitute: string }>>([]);
+  const [pendingPartnerApplications, setPendingPartnerApplications] = useState<Array<{ uid: string; name: string; phone: string; city: string; trades: string[]; experienceYears: number; qualificationType: string; qualificationRegNumber: string; qualificationInstitute: string; approvalStatus: string; accountStatus: string }>>([]);
   const [pendingPartnersLoading, setPendingPartnersLoading] = useState(false);
   const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
   const [partnerReviewError, setPartnerReviewError] = useState('');
@@ -246,6 +246,36 @@ export const AdminDashboard: React.FC = () => {
       await triggerFirestoreSync();
     } catch (error) {
       setPartnerReviewError(error instanceof Error ? error.message : 'Partner review could not be saved.');
+    } finally {
+      setPartnerReviewBusyUid(null);
+    }
+  };
+
+  const handleManualPartnerVerification = async (partnerUid: string) => {
+    if (partnerReviewBusyUid) return;
+    const confirmed = window.confirm('Confirm only if you have physically inspected the partner’s original professional certificate and matched it to this application. This action enables booking eligibility.');
+    if (!confirmed) return;
+    const inspectionNote = window.prompt('Enter a brief note: document type checked, issuing institute, and in-person inspection date (do not enter Aadhaar/PAN numbers).');
+    if (!inspectionNote?.trim() || inspectionNote.trim().length < 5) return;
+    setPartnerReviewBusyUid(partnerUid);
+    setPartnerReviewError('');
+    setPartnerReviewNotice('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/partners/' + encodeURIComponent(partnerUid) + '/verify-manual-kyc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ confirmOriginalInspected: true, inspectionNote: inspectionNote.trim() })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) throw new Error(typeof payload.error === 'string' ? payload.error : 'Manual KYC verification failed.');
+      setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
+      setPartnerReviewNotice('Manual KYC recorded. The partner is now marked verified; dispatch eligibility is controlled by the server.');
+      await triggerFirestoreSync();
+    } catch (error) {
+      setPartnerReviewError(error instanceof Error ? error.message : 'Manual KYC verification failed.');
     } finally {
       setPartnerReviewBusyUid(null);
     }
@@ -1019,7 +1049,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-amber-200">Pending Channel Partner Applications</h3>
-                  <p className="text-[11px] text-slate-400">Review the submitted application details. This step does not verify identity documents or enable dispatch.</p>
+                  <p className="text-[11px] text-slate-400">Step 1: review application. Step 2: inspect the original professional certificate in person and record verification. No document uploads or Aadhaar/PAN collection.</p>
                 </div>
                 <span className="rounded-full bg-amber-900/60 px-2.5 py-1 text-xs font-bold text-amber-200">{pendingPartnerApplications.length} pending</span>
               </div>
@@ -1036,20 +1066,29 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-sm font-bold text-white">{application.name}</p>
                       <p className="text-[11px] text-slate-400">{application.phone} · {application.city}</p>
                     </div>
-                    <span className="text-[10px] rounded-full bg-amber-900/50 px-2 py-1 text-amber-200">Pending KYC review</span>
+                    <span className="text-[10px] rounded-full bg-amber-900/50 px-2 py-1 text-amber-200">{application.approvalStatus === 'pending_audit' ? 'Application review' : 'Awaiting in-person KYC'}</span>
                   </div>
                   <p className="text-xs text-slate-300">Trades: {application.trades.join(', ')}</p>
                   <p className="text-xs text-slate-300">Experience: {application.experienceYears} years</p>
                   <p className="text-xs text-slate-300">Certificate: {application.qualificationType} · {application.qualificationRegNumber}</p>
                   <p className="text-xs text-slate-300">Institute: {application.qualificationInstitute}</p>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
-                      {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Approve'}
-                    </button>
-                    <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'reject')} className="rounded-lg border border-rose-700 bg-rose-950 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-50">
-                      Reject
-                    </button>
-                  </div>
+                  {application.approvalStatus === 'pending_audit' ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                        {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Accept Application'}
+                      </button>
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'reject')} className="rounded-lg border border-rose-700 bg-rose-950 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-[11px] text-amber-300">Application accepted. Partner must show the original professional certificate in person. Do not collect/store Aadhaar or PAN here.</p>
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handleManualPartnerVerification(application.uid)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                        {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Confirm Original Inspected & Verify'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </section>
