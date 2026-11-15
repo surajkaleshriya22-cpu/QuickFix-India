@@ -30,7 +30,7 @@ import { LiveTrackingSheet } from './LiveTrackingSheet';
 import { ReviewModal } from './ReviewModal';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
-import { INDIAN_CITIES } from '../../data/mockData';
+import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -81,15 +81,10 @@ export const CustomerHome: React.FC = () => {
             </div>
             <div>
               <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Your City</div>
-              <select
-                value={currentCity}
-                onChange={e => setCurrentCity(e.target.value)}
-                className="font-bold text-slate-900 bg-transparent cursor-pointer focus:outline-none"
-              >
-                {INDIAN_CITIES.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <IndiaLocationSelector
+                compact
+                onLocationChange={(location) => setCurrentCity(location.tehsil)}
+              />
             </div>
           </div>
 
