@@ -226,7 +226,7 @@ export const CustomerHome: React.FC = () => {
                 <span className={`block text-[10px] ${selectedCategory === category ? 'text-blue-100' : 'text-slate-400'}`}>{hindi}</span>
               </button>
             ))}
-          </div>>
+          </div>
         </div>
 
         {/* Services List */}
