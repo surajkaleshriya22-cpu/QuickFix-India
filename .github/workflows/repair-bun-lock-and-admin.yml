@@ -1,0 +1,49 @@
+name: Repair Bun Lock and Set Admin Claim
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Regenerate lockfile from package.json
+        run: bun install
+
+      - name: Verify production build
+        run: bun run build
+
+      - name: Commit corrected bun.lock
+        run: |
+          if ! git diff --quiet -- bun.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add bun.lock
+            git commit -m "fix: regenerate Bun lockfile"
+            git push origin HEAD:main
+          else
+            echo "bun.lock already matches package.json"
+          fi
+
+      - name: Set Firebase admin custom claim
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          QUICKFIX_ADMIN_UID: ${{ vars.QUICKFIX_ADMIN_UID }}
+        run: bun run set-admin-claim
+
+      - name: Explain missing Firebase Admin credential
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON == '' }}
+        run: echo "Lockfile repaired and build verified. Add FIREBASE_SERVICE_ACCOUNT_JSON as a GitHub Actions secret, then rerun this workflow to set the admin claim."
