@@ -457,54 +457,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                           Qualified Trade & Specialty (Select at least one)
                         </label>
                         <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => toggleTrade('electrician')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('electrician')
-                                ? 'bg-amber-50 text-amber-900 border-amber-400 ring-1 ring-amber-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <Zap className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Electrician</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleTrade('plumber')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('plumber')
-                                ? 'bg-cyan-50 text-cyan-900 border-cyan-400 ring-1 ring-cyan-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <Wrench className="w-3.5 h-3.5 text-cyan-600" />
-                            <span>Plumber</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleTrade('ac_repair')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('ac_repair')
-                                ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <Wind className="w-3.5 h-3.5 text-blue-600" />
-                            <span>AC Repair</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleTrade('fridge_repair')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('fridge_repair')
-                                ? 'bg-indigo-50 text-indigo-900 border-indigo-400 ring-1 ring-indigo-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <Snowflake className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Fridge/Freezer</span>
-                          </button>
+                          {([
+                            ['electrician', 'Electrician'],
+                            ['plumber', 'Plumber'],
+                            ['ac_repair', 'AC Repair'],
+                            ['fridge_repair', 'Fridge Repair'],
+                            ['welder', 'Welder'],
+                            ['mechanic', 'Mechanic'],
+                            ['driver', 'Driver'],
+                            ['tourist_guide', 'Tourist Guide'],
+                            ['contractor', 'Contractor'],
+                            ['bike_rider', 'Bike Rider Captain']
+                          ] as const).map(([trade, label]) => (
+                            <button
+                              key={trade}
+                              type="button"
+                              onClick={() => toggleTrade(trade)}
+                              className={`p-2 rounded-xl border flex items-center justify-center font-bold text-xs transition-colors ${
+                                partnerTrades.includes(trade)
+                                  ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              <span>{label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
 
