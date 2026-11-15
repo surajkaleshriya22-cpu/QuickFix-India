@@ -126,8 +126,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setFormError('');
     } catch (error: any) {
       const errorCode = typeof error?.code === 'string' ? error.code : 'auth/unknown';
-      // Log only the Firebase error code; never log the user's phone number or OTP.
-      console.warn('Firebase phone OTP send failed:', errorCode);
+      // Log only sanitized diagnostic metadata; never log the user's phone number, OTP, or credentials.
+      const rawMessage = typeof error?.message === 'string' ? error.message : '';
+      const safeMessage = rawMessage
+        .replace(/\\+?91\\s*\\d{10}/g, '[phone redacted]')
+        .replace(/\\b\\d{10}\\b/g, '[phone redacted]')
+        .replace(/[A-Za-z0-9_-]{40,}/g, '[token redacted]')
+        .slice(0, 180);
+      console.warn('Firebase phone OTP send failed:', { code: errorCode, message: safeMessage });
       recaptchaVerifierRef.current?.clear();
       recaptchaVerifierRef.current = null;
       const messages: Record<string, string> = {
@@ -144,7 +150,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         'auth/internal-error': 'Firebase returned an internal error. Check the Firebase Authentication configuration and try again.'
       };
       const explanation = messages[errorCode] || 'Firebase could not send the SMS. Use the error code below to identify the exact Firebase issue.';
-      setFormError(`${explanation} ( ${errorCode} )`);
+      const detail = safeMessage && !safeMessage.includes(errorCode)
+        ? ` Firebase detail: ${safeMessage}`
+        : '';
+      setFormError(`${explanation}${detail} ( ${errorCode} )`);
     } finally {
       setIsSendingOtp(false);
     }
