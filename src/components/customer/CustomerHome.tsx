@@ -215,7 +215,8 @@ export const CustomerHome: React.FC = () => {
               ['driver', 'Driver', 'ड्राइवर'],
               ['tourist_guide', 'Tourist Guide', 'टूरिस्ट गाइड'],
               ['contractor', 'Contractor', 'कॉन्ट्रैक्टर'],
-              ['bike_rider', 'Bike Rider Captain', 'बाइक राइडर']
+              ['bike_rider', 'Bike Rider Captain', 'बाइक राइडर'],
+              ['labour', 'Labour / Helper', 'मजदूर / हेल्पर']
             ] as const).map(([category, label, hindi]) => (
               <button
                 key={category}
