@@ -457,8 +457,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                       <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 flex items-start gap-2 text-amber-900">
                         <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-[11px] leading-snug">
-                          <strong className="font-bold block text-amber-950">Verified Trade Mandate & Security Reserve</strong>
-                          Certified <span className="font-semibold text-amber-800">Electricians</span>, <span className="font-semibold text-cyan-800">Plumbers</span>, <span className="font-semibold text-blue-800">AC</span>, and <span className="font-semibold text-indigo-800">Fridge Technicians</span> are eligible. Partners maintain a mandatory non-withdrawable ₹2,000 wallet reserve to take bookings.
+                          <strong className="font-bold block text-amber-950">Partner onboarding & verification</strong>
+                          Electricians, Plumbers, AC and Fridge Technicians can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
                         </div>
                       </div>
 
