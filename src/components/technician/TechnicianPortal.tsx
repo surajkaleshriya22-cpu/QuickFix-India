@@ -33,7 +33,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { Booking, BookingStatus, ServiceCategoryType, WalletTransaction } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
-import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
+import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 
@@ -1122,11 +1122,7 @@ export const TechnicianPortal: React.FC = () => {
                 </button>
               </div>
 
-              <TechnicianRouteMap
-                destinationAddress={currentActiveJob.customerAddress}
-                technicianName={currentTechnician.name}
-                height="170px"
-              />
+              <LiveLocationPanel bookingId={currentActiveJob.id} role="partner" active={currentActiveJob.status === 'assigned' || currentActiveJob.status === 'technician_en_route'} />
             </div>
 
             {/* 1-Hour SLA Countdown Timer Banner */}
