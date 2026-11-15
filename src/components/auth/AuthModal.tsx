@@ -117,8 +117,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         throw new Error('Phone verification container is unavailable.');
       }
       if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'invisible' });
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'normal' });
       }
+      // Render a visible checkbox challenge before requesting SMS. This avoids
+      // invisible reCAPTCHA failures on mobile browsers and embedded webviews.
+      await recaptchaVerifierRef.current.render();
       const result = await signInWithPhoneNumber(auth, '+91' + phone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setIsOtpStep(true);
@@ -206,7 +209,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="absolute bottom-0 right-0" />
+      
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header with QuickFix Branding */}
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white p-5 relative">
@@ -400,6 +403,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         className="flex-1 px-3 py-2 font-mono text-xs focus:outline-none"
                       />
                     </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                    <p className="text-[11px] text-slate-600 mb-2">SMS सुरक्षा जाँच: नीचे reCAPTCHA checkbox पूरा करें।</p>
+                    <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="min-h-[78px] flex justify-center" />
                   </div>
                 </>
               )}
