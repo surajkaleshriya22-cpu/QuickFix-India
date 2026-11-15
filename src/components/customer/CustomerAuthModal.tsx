@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Phone, User, Mail, MapPin, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { INDIAN_CITIES } from '../../data/mockData';
+import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
 
 interface CustomerAuthModalProps {
   onClose: () => void;
@@ -68,15 +68,9 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({ onClose })
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
                   Your City
                 </label>
-                <select
-                  value={currentCity}
-                  onChange={e => setCurrentCity(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  {INDIAN_CITIES.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
+                <IndiaLocationSelector
+                  onLocationChange={(location) => setCurrentCity(location.tehsil)}
+                />
               </div>
 
               {isRegisterMode && (
