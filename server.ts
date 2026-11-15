@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -107,6 +109,81 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
   }
   return next();
 };
+
+// Customer booking creation: server derives the service price and customer identity.
+// No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
+app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod } = req.body ?? {};
+
+    if (typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+        typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
+        !address.trim() || address.length > 500 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(scheduledDate) ||
+        !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
+        !['upi', 'cash'].includes(paymentMethod) ||
+        (notes !== undefined && typeof notes !== 'string')) {
+      return res.status(400).json({ success: false, error: 'Booking details are invalid. Please check service, date, time, address and payment method.' });
+    }
+
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure booking is temporarily unavailable.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    if (!profileSnap.exists || profileSnap.data()?.role !== 'CUSTOMER') {
+      return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
+    }
+
+    const profile = profileSnap.data()!;
+    const service = INITIAL_SERVICES.find((item) => item.id === serviceId);
+    if (!service) {
+      return res.status(400).json({ success: false, error: 'Selected service is not available.' });
+    }
+
+    const price = service.startingPrice;
+    const convenienceFee = INITIAL_COMMISSION_SETTINGS.platformConvenienceFee;
+    const discount = 20;
+    const subtotal = price + convenienceFee - discount;
+    const taxes = Math.round(subtotal * INITIAL_COMMISSION_SETTINGS.gstPct / 100);
+    const totalAmount = subtotal + taxes;
+    const bookingRef = db.collection('bookings').doc();
+
+    await bookingRef.create({
+      id: bookingRef.id,
+      customerUid: identity.uid,
+      customerName: String(profile.displayName || '').slice(0, 100),
+      customerPhone: identity.phone_number || String(profile.phoneNumber || '').slice(0, 30),
+      customerAddress: address.trim(),
+      serviceId: service.id,
+      serviceTitle: service.title,
+      category: service.category,
+      notes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '',
+      scheduledDate,
+      scheduledTimeSlot,
+      city: String(profile.city || '').slice(0, 100),
+      pincode: String(profile.pincode || '').slice(0, 12),
+      paymentMethod,
+      status: 'requested',
+      startOtp: '',
+      price,
+      convenienceFee,
+      discount,
+      taxes,
+      totalAmount,
+      paymentStatus: 'pending',
+      escrowStatus: 'not_funded',
+      createdAt: FieldValue.serverTimestamp()
+    });
+
+    return res.status(201).json({ success: true, bookingId: bookingRef.id });
+  } catch (error) {
+    console.error('Secure booking creation failed:', error);
+    return res.status(500).json({ success: false, error: 'Booking could not be saved securely. Please retry.' });
+  }
+});
 
 // All API requests are rate-limited and require a verified Firebase identity.
 // Admin-only operations must additionally use requireServerAdmin.
