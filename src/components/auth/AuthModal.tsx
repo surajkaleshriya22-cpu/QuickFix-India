@@ -46,6 +46,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   // Form Fields
   const [phone, setPhone] = useState('');
+  const [captchaCode, setCaptchaCode] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
+  const [captchaInput, setCaptchaInput] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -111,6 +113,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setFormError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setFormError('Captcha code sahi type karein.');
+      setCaptchaInput('');
+      setCaptchaCode(Math.random().toString(36).slice(2, 8).toUpperCase());
+      return;
+    }
     setIsSendingOtp(true);
     try {
       if (!recaptchaContainerRef.current) {
@@ -123,6 +131,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       setConfirmationResult(result);
       setIsOtpStep(true);
       setEnteredOtp('');
+      setCaptchaInput('');
+      setCaptchaCode(Math.random().toString(36).slice(2, 8).toUpperCase());
       setFormError('');
     } catch (error: any) {
       const errorCode = typeof error?.code === 'string' ? error.code : 'auth/unknown';
@@ -401,7 +411,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                       />
                     </div>
                   </div>
-                  <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="hidden" aria-hidden="true" />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                    <label htmlFor="quickfix-text-captcha" className="text-[11px] font-bold text-slate-600 block">Security Code / Captcha</label>
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-[112px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-center font-mono text-lg font-black tracking-[0.25em] text-slate-800 select-none line-through decoration-slate-400">{captchaCode}</div>
+                      <button type="button" onClick={() => { setCaptchaCode(Math.random().toString(36).slice(2, 8).toUpperCase()); setCaptchaInput(''); setFormError(''); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700">↻ Refresh</button>
+                    </div>
+                    <input id="quickfix-text-captcha" type="text" autoComplete="off" maxLength={6} value={captchaInput} onChange={e => setCaptchaInput(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6))} placeholder="Upar diya code likhein" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <p className="text-[10px] text-slate-500">Image mein dikh raha 6-character code type karein.</p>
+                  </div>
+                  <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="absolute h-px w-px overflow-hidden opacity-0 pointer-events-none" aria-hidden="true" />
                 </>
               )}
 
