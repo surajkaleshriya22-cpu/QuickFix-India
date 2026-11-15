@@ -434,7 +434,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-[11px] leading-snug">
                           <strong className="font-bold block text-amber-950">Verified Trade Mandate & Security Reserve</strong>
-                          Electrician, Plumber, AC, Fridge, Welder, Mechanic, Driver, Tourist Guide, Contractor and Bike Rider partners can select their trade. Partner activation remains subject to verification and approval; the ₹2,000 reserve is not collected on this screen.
+                          Electrician, Plumber, AC, Fridge, Welder, Mechanic, Driver, Tourist Guide, Contractor, Bike Rider and Labour partners can select their trade. Partner activation remains subject to verification and approval; the ₹2,000 reserve is not collected on this screen.
                         </div>
                       </div>
 
@@ -467,7 +467,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             ['driver', 'Driver'],
                             ['tourist_guide', 'Tourist Guide'],
                             ['contractor', 'Contractor'],
-                            ['bike_rider', 'Bike Rider Captain']
+                            ['bike_rider', 'Bike Rider Captain'],
+                            ['labour', 'Labour / Helper']
                           ] as const).map(([trade, label]) => (
                             <button
                               key={trade}
