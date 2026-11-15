@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 type LgdRow = { code: string; name: string };
 type ApiResponse = { success: boolean; data?: LgdRow[]; error?: { message?: string } };
@@ -33,6 +33,9 @@ export const IndiaLocationSelector: React.FC<{
   const [tehsilCode, setTehsilCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [savedLocation, setSavedLocation] = useState<IndiaLocation | null>(null);
+  const onLocationChangeRef = useRef(onLocationChange);
+  onLocationChangeRef.current = onLocationChange;
 
   useEffect(() => {
     let active = true;
@@ -44,9 +47,8 @@ export const IndiaLocationSelector: React.FC<{
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as IndiaLocation | null;
           if (saved?.stateCode && saved?.districtCode && saved?.tehsilCode) {
+            setSavedLocation(saved);
             setStateCode(saved.stateCode);
-            setDistrictCode(saved.districtCode);
-            setTehsilCode(saved.tehsilCode);
           }
         } catch { /* Ignore invalid saved location. */ }
       })
@@ -59,7 +61,11 @@ export const IndiaLocationSelector: React.FC<{
     let active = true;
     setDistricts([]); setDistrictCode(''); setTehsils([]); setTehsilCode('');
     loadRows(`districts:${stateCode}`, `/districts?state=${encodeURIComponent(stateCode)}`)
-      .then(rows => { if (active) setDistricts(rows); })
+      .then(rows => {
+        if (!active) return;
+        setDistricts(rows);
+        if (savedLocation?.stateCode === stateCode && savedLocation.districtCode) setDistrictCode(savedLocation.districtCode);
+      })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Districts could not be loaded.'); });
     return () => { active = false; };
   }, [stateCode]);
@@ -69,7 +75,11 @@ export const IndiaLocationSelector: React.FC<{
     let active = true;
     setTehsils([]); setTehsilCode('');
     loadRows(`tehsils:${districtCode}`, `/subdistricts?district=${encodeURIComponent(districtCode)}`)
-      .then(rows => { if (active) setTehsils(rows); })
+      .then(rows => {
+        if (!active) return;
+        setTehsils(rows);
+        if (savedLocation?.districtCode === districtCode && savedLocation.tehsilCode) setTehsilCode(savedLocation.tehsilCode);
+      })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Tehsils could not be loaded.'); });
     return () => { active = false; };
   }, [districtCode]);
@@ -85,8 +95,8 @@ export const IndiaLocationSelector: React.FC<{
       stateCode: selectedState.code, districtCode: selectedDistrict.code, tehsilCode: selectedTehsil.code
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
-    onLocationChange(location);
-  }, [selectedState, selectedDistrict, selectedTehsil, onLocationChange]);
+    onLocationChangeRef.current(location);
+  }, [selectedState, selectedDistrict, selectedTehsil]);
 
   const selectClass = 'w-full min-w-0 text-xs p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50';
   const labelClass = 'block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1';
