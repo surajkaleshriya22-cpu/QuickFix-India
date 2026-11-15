@@ -448,30 +448,38 @@ export const TechnicianPortal: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setRegError('');
-                  const res = registerTechnician({
-                    name: regName || 'Sunil Verma',
-                    phone: regPhone || '+91 98450 99881',
-                    email: regEmail || 'sunil.partner@quickfix.in',
-                    trades: regTrades,
-                    experienceYears: Math.max(2, regExp),
-                    city: regCity,
-                    qualificationType: regQualType,
-                    qualificationRegNumber: regQualNumber || 'ITI-PENDING-AUDIT',
-                    qualificationInstitute: regQualInst || `${regCity} Technical Institute`,
-                    kycDocType: regKycType,
-                    kycDocNumber: regKycDoc || 'KYC-88123-IN',
-                    upiId: regUpi || 'sunil.partner@upi',
-                    initialDepositAmount: regDeposit
-                  });
-                  if (res && !res.success) {
-                    setRegError(res.message || 'Registration failed');
+                  if (!regName.trim() || !regEmail.trim() || !regCity.trim() || regTrades.length === 0) {
+                    setRegError('Please enter your name, email, city and select at least one trade.');
+                    return;
+                  }
+                  try {
+                    const res = await registerTechnician({
+                      name: regName.trim(),
+                      phone: regPhone,
+                      email: regEmail.trim(),
+                      trades: regTrades,
+                      experienceYears: Math.max(0, regExp),
+                      city: regCity.trim(),
+                      qualificationType: regQualType,
+                      qualificationRegNumber: regQualNumber,
+                      qualificationInstitute: regQualInst,
+                      kycDocType: regKycType,
+                      kycDocNumber: regKycDoc,
+                      upiId: regUpi,
+                      initialDepositAmount: regDeposit
+                    });
+                    if (!res.success) {
+                      setRegError(res.message || 'Registration failed');
+                    }
+                  } catch {
+                    setRegError('Registration could not be completed. Please try again.');
                   }
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
               >
-                Submit Partner KYC & Pay ₹{regDeposit} Security Deposit
+                Submit Basic Partner Registration
               </button>
 
               <button
