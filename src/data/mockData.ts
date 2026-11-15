@@ -532,6 +532,139 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Site task and safety briefing', 'Worker-count and shift confirmation', 'Final rate approval before work starts']
   },
 
+
+  // Home Care Services: household chores with task scope and final-price confirmation.
+  {
+    id: 'home-cooking',
+    category: 'home_care',
+    title: 'Home Cooking & Meal Preparation',
+    hindiTitle: 'घर का खाना बनाना',
+    description: 'Book help for daily meals, chopping, dough preparation and cooking as agreed. Customer provides ingredients and utensils; confirm menu, people and hours before booking.',
+    startingPrice: 299,
+    durationMinutes: 120,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Menu and meal-count confirmation', 'Ingredient and utensil readiness check', 'Kitchen cleanup of used work area']
+  },
+  {
+    id: 'home-laundry',
+    category: 'home_care',
+    title: 'Laundry Washing & Folding',
+    hindiTitle: 'कपड़े धोना और तह करना',
+    description: 'Hand or machine washing, drying arrangement and folding. Dry cleaning, stain treatment and detergent are separate unless agreed.',
+    startingPrice: 199,
+    durationMinutes: 90,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Laundry load and fabric instructions', 'Washing and drying arrangement', 'Clean clothes folding']
+  },
+  {
+    id: 'home-ironing',
+    category: 'home_care',
+    title: 'Clothes Ironing',
+    hindiTitle: 'कपड़ों पर प्रेस करना',
+    description: 'Iron everyday clothes according to fabric care instructions. Confirm number and type of garments.',
+    startingPrice: 149,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Garment count confirmation', 'Fabric-safe ironing', 'Neat stacking or hanging']
+  },
+  {
+    id: 'home-dishes',
+    category: 'home_care',
+    title: 'Utensil & Dish Washing',
+    hindiTitle: 'बर्तन धोना',
+    description: 'Wash kitchen utensils, plates, glasses and cookware. Heavy grease, large party loads and special items need separate confirmation.',
+    startingPrice: 149,
+    durationMinutes: 45,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Utensil quantity confirmation', 'Washing and rinsing', 'Dish rack arrangement']
+  },
+  {
+    id: 'home-sweep-mop',
+    category: 'home_care',
+    title: 'Sweeping & Floor Mopping',
+    hindiTitle: 'झाड़ू और पोछा',
+    description: 'Routine floor sweeping and mopping for agreed rooms and areas. Furniture shifting and deep stain removal are extra.',
+    startingPrice: 199,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Rooms and floor area confirmation', 'Sweeping and wet mopping', 'Basic floor drying and tidy-up']
+  },
+  {
+    id: 'home-bathroom',
+    category: 'home_care',
+    title: 'Bathroom & Toilet Cleaning',
+    hindiTitle: 'बाथरूम और टॉयलेट की सफाई',
+    description: 'Routine cleaning of toilet, wash basin, taps, shower area and floor using customer-approved products.',
+    startingPrice: 249,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Bathroom count confirmation', 'Sanitary fixture and floor cleaning', 'Rinse and basic drying']
+  },
+  {
+    id: 'home-dusting',
+    category: 'home_care',
+    title: 'Dusting & Room Tidying',
+    hindiTitle: 'धूल साफ करना और कमरा व्यवस्थित करना',
+    description: 'Dust reachable surfaces, shelves, fans where safely accessible and tidy agreed rooms. High-risk ladder work is excluded.',
+    startingPrice: 199,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Room and surface scope confirmation', 'Reachable surface dusting', 'Basic room tidying']
+  },
+  {
+    id: 'home-kitchen',
+    category: 'home_care',
+    title: 'Kitchen & Platform Cleaning',
+    hindiTitle: 'किचन और स्लैब की सफाई',
+    description: 'Clean kitchen platform, sink exterior, cabinet fronts and appliance exteriors. Chimney deep cleaning and pest treatment are excluded.',
+    startingPrice: 249,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Kitchen scope confirmation', 'Platform and sink-area cleaning', 'Cabinet and appliance exterior wipe']
+  },
+  {
+    id: 'home-full-clean',
+    category: 'home_care',
+    title: 'Full Home Routine Cleaning',
+    hindiTitle: 'पूरे घर की सामान्य सफाई',
+    description: 'Combined routine sweeping, mopping, dusting and basic kitchen/bathroom touch-up. Final price depends on home size and room count.',
+    startingPrice: 699,
+    durationMinutes: 180,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Room count and home size confirmation', 'Routine floor and surface cleaning', 'Final walkthrough with customer']
+  },
+  {
+    id: 'home-elder-assist',
+    category: 'home_care',
+    title: 'Household Help & Daily Chores',
+    hindiTitle: 'घर के रोज़मर्रा के कामों में मदद',
+    description: 'Book help for organizing, grocery unpacking, bed making and other non-medical household chores. No childcare, medical care or personal care in this service.',
+    startingPrice: 249,
+    durationMinutes: 60,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    included: ['Task list and duration confirmation', 'Agreed household chores', 'Customer review before completion']
+  },
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
