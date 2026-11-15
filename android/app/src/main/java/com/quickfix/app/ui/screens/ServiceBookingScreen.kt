@@ -42,6 +42,8 @@ fun ServiceBookingScreen(
 
     var address by remember { mutableStateOf(defaultAddress) }
     var notes by remember { mutableStateOf("") }
+    var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
+    var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -103,10 +105,12 @@ fun ServiceBookingScreen(
                                 scope.launch {
                                     try {
                                         val newB = viewModel.createBooking(
+                                            serviceId = service.id,
                                             serviceTitle = service.title,
                                             category = service.category,
                                             customerAddress = address,
-                                            price = basePrice,
+                                            scheduledDate = scheduledDate,
+                                            scheduledTimeSlot = scheduledTimeSlot,
                                             notes = notes
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
@@ -121,7 +125,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank(),
+                        enabled = !isBooking && address.isNotBlank() && scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -188,6 +192,22 @@ fun ServiceBookingScreen(
                         onValueChange = { address = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("House / Flat, Landmark, City") }
+                    )
+                    OutlinedTextField(
+                        value = scheduledDate,
+                        onValueChange = { scheduledDate = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Service date (YYYY-MM-DD)") },
+                        supportingText = { Text("Example: ${java.time.LocalDate.now()}") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = scheduledTimeSlot,
+                        onValueChange = { scheduledTimeSlot = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Preferred time slot") },
+                        supportingText = { Text("Example: 10:00 AM - 12:00 PM") },
+                        singleLine = true
                     )
                 }
             }
