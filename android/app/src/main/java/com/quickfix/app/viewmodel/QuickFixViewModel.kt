@@ -382,6 +382,96 @@ class QuickFixViewModel : ViewModel() {
                 warrantyDays = 0
             ),
             ServiceItem(
+                id = "home-cooking",
+                category = "home_care",
+                title = "Home Cooking & Meal Preparation",
+                hindiTitle = "घर का खाना बनाना",
+                startingPrice = 299,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-laundry",
+                category = "home_care",
+                title = "Laundry Washing & Folding",
+                hindiTitle = "कपड़े धोना और तह करना",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-ironing",
+                category = "home_care",
+                title = "Clothes Ironing",
+                hindiTitle = "कपड़ों पर प्रेस करना",
+                startingPrice = 149,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-dishes",
+                category = "home_care",
+                title = "Utensil & Dish Washing",
+                hindiTitle = "बर्तन धोना",
+                startingPrice = 149,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-sweep-mop",
+                category = "home_care",
+                title = "Sweeping & Floor Mopping",
+                hindiTitle = "झाड़ू और पोछा",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-bathroom",
+                category = "home_care",
+                title = "Bathroom & Toilet Cleaning",
+                hindiTitle = "बाथरूम और टॉयलेट की सफाई",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-dusting",
+                category = "home_care",
+                title = "Dusting & Room Tidying",
+                hindiTitle = "धूल साफ करना और कमरा व्यवस्थित करना",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-kitchen",
+                category = "home_care",
+                title = "Kitchen & Platform Cleaning",
+                hindiTitle = "किचन और स्लैब की सफाई",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-full-clean",
+                category = "home_care",
+                title = "Full Home Routine Cleaning",
+                hindiTitle = "पूरे घर की सामान्य सफाई",
+                startingPrice = 699,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-elder-assist",
+                category = "home_care",
+                title = "Household Help & Daily Chores",
+                hindiTitle = "घर के रोज़मर्रा के कामों में मदद",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
                 id = "bike-pickup",
                 category = "bike_rider",
                 title = "Bike Pickup & Local Delivery",
