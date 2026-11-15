@@ -503,6 +503,35 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Task and destination confirmation', 'Pickup confirmation', 'Recipient handover confirmation']
   },
 
+
+  // General Labour Services
+  {
+    id: 'labour-helper',
+    category: 'labour',
+    title: 'General Helper / Daily Labour',
+    hindiTitle: 'सामान्य मजदूर / रोज़ाना लेबर',
+    description: 'Book helpers for loading, shifting, cleaning support and other lawful general tasks. Confirm worker count, hours and final rate before booking.',
+    startingPrice: 499,
+    durationMinutes: 240,
+    rating: 4.80,
+    reviewsCount: 120,
+    warrantyDays: 0,
+    included: ['Task and worker-count confirmation', 'Work duration discussion', 'Final price approval before work starts']
+  },
+  {
+    id: 'labour-construction',
+    category: 'labour',
+    title: 'Construction & Site Labour',
+    hindiTitle: 'निर्माण कार्य और साइट मजदूर',
+    description: 'Book labour for carrying materials, site assistance and basic construction support. Skilled work, materials and transport are quoted separately.',
+    startingPrice: 599,
+    durationMinutes: 240,
+    rating: 4.82,
+    reviewsCount: 95,
+    warrantyDays: 0,
+    included: ['Site task and safety briefing', 'Worker-count and shift confirmation', 'Final rate approval before work starts']
+  },
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
