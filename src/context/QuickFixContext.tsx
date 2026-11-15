@@ -137,7 +137,7 @@ interface QuickFixContextType {
     kycDocNumber: string;
     upiId: string;
     initialDepositAmount?: number;
-  }) => { success: boolean; message?: string };
+  }) => Promise<{ success: boolean; message?: string }>;
   logoutTechnician: () => void;
   serviceZones: ServiceZone[];
   toggleTechnicianOnline: (
@@ -545,7 +545,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return false;
   };
 
-  const registerTechnician = (data: {
+  const registerTechnician = async (data: {
     name: string;
     phone: string;
     email: string;
@@ -559,7 +559,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     kycDocNumber: string;
     upiId: string;
     initialDepositAmount?: number;
-  }): { success: boolean; message?: string } => {
+  }): Promise<{ success: boolean; message?: string }> => {
     // Legacy adapter: KYC identifiers, certificate numbers, UPI and deposits are not sent.
     return registerNewPartner({
       displayName: data.name,
@@ -569,7 +569,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       experienceYears: data.experienceYears,
       city: data.city,
       rememberMe: true
-    }) as unknown as { success: boolean; message?: string };
+    });
   };
 
   const logoutTechnician = () => {
