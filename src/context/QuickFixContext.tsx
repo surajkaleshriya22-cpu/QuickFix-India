@@ -32,7 +32,7 @@ import {
   updateTechnicianFirestoreStatus
 } from '../services/geofenceService';
 import { auth, db, testFirestoreConnection } from '../lib/firebase';
-import { doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getIdTokenResult, signOut, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
@@ -313,7 +313,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const authenticateFirebaseCustomer = async ({ firebaseUser, displayName, email, address, city, rememberMe }: { firebaseUser: FirebaseUser; displayName: string; email: string; address?: string; city: string; rememberMe: boolean }): Promise<{ success: boolean; message?: string }> => {
     try {
       const profileRef = doc(db, 'users', firebaseUser.uid);
-      const existing = await (await import('firebase/firestore')).getDoc(profileRef);
+      const existing = await getDoc(profileRef);
       if (existing.exists()) {
         const data = existing.data();
         if (data.role !== 'CUSTOMER' || data.isVerified !== false) {
