@@ -344,6 +344,165 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Factory electronic test cycle run'
     ]
   }
+
+  // Additional India-wide partner services
+  {
+    id: 'weld-gate',
+    category: 'welder',
+    title: 'Gate, Grill & Railing Welding',
+    hindiTitle: 'गेट, ग्रिल और रेलिंग वेल्डिंग',
+    description: 'On-site fabrication and repair of iron gates, window grills, railings and metal joints. Final material and labour quote is confirmed after inspection.',
+    startingPrice: 399,
+    durationMinutes: 60,
+    rating: 4.80,
+    reviewsCount: 120,
+    warrantyDays: 30,
+    included: ['Site inspection and measurement', 'Welding repair or joint fabrication', 'Grinding and edge finishing', 'Basic weld safety check']
+  },
+  {
+    id: 'weld-furniture',
+    category: 'welder',
+    title: 'Metal Furniture & Frame Repair',
+    hindiTitle: 'लोहे के फर्नीचर और फ्रेम की मरम्मत',
+    description: 'Repair of metal beds, chairs, racks, frames and broken brackets. Spare material is charged separately after approval.',
+    startingPrice: 299,
+    durationMinutes: 45,
+    rating: 4.78,
+    reviewsCount: 85,
+    warrantyDays: 30,
+    included: ['Damage inspection', 'Metal joint repair', 'Alignment and stability check']
+  },
+  {
+    id: 'mech-bike',
+    category: 'mechanic',
+    title: 'Two-Wheeler Breakdown & Basic Repair',
+    hindiTitle: 'बाइक और स्कूटर की बेसिक मरम्मत',
+    description: 'On-site inspection for starting trouble, chain issues, brake adjustment and minor breakdowns. Parts and major repairs quoted separately.',
+    startingPrice: 249,
+    durationMinutes: 45,
+    rating: 4.82,
+    reviewsCount: 210,
+    warrantyDays: 7,
+    included: ['Initial fault inspection', 'Basic adjustment and minor repair', 'Brake, chain and tyre visual checks']
+  },
+  {
+    id: 'mech-car',
+    category: 'mechanic',
+    title: 'Car Emergency Inspection',
+    hindiTitle: 'कार की इमरजेंसी जांच',
+    description: 'Basic roadside inspection for no-start, battery connection and visible mechanical issues. Towing and replacement parts are extra.',
+    startingPrice: 399,
+    durationMinutes: 45,
+    rating: 4.79,
+    reviewsCount: 96,
+    warrantyDays: 7,
+    included: ['Battery and terminal inspection', 'Basic no-start diagnosis', 'Visible leak and safety check']
+  },
+  {
+    id: 'driver-local',
+    category: 'driver',
+    title: 'Local Hourly Driver',
+    hindiTitle: 'लोकल घंटे के हिसाब से ड्राइवर',
+    description: 'Book a verified driver for your own vehicle for local errands or appointments. Vehicle, fuel and parking costs are not included.',
+    startingPrice: 399,
+    durationMinutes: 120,
+    rating: 4.86,
+    reviewsCount: 180,
+    warrantyDays: 0,
+    included: ['Driver identity verification', 'Pickup and trip details confirmation', 'Customer trip completion confirmation']
+  },
+  {
+    id: 'driver-outstation',
+    category: 'driver',
+    title: 'Outstation Trip Driver',
+    hindiTitle: 'आउटस्टेशन ट्रिप ड्राइवर',
+    description: 'Hire a driver for an outstation journey in your vehicle. Confirm route, duration, night allowance and return plan before booking.',
+    startingPrice: 999,
+    durationMinutes: 480,
+    rating: 4.84,
+    reviewsCount: 110,
+    warrantyDays: 0,
+    included: ['Route and schedule confirmation', 'Driver document verification', 'Trip start and end confirmation']
+  },
+  {
+    id: 'guide-city',
+    category: 'tourist_guide',
+    title: 'Local City Sightseeing Guide',
+    hindiTitle: 'शहर घूमने के लिए लोकल गाइड',
+    description: 'Book a local guide for sightseeing, heritage places and city highlights. Entry tickets, transport and meals are extra.',
+    startingPrice: 599,
+    durationMinutes: 180,
+    rating: 4.88,
+    reviewsCount: 145,
+    warrantyDays: 0,
+    included: ['Itinerary discussion', 'Local sightseeing assistance', 'Language and meeting-point confirmation']
+  },
+  {
+    id: 'guide-custom',
+    category: 'tourist_guide',
+    title: 'Custom Local Experience Guide',
+    hindiTitle: 'कस्टम लोकल टूर गाइड',
+    description: 'A guide for food walks, markets and custom local experiences. Customer and guide confirm route and inclusions before the trip.',
+    startingPrice: 799,
+    durationMinutes: 240,
+    rating: 4.87,
+    reviewsCount: 90,
+    warrantyDays: 0,
+    included: ['Custom route planning', 'Local experience assistance', 'Schedule confirmation']
+  },
+  {
+    id: 'contractor-inspection',
+    category: 'contractor',
+    title: 'Home Repair & Renovation Site Visit',
+    hindiTitle: 'घर की मरम्मत और रिनोवेशन साइट विजिट',
+    description: 'Book a contractor for site inspection, measurements and an estimate. Materials and execution are quoted separately.',
+    startingPrice: 499,
+    durationMinutes: 60,
+    rating: 4.83,
+    reviewsCount: 130,
+    warrantyDays: 0,
+    included: ['Site inspection', 'Measurements and scope discussion', 'Written estimate of proposed work']
+  },
+  {
+    id: 'contractor-project',
+    category: 'contractor',
+    title: 'Small Civil Work & Repair Estimate',
+    hindiTitle: 'छोटे सिविल काम का अनुमान',
+    description: 'Assessment for plaster, tile, seepage and minor civil repair work. Work begins only after a separate approved quotation.',
+    startingPrice: 599,
+    durationMinutes: 75,
+    rating: 4.81,
+    reviewsCount: 105,
+    warrantyDays: 0,
+    included: ['Damage assessment', 'Work scope and material estimate', 'Timeline discussion']
+  },
+  {
+    id: 'bike-pickup',
+    category: 'bike_rider',
+    title: 'Bike Pickup & Local Delivery',
+    hindiTitle: 'बाइक से पिकअप और लोकल डिलीवरी',
+    description: 'Book a verified bike rider for permitted local parcel pickup and delivery. Restricted or prohibited goods are not accepted.',
+    startingPrice: 99,
+    durationMinutes: 45,
+    rating: 4.85,
+    reviewsCount: 260,
+    warrantyDays: 0,
+    included: ['Pickup and drop details confirmation', 'Rider identity verification', 'Delivery confirmation']
+  },
+  {
+    id: 'bike-errand',
+    category: 'bike_rider',
+    title: 'Local Errand & Document Delivery',
+    hindiTitle: 'लोकल काम और डॉक्यूमेंट डिलीवरी',
+    description: 'A bike rider for local errands and document delivery. Customer must ensure the item is lawful and properly packaged.',
+    startingPrice: 129,
+    durationMinutes: 60,
+    rating: 4.83,
+    reviewsCount: 175,
+    warrantyDays: 0,
+    included: ['Task and destination confirmation', 'Pickup confirmation', 'Recipient handover confirmation']
+  },
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
