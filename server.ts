@@ -34,6 +34,7 @@ app.use(helmet({
         "https://identitytoolkit.googleapis.com",
         "https://securetoken.googleapis.com",
         "https://www.googleapis.com",
+        "https://firestore.googleapis.com",
         "https://firebaseinstallations.googleapis.com",
         "https://www.google.com",
         "https://www.gstatic.com",
