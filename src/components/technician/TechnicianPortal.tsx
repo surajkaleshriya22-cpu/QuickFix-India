@@ -36,6 +36,7 @@ import { INDIAN_CITIES } from '../../data/mockData';
 import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
+import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -312,17 +313,12 @@ export const TechnicianPortal: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Operating City (शहर)</label>
-                <select
-                  value={regCity}
-                  onChange={e => setRegCity(e.target.value)}
-                  className="w-full p-2 rounded-lg border border-slate-300 bg-white"
-                >
-                  {INDIAN_CITIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-700 block mb-1">Operating Area (भारत में कहीं भी)</label>
+                <IndiaLocationSelector
+                  onLocationChange={(location) => setRegCity(location.tehsil)}
+                />
+                <p className="text-[10px] text-slate-500">Selected service area: {regCity}. Choose State, District and Tehsil.</p>
               </div>
 
               {/* Trade Qualification Proof */}
