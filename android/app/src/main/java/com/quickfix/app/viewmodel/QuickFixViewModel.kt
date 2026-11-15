@@ -365,12 +365,13 @@ class QuickFixViewModel : ViewModel() {
             throw IllegalStateException("Server did not confirm the booking. Please retry.")
         }
 
-        val profile = firestore.collection("users").document(firebaseUser.uid).get().await()
+        // Do not perform a second Firestore read after the server has created the booking:
+        // a profile-read failure must not make the customer retry and create a duplicate booking.
         val newBooking = Booking(
             id = bookingId,
             serviceTitle = serviceTitle,
             category = category,
-            customerName = profile.getString("displayName") ?: firebaseUser.displayName ?: "QuickFix Customer",
+            customerName = firebaseUser.displayName ?: "QuickFix Customer",
             customerAddress = customerAddress.trim(),
             status = "requested",
             technicianName = null,
