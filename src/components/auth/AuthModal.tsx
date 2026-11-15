@@ -420,7 +420,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                     <input id="quickfix-text-captcha" type="text" autoComplete="off" maxLength={6} value={captchaInput} onChange={e => setCaptchaInput(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6))} placeholder="Upar diya code likhein" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <p className="text-[10px] text-slate-500">Image mein dikh raha 6-character code type karein.</p>
                   </div>
-                  <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="absolute h-px w-px overflow-hidden opacity-0 pointer-events-none" aria-hidden="true" />
+                  <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="fixed left-0 top-0 h-px w-px overflow-hidden opacity-0" aria-hidden="true" />
                 </>
               )}
 
