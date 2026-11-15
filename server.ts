@@ -170,12 +170,16 @@ app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAd
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner review is temporarily unavailable.' });
     const db = getFirestore(firebaseAdminApp);
-    const snapshot = await db.collection('users').where('approvalStatus', '==', 'pending_audit').limit(100).get();
+    const snapshot = await db.collection('users').limit(300).get();
     const partners = snapshot.docs.flatMap((doc) => {
       const profile = doc.data();
-      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.role))) return [];
+      const awaitingApplicationReview = profile.approvalStatus === 'pending_audit';
+      const awaitingManualKyc = profile.approvalStatus === 'approved' && profile.isVerified !== true && profile.accountStatus === 'pending_kyc';
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.role)) || (!awaitingApplicationReview && !awaitingManualKyc)) return [];
       return [{
         uid: doc.id,
+        approvalStatus: String(profile.approvalStatus || ''),
+        accountStatus: String(profile.accountStatus || ''),
         name: String(profile.displayName || 'Channel Partner').slice(0, 100),
         phone: String(profile.phoneNumber || '').slice(0, 30),
         city: String(profile.city || '').slice(0, 100),
@@ -316,6 +320,53 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
   }
 });
 
+
+
+// Manual offline KYC: an Admin records that the original professional credential
+// was physically inspected. No document image or government ID is uploaded/stored.
+app.post('/api/admin/partners/:partnerUid/verify-manual-kyc', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    const { confirmOriginalInspected, inspectionNote } = req.body ?? {};
+    if (confirmOriginalInspected !== true || typeof inspectionNote !== 'string' ||
+        inspectionNote.trim().length < 5 || inspectionNote.trim().length > 300) {
+      return res.status(400).json({ success: false, error: 'Confirm that the original professional certificate was inspected and enter a short inspection note.' });
+    }
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Manual verification is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(req.params.partnerUid);
+    const auditRef = db.collection('adminAuditLogs').doc();
+    const outcome = await db.runTransaction(async (transaction) => {
+      const partner = await transaction.get(partnerRef);
+      if (!partner.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.data()?.role))) return 'not_found';
+      const profile = partner.data()!;
+      if (profile.approvalStatus !== 'approved' || profile.isVerified === true || profile.accountStatus !== 'pending_kyc') return 'not_eligible';
+      transaction.update(partnerRef, {
+        isVerified: true,
+        accountStatus: 'active',
+        verificationMethod: 'manual_offline_original_inspected',
+        manualKycInspectionNote: inspectionNote.trim(),
+        verifiedAt: FieldValue.serverTimestamp(),
+        verifiedBy: identity.uid,
+      });
+      transaction.create(auditRef, {
+        action: 'partner_manual_kyc_verified',
+        targetUid: req.params.partnerUid,
+        adminUid: identity.uid,
+        method: 'manual_offline_original_inspected',
+        inspectionNote: inspectionNote.trim(),
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      return 'verified';
+    });
+    if (outcome === 'not_found') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (outcome === 'not_eligible') return res.status(409).json({ success: false, error: 'Only an approved partner awaiting manual KYC can be verified.' });
+    return res.json({ success: true, isVerified: true, accountStatus: 'active' });
+  } catch (error) {
+    console.error('Manual partner KYC verification failed:', error);
+    return res.status(500).json({ success: false, error: 'Manual KYC verification could not be saved.' });
+  }
+});
 
 // Return only the minimum profile fields needed by the Admin dispatch picker.
 app.get('/api/admin/partners/verified', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
