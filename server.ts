@@ -728,7 +728,6 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       const status = outcome === 'not_found' || outcome === 'partner_missing' ? 404
         : outcome === 'not_assigned' || outcome === 'partner_unverified' ? 403
         : outcome === 'invalid_otp' ? 401
-        : outcome === 'wallet_low' ? 402
         : outcome === 'expired' || outcome === 'locked' ? 410 : 409;
       const messages: Record<string, string> = {
         not_found: 'Booking not found.', partner_missing: 'Partner profile not found.',
