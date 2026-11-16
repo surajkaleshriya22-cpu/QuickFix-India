@@ -395,6 +395,113 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
   }
 });
 
+
+// Atomically claim a requested booking for the authenticated Channel Partner.
+// No client-supplied partner identity, wallet, reserve, price or status is trusted.
+app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure job acceptance is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId)) {
+      return res.status(400).json({ success: false, error: 'Booking ID is invalid.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const auditRef = db.collection('partner_job_audit_logs').doc();
+    const acceptedAt = new Date();
+    const deadline = new Date(acceptedAt.getTime() + 60 * 60 * 1000);
+
+    await db.runTransaction(async (transaction) => {
+      const [partnerSnap, bookingSnap] = await Promise.all([
+        transaction.get(partnerRef),
+        transaction.get(bookingRef)
+      ]);
+      if (!partnerSnap.exists) throw new Error('PARTNER_PROFILE_NOT_FOUND');
+      if (!bookingSnap.exists) throw new Error('BOOKING_NOT_FOUND');
+
+      const partner = partnerSnap.data()!;
+      const booking = bookingSnap.data()!;
+      if (!isPartnerEligibleForDispatch(partner)) throw new Error('PARTNER_NOT_ELIGIBLE');
+
+      const city = typeof partner.city === 'string' ? partner.city.trim() : '';
+      const trades = Array.isArray(partner.trades)
+        ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
+        : [];
+      const categories = new Set<string>();
+      for (const trade of trades) {
+        if (trade === 'ac_fridge') {
+          categories.add('ac_repair');
+          categories.add('fridge_repair');
+        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+          categories.add(trade);
+        }
+      }
+      if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
+        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
+      }
+
+      const normalizeArea = (value: unknown) =>
+        typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
+      const partnerArea = partner.serviceArea && typeof partner.serviceArea === 'object'
+        ? partner.serviceArea as Record<string, unknown> : null;
+      const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
+        ? booking.serviceArea as Record<string, unknown> : null;
+      const hasCompleteArea = (area: Record<string, unknown> | null) =>
+        Boolean(area && ['state', 'district', 'tehsil'].every((key) => normalizeArea(area[key])));
+      if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
+          !['state', 'district', 'tehsil'].every((key) =>
+            normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
+      }
+
+      if (booking.status !== 'requested' || booking.technicianUid || booking.technicianId) {
+        throw new Error('BOOKING_ALREADY_CLAIMED');
+      }
+
+      transaction.update(bookingRef, {
+        status: 'assigned',
+        technicianUid: identity.uid,
+        technicianId: identity.uid,
+        technicianName: String(partner.displayName || '').slice(0, 100),
+        acceptedAt: acceptedAt.toISOString(),
+        serviceDeadline: deadline.toISOString(),
+        assignedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: 'partner_job_accepted',
+        bookingId,
+        partnerUid: identity.uid,
+        acceptedAt: FieldValue.serverTimestamp(),
+        serviceDeadline: deadline.toISOString()
+      });
+    });
+
+    return res.json({
+      success: true,
+      bookingId,
+      status: 'assigned',
+      acceptedAt: acceptedAt.toISOString(),
+      serviceDeadline: deadline.toISOString(),
+      message: 'Job assigned successfully. The 1-hour service SLA has started.'
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_PROFILE_NOT_FOUND') return res.status(403).json({ success: false, error: 'A registered Channel Partner profile is required.' });
+    if (code === 'BOOKING_NOT_FOUND') return res.status(404).json({ success: false, error: 'Booking was not found.' });
+    if (code === 'PARTNER_NOT_ELIGIBLE') return res.status(403).json({ success: false, error: 'Job acceptance requires approved KYC, online status and the fully funded ₹2,000 reserve.' });
+    if (code === 'BOOKING_OUTSIDE_PARTNER_SCOPE') return res.status(403).json({ success: false, error: 'This job is outside your approved city, trade or service area.' });
+    if (code === 'BOOKING_ALREADY_CLAIMED') return res.status(409).json({ success: false, error: 'This job is no longer available.' });
+    console.error('Secure partner job acceptance failed:', error);
+    return res.status(500).json({ success: false, error: 'Job could not be accepted securely. Please retry.' });
+  }
+});
+
 // API routes must verify Firebase identity; admin routes must additionally use requireServerAdmin.
 app.use('/api/places', authenticateFirebaseUser);
 app.use('/api/audio', authenticateFirebaseUser);
