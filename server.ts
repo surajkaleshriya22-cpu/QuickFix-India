@@ -544,7 +544,7 @@ app.get('/api/admin/wallet-audit', authenticateFirebaseUser, requireServerAdmin,
         withdrawalsEnabled: data.withdrawalsEnabled === true,
       };
     });
-    const ledgerSnap = await db.collection('partnerWalletLedger').limit(300).get();
+    const ledgerSnap = await db.collection('partnerWalletLedger').orderBy('createdAt', 'desc').limit(300).get();
     const ledger = ledgerSnap.docs.map((doc) => {
       const data = doc.data();
       return {
