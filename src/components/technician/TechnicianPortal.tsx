@@ -446,7 +446,7 @@ export const TechnicianPortal: React.FC = () => {
                 </p>
                 <div className="pt-0.5">
                   <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
-                    Select Initial Wallet Fund:
+                    Security reserve requirement:
                   </label>
                   <div className="flex gap-1.5">
                     {[2000, 3000, 5000].map(amt => (
@@ -478,18 +478,18 @@ export const TechnicianPortal: React.FC = () => {
                 onClick={() => {
                   setRegError('');
                   const res = registerTechnician({
-                    name: regName || 'Sunil Verma',
-                    phone: regPhone || '+91 98450 99881',
-                    email: regEmail || 'sunil.partner@quickfix.in',
+                    name: regName,
+                    phone: regPhone,
+                    email: regEmail,
                     trades: regTrades,
                     experienceYears: Math.max(2, regExp),
                     city: regCity,
                     qualificationType: regQualType,
-                    qualificationRegNumber: regQualNumber || 'ITI-PENDING-AUDIT',
-                    qualificationInstitute: regQualInst || `${regCity} Technical Institute`,
+                    qualificationRegNumber: regQualNumber,
+                    qualificationInstitute: regQualInst,
                     kycDocType: regKycType,
-                    kycDocNumber: regKycDoc || 'KYC-88123-IN',
-                    upiId: regUpi || 'sunil.partner@upi',
+                    kycDocNumber: regKycDoc,
+                    upiId: regUpi,
                     initialDepositAmount: regDeposit
                   });
                   if (res && !res.success) {
@@ -498,7 +498,7 @@ export const TechnicianPortal: React.FC = () => {
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
               >
-                Submit Partner KYC & Pay ₹{regDeposit} Security Deposit
+                Registration unavailable — secure identity and deposit setup pending
               </button>
 
               <button
@@ -596,7 +596,7 @@ export const TechnicianPortal: React.FC = () => {
                 ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 cursor-pointer'
                 : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
             }`}
-            title={!currentTechnician.isVerified ? 'Qualification approval required' : (currentTechnician.walletBalance ?? 0) < 2000 ? 'Minimum ₹2,000 security reserve required' : undefined}
+            title={!currentTechnician.isVerified ? 'Qualification approval required' : (walletBalance) < 2000 ? 'Minimum ₹2,000 security reserve required' : undefined}
           >
             <Power className="w-3.5 h-3.5" />
             <span>
@@ -604,7 +604,7 @@ export const TechnicianPortal: React.FC = () => {
                 ? 'ONLINE'
                 : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
                 ? 'AUDIT PENDING'
-                : (currentTechnician.walletBalance ?? 0) < 2000
+                : (walletBalance) < 2000
                 ? 'RESERVE DEFICIT'
                 : 'OFFLINE'}
             </span>
@@ -675,7 +675,7 @@ export const TechnicianPortal: React.FC = () => {
         )}
 
         {/* Security Reserve Deficit Alert Banner */}
-        {(currentTechnician.walletBalance ?? 0) < 2000 && (
+        {(walletBalance) < 2000 && (
           <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-3.5 shadow-xs space-y-2 text-rose-950">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
@@ -683,7 +683,7 @@ export const TechnicianPortal: React.FC = () => {
                 <span>Security Reserve Deficit (Balance: ₹{walletBalance})</span>
               </span>
               <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
-                Need ₹{2000 - (currentTechnician.walletBalance ?? 0)}
+                Required locked reserve: ₹2,000
               </span>
             </div>
             <p className="text-xs text-rose-900 leading-relaxed">
@@ -691,13 +691,13 @@ export const TechnicianPortal: React.FC = () => {
             </p>
             <button
               onClick={() => {
-                setTopupAmount(2000 - (currentTechnician.walletBalance ?? 0));
+                setTopupAmount(2000 - (walletBalance));
                 setShowTopupModal(true);
               }}
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>Top-Up ₹{2000 - (currentTechnician.walletBalance ?? 0)} to Restore Duty</span>
+              <span>Top-ups unavailable</span>
             </button>
           </div>
         )}
@@ -788,7 +788,7 @@ export const TechnicianPortal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
+              {(walletBalance) >= 2000 ? (
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" />
                   <span>Reserve recorded</span>
@@ -808,7 +808,7 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Wallet</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
-                ₹{currentTechnician.walletBalance ?? 0}
+                ₹{walletBalance}
               </div>
             </div>
 
@@ -856,7 +856,7 @@ export const TechnicianPortal: React.FC = () => {
               className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>Top-Up Wallet</span>
+              <span>Top-ups unavailable</span>
             </button>
 
             <button
@@ -1173,14 +1173,14 @@ export const TechnicianPortal: React.FC = () => {
               {currentActiveJob.status === 'assigned' && !jobAccepted && (
                 <div className="space-y-2">
                   {/* Minimum ₹1,000 Wallet Gate Warning */}
-                  {(currentTechnician.walletBalance ?? 0) < 1000 ? (
+                  {(walletBalance) < 1000 ? (
                     <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-950 space-y-2">
                       <div className="flex items-center gap-1.5 font-bold text-amber-900">
                         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                         <span>Cannot Accept Service Notification (Balance &lt; ₹1,000)</span>
                       </div>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
-                        A minimum partner wallet balance of <strong>₹1,000</strong> is required to accept booking notifications. Your current balance is <strong>₹{currentTechnician.walletBalance ?? 0}</strong>. Please top up your wallet to activate acceptance.
+                        A minimum partner wallet balance of <strong>₹1,000</strong> is required to accept booking notifications. Your current balance is <strong>₹{walletBalance}</strong>. Top-ups are not enabled. Please wait for the official verified payment flow.
                       </p>
                       <button
                         type="button"
@@ -1207,10 +1207,10 @@ export const TechnicianPortal: React.FC = () => {
                   )}
 
                   <button
-                    disabled={(currentTechnician.walletBalance ?? 0) < 1000}
+                    disabled={(walletBalance) < 1000}
                     onClick={() => handleAcceptJob(currentActiveJob.id)}
                     className={`w-full font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
-                      (currentTechnician.walletBalance ?? 0) < 1000
+                      (walletBalance) < 1000
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                         : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-98'
                     }`}
