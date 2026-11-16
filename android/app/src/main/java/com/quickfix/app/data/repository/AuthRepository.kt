@@ -83,6 +83,17 @@ class AuthRepository(
         PhoneAuthProvider.verifyPhoneNumber(builder.build())
     }
 
+    /** Sign in with the administrator's Firebase email/password account, then require a server-issued admin claim. */
+    suspend fun signInAdmin(email: String, password: String): User {
+        val cleanEmail = email.trim().lowercase()
+        auth.signInWithEmailAndPassword(cleanEmail, password).await()
+        return getAdminUser(cleanEmail)
+            ?: run {
+                auth.signOut()
+                throw SecurityException("Admin access denied. This Firebase account does not have the required server-issued admin permission.")
+            }
+    }
+
     suspend fun signInWithCredential(credential: PhoneAuthCredential): String {
         val result = auth.signInWithCredential(credential).await()
         return result.user?.uid ?: throw IllegalStateException("Firebase UID is null")
