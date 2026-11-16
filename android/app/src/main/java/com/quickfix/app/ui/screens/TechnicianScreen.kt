@@ -38,6 +38,8 @@ fun TechnicianScreen(
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(Unit) { viewModel.refreshPartnerJobs() }
+
     val myBookings = bookings
 
     Scaffold(
