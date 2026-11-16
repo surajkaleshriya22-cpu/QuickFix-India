@@ -478,8 +478,18 @@ app.post('/api/bookings/:bookingId/location/consent', authenticateFirebaseUser, 
       [`locationSharing.${participant.role}UpdatedAt`]: FieldValue.serverTimestamp(),
     });
     if (!enabled) {
-      await getFirestore(firebaseAdminApp!).collection('bookings').doc(req.params.bookingId)
-        .collection('liveLocations').doc(uid).delete().catch(() => undefined);
+      // Revocation by either participant ends the shared session for both people.
+      // Remove both latest GPS points so a later re-consent cannot expose stale coordinates.
+      const locationsRef = participant.ref.collection('liveLocations');
+      const partnerUid = participant.booking.technicianUid || participant.booking.assignedPartnerUid;
+      const participantUids = [participant.booking.customerUid, partnerUid].filter(
+        (value): value is string => typeof value === 'string' && value.length > 0
+      );
+      await Promise.all(participantUids.map((participantUid) =>
+        locationsRef.doc(participantUid).delete().catch((error) => {
+          console.warn('Could not clear a revoked live-location point:', error);
+        })
+      ));
     }
     return res.json({ success: true, enabled });
   } catch (error) {
