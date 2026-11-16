@@ -853,13 +853,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Cash commission auto-debit is not enabled yet. No commission will be deducted until the server-side ledger is implemented and audited. The ₹2,000 reserve is not collected through this screen.
+                <strong>Cash commission auto-debit is not enabled yet.</strong> No commission will be deducted until the server-side ledger is implemented and audited. The ₹2,000 reserve is not collected through this screen.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Payout requests are disabled until the payment provider, server-side reserve handling and verified webhook are configured. This screen does not send money.
+                <strong>Payout requests are disabled.</strong> They will remain disabled until the payment provider, server-side reserve handling and verified webhook are configured. This screen does not send money.
               </span>
             </div>
           </div>
