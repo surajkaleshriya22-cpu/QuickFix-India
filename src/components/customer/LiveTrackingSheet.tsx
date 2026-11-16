@@ -20,6 +20,7 @@ import { Booking, BookingStatus } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 import { NearbyStoresModal } from './NearbyStoresModal';
+import { auth } from '../../lib/firebase';
 
 interface LiveTrackingSheetProps {
   booking: Booking;
@@ -30,6 +31,8 @@ interface LiveTrackingSheetProps {
 export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, onBack, onOpenReview }) => {
   const { updateBookingStatus } = useQuickFix();
   const [copiedOtp, setCopiedOtp] = useState(false);
+  const [customerOtp, setCustomerOtp] = useState('');
+  const [otpLoadError, setOtpLoadError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
   const steps: { key: BookingStatus; label: string; desc: string }[] = [
@@ -53,8 +56,25 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
 
   const currentStepIdx = getStepIndex(booking.status);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadOtp = async () => {
+      if (!auth.currentUser || !['assigned', 'technician_en_route'].includes(booking.status)) { setCustomerOtp(''); return; }
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/bookings/' + encodeURIComponent(booking.id) + '/start-otp', { headers: { Authorization: 'Bearer ' + token } });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'OTP is not available yet.');
+        if (!cancelled) { setCustomerOtp(result.otp); setOtpLoadError(''); }
+      } catch (error: any) { if (!cancelled) { setCustomerOtp(''); setOtpLoadError(error?.message || 'Could not load the job-start OTP.'); } }
+    };
+    void loadOtp();
+    return () => { cancelled = true; };
+  }, [booking.id, booking.status]);
+
   const handleCopyOtp = () => {
-    navigator.clipboard.writeText(booking.startOtp);
+    if (!customerOtp) return;
+    navigator.clipboard.writeText(customerOtp);
     setCopiedOtp(true);
     setTimeout(() => setCopiedOtp(false), 2000);
   };
@@ -129,13 +149,14 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
                 <KeyRound className="w-4 h-4 text-blue-600" />
                 <span>Job Start Security OTP</span>
               </div>
-              <p className="text-[11px] text-slate-600">Share this code with the technician upon arrival to begin.</p>
+              <p className="text-[11px] text-slate-600">Share this code with your assigned Channel Partner when they arrive.</p>
+              {otpLoadError && <p className="text-[10px] text-amber-700">{otpLoadError}</p>}
             </div>
             <button
               onClick={handleCopyOtp}
               className="bg-white border-2 border-blue-600 px-3.5 py-1.5 rounded-xl font-mono text-base font-extrabold text-blue-800 tracking-widest shadow-xs hover:bg-blue-50 active:scale-95 transition-all"
             >
-              {copiedOtp ? 'COPIED!' : booking.startOtp}
+              {copiedOtp ? 'COPIED!' : (customerOtp || '----')}
             </button>
           </div>
         )}
