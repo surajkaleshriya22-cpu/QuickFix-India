@@ -33,6 +33,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { Booking, BookingStatus, ServiceCategoryType, WalletTransaction } from '../../types';
 import { LiveLocationPanel } from '../maps/LiveLocationPanel';
+import { auth } from '../../lib/firebase';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
@@ -173,17 +174,29 @@ export const TechnicianPortal: React.FC = () => {
     }
   };
 
-  const handleStartJobWithOtp = (bookingId: string) => {
-    if (!otpInput || otpInput.trim().length !== 4) {
+  const handleStartJobWithOtp = async (bookingId: string) => {
+    if (!/^\d{4}$/.test(otpInput.trim())) {
       setOtpError('Please enter the 4-digit OTP provided by customer');
       return;
     }
-    const result = updateBookingStatus(bookingId, 'in_progress', otpInput);
-    if (!result.success) {
-      setOtpError(result.message || 'Invalid OTP');
-    } else {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setOtpError('Please sign in with your verified Channel Partner account.');
+      return;
+    }
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/bookings/' + encodeURIComponent(bookingId) + '/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ otp: otpInput.trim() })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Job could not be started.');
       setOtpError('');
       setOtpInput('');
+    } catch (error: any) {
+      setOtpError(error?.message || 'Job could not be started securely.');
     }
   };
 
