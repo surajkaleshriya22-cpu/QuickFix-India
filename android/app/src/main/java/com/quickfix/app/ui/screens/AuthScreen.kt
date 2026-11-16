@@ -55,8 +55,8 @@ fun AuthScreen(
     // Partner specific
     val selectedTrades = remember { mutableStateListOf("electrician") }
     var experienceYears by remember { mutableStateOf("7") }
-    var kycNumber by remember { mutableStateOf("") }
-    var upiId by remember { mutableStateOf("") }
+    
+    
 
     // Admin specific
     var adminPasscode by remember { mutableStateOf("") }
@@ -119,8 +119,8 @@ fun AuthScreen(
                         )
                         TabRoleButton(
                             title = "Partner",
-                            isSelected = selectedRole == UserRole.TECHNICIAN,
-                            onClick = { selectedRole = UserRole.TECHNICIAN },
+                            isSelected = selectedRole == UserRole.CHANNEL_PARTNER,
+                            onClick = { selectedRole = UserRole.CHANNEL_PARTNER },
                             modifier = Modifier.weight(1f)
                         )
                         TabRoleButton(
@@ -156,7 +156,7 @@ fun AuthScreen(
                     LaunchedEffect(state.user) {
                         when (state.user.role) {
                             UserRole.CUSTOMER -> navController.navigate("customer_home")
-                            UserRole.TECHNICIAN -> navController.navigate("technician_portal")
+                            UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> navController.navigate("technician_portal")
                             UserRole.ADMIN -> navController.navigate("admin_dashboard")
                         }
                     }
@@ -206,15 +206,13 @@ fun AuthScreen(
                                     role = selectedRole,
                                     address = address,
                                     city = city,
-                                    trades = selectedTrades.toList(),
+                                    trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
                                     experienceYears = experienceYears.toIntOrNull() ?: 5,
-                                    kycDocNumber = kycNumber,
-                                    upiId = upiId
                                 )
                                 authViewModel.verifyOtp(otpCode, pendingUser) { verifiedUser ->
                                     when (verifiedUser.role) {
                                         UserRole.CUSTOMER -> navController.navigate("customer_home")
-                                        UserRole.TECHNICIAN -> navController.navigate("technician_portal")
+                                        UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> navController.navigate("technician_portal")
                                         UserRole.ADMIN -> navController.navigate("admin_dashboard")
                                     }
                                 }
@@ -262,7 +260,7 @@ fun AuthScreen(
                             text = if (selectedRole == UserRole.CUSTOMER) {
                                 if (isSignUp) "Customer Registration" else "Customer Sign In"
                             } else {
-                                if (isSignUp) "Partner Trade & KYC Registration" else "Technician Partner Login"
+                                if (isSignUp) "Partner Trade & KYC Registration" else "Channel Partner Login"
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
@@ -305,9 +303,9 @@ fun AuthScreen(
                                 }
                             }
 
-                            if (selectedRole == UserRole.TECHNICIAN) {
+                            if (selectedRole == UserRole.CHANNEL_PARTNER) {
                                 Text("KYC details will be reviewed before activation. A ₹2,000 reserve is required only through a verified payment flow; this screen does not collect money.", fontSize = 11.sp, color = Color(0xFF92400E))
-                                Text("Select Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Select Channel Partner Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 val partnerTrades = listOf(
                                     "electrician" to "Electrician",
                                     "ac_fridge" to "AC / Fridge",
@@ -317,7 +315,8 @@ fun AuthScreen(
                                     "driver" to "Driver",
                                     "tourist_guide" to "Tourist Guide",
                                     "contractor" to "Contractor",
-                                    "bike_rider" to "Bike Rider Captain"
+                                    "bike_rider" to "Bike Rider Captain",
+                                    "labour" to "Labour"
                                 )
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     partnerTrades.chunked(2).forEach { rowTrades ->
@@ -345,17 +344,10 @@ fun AuthScreen(
                                 if (selectedTrades.isEmpty()) {
                                     Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
-                                OutlinedTextField(
-                                    value = kycNumber,
-                                    onValueChange = { kycNumber = it },
-                                    label = { Text("KYC Document Number (Aadhaar / Skill Cert)") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                OutlinedTextField(
-                                    value = upiId,
-                                    onValueChange = { upiId = it },
-                                    label = { Text("UPI ID for Instant Payouts") },
-                                    modifier = Modifier.fillMaxWidth()
+                                Text(
+                                    "Your mobile number is verified by Firebase. Basic partner details are submitted securely for admin review; KYC and payment setup happen later.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF92400E)
                                 )
                             }
                         }
@@ -377,7 +369,10 @@ fun AuthScreen(
                         }
 
                         Button(
-                            enabled = selectedRole != UserRole.TECHNICIAN || !isSignUp || selectedTrades.isNotEmpty(),
+                            enabled = phone.filter { it.isDigit() }.length == 10 &&
+                                (!isSignUp || (displayName.trim().length >= 2 &&
+                                    email.contains("@") &&
+                                    (selectedRole != UserRole.CHANNEL_PARTNER || selectedTrades.isNotEmpty()))),
                             onClick = {
                                 activity?.let { act ->
                                     authViewModel.sendOtp("+91 $phone", act)

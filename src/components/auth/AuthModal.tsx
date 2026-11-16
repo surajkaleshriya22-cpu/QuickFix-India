@@ -99,10 +99,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (selectedRoleTab !== 'customer') {
+    if (selectedRoleTab === 'admin' || (selectedRoleTab === 'technician' && !isSignupMode)) {
       setFormError(selectedRoleTab === 'admin'
         ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
-        : 'Partner registration and sign-in are temporarily unavailable until server-side partner verification is connected. No deposit has been collected.');
+        : 'Existing partner sign-in is not enabled yet. Use the registered customer account or contact support.');
       return;
     }
     if (!isFirebaseConfigured) {
@@ -182,6 +182,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     }
     try {
       const credential = await confirmationResult.confirm(enteredOtp.trim());
+      if (selectedRoleTab === 'technician') {
+        if (!isSignupMode) {
+          setFormError('Existing partner sign-in is not enabled yet.');
+          return;
+        }
+        const result = await registerNewPartner({
+          displayName,
+          phoneNumber: credential.user.phoneNumber || '+91' + phone,
+          email,
+          trades: partnerTrades,
+          experienceYears,
+          city: currentCity,
+          address,
+          rememberMe
+        });
+        if (!result.success) {
+          setFormError(result.message || 'Unable to complete partner registration.');
+          return;
+        }
+        setActiveRole('technician');
+        setFormError(result.message || 'Basic partner profile created. Approval is pending.');
+        onClose();
+        return;
+      }
       if (selectedRoleTab !== 'customer') {
         setFormError('This account type cannot be completed through customer phone sign-in.');
         return;
@@ -433,8 +457,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                       <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 flex items-start gap-2 text-amber-900">
                         <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-[11px] leading-snug">
-                          <strong className="font-bold block text-amber-950">Verified Trade Mandate & Security Reserve</strong>
-                          Certified <span className="font-semibold text-amber-800">Electricians</span>, <span className="font-semibold text-cyan-800">Plumbers</span>, <span className="font-semibold text-blue-800">AC</span>, and <span className="font-semibold text-indigo-800">Fridge Technicians</span> are eligible. Partners maintain a mandatory non-withdrawable ₹2,000 wallet reserve to take bookings.
+                          <strong className="font-bold block text-amber-950">Partner onboarding & verification</strong>
+                          Electricians, Plumbers, AC and Fridge Technicians can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
                         </div>
                       </div>
 
@@ -508,169 +532,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         </div>
                       </div>
 
-                      {/* Partner Wallet Policy Note */}
-                      <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-2.5 flex items-start gap-2 text-blue-900">
-                        <Wallet className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-                        <div className="text-[10px] leading-snug">
-                          <strong className="font-bold block text-blue-950">₹2,000 Wallet Security Policy</strong>
-                          New partners maintain a base ₹2,000 balance. The ₹2,000 base cannot be withdrawn; only earnings above ₹2,000 are withdrawable. For cash orders, platform commission is auto-debited from your wallet.
-                        </div>
-                      </div>
-
-                      {/* Trade Qualification Certificate Section */}
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1">
-                            <Award className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Trade Certification Proof</span>
-                          </span>
-                          <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                            Required
-                          </span>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 uppercase block mb-0.5">
-                            Certification Type
-                          </label>
-                          <select
-                            value={qualificationType}
-                            onChange={e => setQualificationType(e.target.value as any)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium"
-                          >
-                            <option value="ITI Trade Certificate">ITI Trade Certificate (Electrician/Plumber)</option>
-                            <option value="Skill India / NSDC Certified">Skill India / NSDC Certified Professional</option>
-                            <option value="State Wireman/Plumber License">State Wireman / Plumber License</option>
-                            <option value="Govt Polytechnic Diploma">Govt Polytechnic Diploma in Engineering</option>
-                          </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-600 uppercase block mb-0.5">
-                              Certificate / Reg. No.
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={qualificationRegNumber}
-                              onChange={e => setQualificationRegNumber(e.target.value)}
-                              placeholder="e.g. ITI-MP-2020-8812"
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-600 uppercase block mb-0.5">
-                              Trade Field Exp (Years)
-                            </label>
-                            <input
-                              type="number"
-                              min="2"
-                              max="35"
-                              value={experienceYears}
-                              onChange={e => setExperienceYears(Math.max(2, Number(e.target.value)))}
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 uppercase block mb-0.5">
-                            Issuing Institute / Board / State
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={qualificationInstitute}
-                            onChange={e => setQualificationInstitute(e.target.value)}
-                            placeholder="e.g. Govt ITI Indore / NSDC Skill Council"
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Government KYC ID */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Govt Identity Proof
-                          </label>
-                          <select
-                            value={kycType}
-                            onChange={e => setKycType(e.target.value as any)}
-                            className="w-full px-2 py-2 rounded-xl border border-slate-300 bg-white text-xs"
-                          >
-                            <option value="Skill India Certificate">Skill India ID</option>
-                            <option value="Aadhaar">Aadhaar Card</option>
-                            <option value="PAN">PAN Card</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Doc Number
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={kycNumber}
-                            onChange={e => setKycNumber(e.target.value)}
-                            placeholder="e.g. SIC-EL-9941"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          UPI ID for Direct Bank Payouts
-                        </label>
+                      {/* Basic registration only. KYC and payments are deliberately deferred. */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+                        <div className="font-bold text-emerald-900 text-xs">Basic profile registration</div>
+                        <label className="text-[11px] font-bold text-slate-700 block">Work experience (years)</label>
                         <input
-                          type="text"
-                          required
-                          value={upiId}
-                          onChange={e => setUpiId(e.target.value)}
-                          placeholder="name@okaxis or paytm"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-mono text-xs"
+                          type="number"
+                          min="0"
+                          max="60"
+                          value={experienceYears}
+                          onChange={e => setExperienceYears(Math.max(0, Math.min(60, Number(e.target.value))))}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                         />
-                      </div>
-
-                      {/* Mandatory Partner Security Deposit of ₹2,000 */}
-                      <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-bold text-amber-950 text-xs">
-                            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span>Mandatory Security Deposit: ₹2,000</span>
-                          </div>
-                          <span className="text-[10px] font-bold uppercase bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">
-                            Non-Withdrawable
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-amber-800 leading-relaxed">
-                          To complete registration, partners must maintain a minimum wallet balance of <strong>₹2,000</strong>. This base deposit remains locked as a security guarantee for platform cash commissions and cannot be withdrawn. Only earnings above ₹2,000 are eligible for withdrawal.
+                        <p className="text-[11px] text-emerald-900 leading-relaxed">
+                          Your basic profile will be submitted for review. Government ID, certificates, UPI details and any deposit are not collected at this stage. Do not send money during registration.
                         </p>
-                        <div className="pt-1">
-                          <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
-                            Initial Wallet Balance to Fund:
-                          </label>
-                          <div className="flex gap-2">
-                            {[2000, 3000, 5000].map(amt => (
-                              <button
-                                key={amt}
-                                type="button"
-                                onClick={() => setPartnerDeposit(amt)}
-                                className={`flex-1 py-1.5 rounded-lg border text-center font-mono font-bold text-xs transition-colors ${
-                                  partnerDeposit === amt
-                                    ? 'bg-amber-600 text-white border-amber-700 shadow-2xs'
-                                    : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100'
-                                }`}
-                              >
-                                ₹{amt} {amt === 2000 ? '(Min)' : ''}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
                       </div>
                     </>
                   ) : null}

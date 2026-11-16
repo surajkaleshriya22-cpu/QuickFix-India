@@ -76,17 +76,10 @@ interface QuickFixContextType {
     email: string;
     trades: ServiceCategoryType[];
     experienceYears: number;
-    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
-    kycDocNumber: string;
-    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
-    qualificationRegNumber?: string;
-    qualificationInstitute?: string;
-    upiId: string;
     city: string;
     address?: string;
-    initialDepositAmount?: number;
     rememberMe: boolean;
-  }) => { success: boolean; message?: string };
+  }) => Promise<{ success: boolean; message?: string }>;
   logoutUser: () => Promise<void>;
   updateCustomerAddress: (newAddr: {
     label: 'Home' | 'Work' | 'Other';
@@ -144,7 +137,7 @@ interface QuickFixContextType {
     kycDocNumber: string;
     upiId: string;
     initialDepositAmount?: number;
-  }) => { success: boolean; message?: string };
+  }) => Promise<{ success: boolean; message?: string }>;
   logoutTechnician: () => void;
   serviceZones: ServiceZone[];
   toggleTechnicianOnline: (
@@ -441,26 +434,49 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const registerNewPartner = (_params: {
-    displayName: string;
-    phoneNumber: string;
-    email: string;
-    trades: ServiceCategoryType[];
-    experienceYears: number;
-    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
-    kycDocNumber: string;
-    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
-    qualificationRegNumber?: string;
-    qualificationInstitute?: string;
-    upiId: string;
-    city: string;
-    address?: string;
-    initialDepositAmount?: number;
-    rememberMe: boolean;
-  }): { success: boolean; message?: string } => ({
-    success: false,
-    message: 'Channel Partner registration is temporarily unavailable until secure Firebase identity, KYC review, and verified ₹2,000 deposit processing are deployed. No account or deposit was created.'
-  });
+  const registerNewPartner: QuickFixContextType['registerNewPartner'] = async (params) => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return { success: false, message: 'Please verify your mobile number with Firebase OTP first.' };
+    try {
+      const idToken = await firebaseUser.getIdToken(true);
+      const response = await fetch('/api/partners/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          displayName: params.displayName,
+          email: params.email,
+          trades: params.trades,
+          experienceYears: params.experienceYears,
+          city: params.city,
+          address: params.address || ''
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) return { success: false, message: result.error || 'Partner registration could not be completed.' };
+      const partnerUser: AppUser = {
+        uid: firebaseUser.uid,
+        phoneNumber: firebaseUser.phoneNumber || params.phoneNumber,
+        displayName: params.displayName.trim(),
+        email: params.email.trim().toLowerCase(),
+        role: 'technician',
+        city: params.city.trim(),
+        address: params.address?.trim() || '',
+        trades: params.trades,
+        experienceYears: params.experienceYears,
+        approvalStatus: 'pending_audit',
+        isVerified: false,
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUser(partnerUser);
+      setIsAuthenticated(true);
+      setIsTechnicianLoggedIn(false);
+      setActiveRole('technician');
+      return { success: true, message: result.message || 'Basic partner profile created. KYC approval is pending.' };
+    } catch (error) {
+      console.warn('Secure partner registration request failed:', error);
+      return { success: false, message: 'Network or server error. Your partner profile was not confirmed; please try again.' };
+    }
+  };
 
   const logoutUser = async (): Promise<void> => {
     try {
@@ -529,7 +545,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return false;
   };
 
-  const registerTechnician = (data: {
+  const registerTechnician = async (data: {
     name: string;
     phone: string;
     email: string;
@@ -543,21 +559,15 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     kycDocNumber: string;
     upiId: string;
     initialDepositAmount?: number;
-  }): { success: boolean; message?: string } => {
+  }): Promise<{ success: boolean; message?: string }> => {
+    // Legacy adapter: KYC identifiers, certificate numbers, UPI and deposits are not sent.
     return registerNewPartner({
       displayName: data.name,
       phoneNumber: data.phone,
       email: data.email,
       trades: data.trades,
       experienceYears: data.experienceYears,
-      kycDocType: data.kycDocType,
-      kycDocNumber: data.kycDocNumber,
-      qualificationType: data.qualificationType,
-      qualificationRegNumber: data.qualificationRegNumber,
-      qualificationInstitute: data.qualificationInstitute,
-      upiId: data.upiId,
       city: data.city,
-      initialDepositAmount: data.initialDepositAmount,
       rememberMe: true
     });
   };

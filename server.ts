@@ -113,6 +113,72 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
+// Secure Channel Partner registration. Only basic profile data is accepted here;
+// government IDs, certificates, UPI details and deposits remain out of scope until
+// a compliant restricted KYC workflow and verified payment provider are deployed.
+app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure registration is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const verifiedPhone = identity.phone_number;
+    const { displayName, email, trades, experienceYears, city, address } = req.body ?? {};
+    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
+
+    if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
+        displayName.trim().length > 100 ||
+        typeof email !== 'string' || email.trim().length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 9 ||
+        new Set(trades).size !== trades.length ||
+        trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
+        !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
+        typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100 ||
+        (address !== undefined && (typeof address !== 'string' || address.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Partner profile details are invalid.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(userRef);
+      if (existing.exists) {
+        throw new Error('PROFILE_ALREADY_EXISTS');
+      }
+      transaction.create(userRef, {
+        uid: identity.uid,
+        phoneNumber: verifiedPhone,
+        displayName: displayName.trim(),
+        email: email.trim().toLowerCase(),
+        role: 'CHANNEL_PARTNER',
+        city: city.trim(),
+        address: typeof address === 'string' ? address.trim() : '',
+        trades: [...new Set(trades)],
+        experienceYears,
+        isVerified: false,
+        approvalStatus: 'pending_audit',
+        kycStatus: 'not_submitted',
+        securityDepositPaid: false,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+
+    return res.status(201).json({
+      success: true,
+      approvalStatus: 'pending_audit',
+      message: 'Basic partner profile created. KYC and approval are still pending; no deposit was collected.'
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'PROFILE_ALREADY_EXISTS') {
+      return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
+    }
+    console.error('Secure partner registration failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
+  }
+});
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -353,6 +419,96 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
     verified: false,
     error: 'Payout webhook is not configured. No payout has been settled.'
   });
+});
+
+// Admin-only Channel Partner review API. This approves the basic profile for the next
+// KYC stage only; it never marks a partner verified or enables job acceptance.
+app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users')
+      .where('role', '==', 'CHANNEL_PARTNER')
+      .where('approvalStatus', '==', 'pending_audit')
+      .limit(100)
+      .get();
+    const partners = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        displayName: String(data.displayName || ''),
+        email: String(data.email || ''),
+        phoneNumber: String(data.phoneNumber || ''),
+        city: String(data.city || ''),
+        trades: Array.isArray(data.trades) ? data.trades : [],
+        experienceYears: Number(data.experienceYears || 0),
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
+        approvalStatus: data.approvalStatus,
+        kycStatus: data.kycStatus || 'not_submitted'
+      };
+    });
+    return res.json({ success: true, partners });
+  } catch (error) {
+    console.error('Admin pending partner lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Pending partner list could not be loaded.' });
+  }
+});
+
+app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const partnerUid = String(req.params.partnerUid || '');
+    const { decision, reason } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(partnerUid) ||
+        !['approve_profile', 'reject'].includes(decision) ||
+        (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Partner review details are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(partnerUid);
+    const auditRef = db.collection('admin_audit_logs').doc();
+    let resultingStatus = '';
+    await db.runTransaction(async (transaction) => {
+      const partnerSnap = await transaction.get(partnerRef);
+      if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      if (partner.role !== 'CHANNEL_PARTNER') throw new Error('NOT_A_PARTNER');
+      if (partner.approvalStatus !== 'pending_audit') throw new Error('PARTNER_NOT_PENDING');
+      resultingStatus = decision === 'approve_profile' ? 'basic_profile_approved' : 'rejected';
+      transaction.update(partnerRef, {
+        approvalStatus: resultingStatus,
+        profileReviewReason: typeof reason === 'string' ? reason.trim() : '',
+        profileReviewedBy: identity.uid,
+        profileReviewedAt: FieldValue.serverTimestamp(),
+        // Approval of basic profile is NOT qualification/KYC approval.
+        isVerified: false,
+        kycStatus: partner.kycStatus || 'not_submitted',
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: decision,
+        targetUid: partnerUid,
+        actorUid: identity.uid,
+        reason: typeof reason === 'string' ? reason.trim() : '',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({
+      success: true,
+      approvalStatus: resultingStatus,
+      isVerified: false,
+      message: decision === 'approve_profile'
+        ? 'Basic profile approved for the next KYC stage. Partner is not verified and cannot accept jobs.'
+        : 'Partner profile rejected.'
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_NOT_FOUND') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (code === 'NOT_A_PARTNER') return res.status(400).json({ success: false, error: 'The selected account is not a Channel Partner.' });
+    if (code === 'PARTNER_NOT_PENDING') return res.status(409).json({ success: false, error: 'This partner profile is no longer pending review.' });
+    console.error('Admin partner review failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner review could not be saved securely.' });
+  }
 });
 
 // Server-side admin gate. No client-supplied role or email is trusted.

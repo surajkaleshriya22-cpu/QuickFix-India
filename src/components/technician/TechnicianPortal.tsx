@@ -101,6 +101,8 @@ const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; crea
 
 export const TechnicianPortal: React.FC = () => {
   const {
+    currentUser,
+    logoutUser,
     currentTechnician,
     isTechnicianLoggedIn,
     loginTechnician,
@@ -221,6 +223,29 @@ export const TechnicianPortal: React.FC = () => {
       }, 1600);
     }
   };
+
+  // A newly registered partner must see the real review state, not a misleading login form.
+  if (currentUser?.role === 'technician' && currentUser.approvalStatus === 'pending_audit' && !isTechnicianLoggedIn) {
+    return (
+      <div className="flex-1 bg-slate-50 flex flex-col justify-center p-5">
+        <div className="bg-white rounded-2xl p-6 border border-amber-200 shadow-md space-y-4 max-w-sm mx-auto w-full">
+          <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Partner profile submitted</h2>
+            <p className="text-sm text-slate-600 mt-2">Thanks{currentUser.displayName ? `, ${currentUser.displayName}` : ''}. Your basic Channel Partner profile is waiting for admin review.</p>
+          </div>
+          <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-900 space-y-1">
+            <p className="font-bold">Status: Pending review</p>
+            <p>You cannot accept jobs or go online until approval and secure partner sign-in are enabled.</p>
+            <p>No KYC documents or deposit were collected. Do not send money to anyone claiming to activate this account.</p>
+          </div>
+          <button type="button" onClick={() => void logoutUser()} className="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm">Sign out</button>
+        </div>
+      </div>
+    );
+  }
 
   // If not logged in
   if (!isTechnicianLoggedIn) {
@@ -448,30 +473,38 @@ export const TechnicianPortal: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setRegError('');
-                  const res = registerTechnician({
-                    name: regName || 'Sunil Verma',
-                    phone: regPhone || '+91 98450 99881',
-                    email: regEmail || 'sunil.partner@quickfix.in',
-                    trades: regTrades,
-                    experienceYears: Math.max(2, regExp),
-                    city: regCity,
-                    qualificationType: regQualType,
-                    qualificationRegNumber: regQualNumber || 'ITI-PENDING-AUDIT',
-                    qualificationInstitute: regQualInst || `${regCity} Technical Institute`,
-                    kycDocType: regKycType,
-                    kycDocNumber: regKycDoc || 'KYC-88123-IN',
-                    upiId: regUpi || 'sunil.partner@upi',
-                    initialDepositAmount: regDeposit
-                  });
-                  if (res && !res.success) {
-                    setRegError(res.message || 'Registration failed');
+                  if (!regName.trim() || !regEmail.trim() || !regCity.trim() || regTrades.length === 0) {
+                    setRegError('Please enter your name, email, city and select at least one trade.');
+                    return;
+                  }
+                  try {
+                    const res = await registerTechnician({
+                      name: regName.trim(),
+                      phone: regPhone,
+                      email: regEmail.trim(),
+                      trades: regTrades,
+                      experienceYears: Math.max(0, regExp),
+                      city: regCity.trim(),
+                      qualificationType: regQualType,
+                      qualificationRegNumber: regQualNumber,
+                      qualificationInstitute: regQualInst,
+                      kycDocType: regKycType,
+                      kycDocNumber: regKycDoc,
+                      upiId: regUpi,
+                      initialDepositAmount: regDeposit
+                    });
+                    if (!res.success) {
+                      setRegError(res.message || 'Registration failed');
+                    }
+                  } catch {
+                    setRegError('Registration could not be completed. Please try again.');
                   }
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
               >
-                Submit Partner KYC & Pay ₹{regDeposit} Security Deposit
+                Submit Basic Partner Registration
               </button>
 
               <button

@@ -11,7 +11,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
 import com.quickfix.app.data.model.User
 import com.quickfix.app.data.model.UserRole
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.TimeUnit
 
 class AuthRepository(
@@ -104,6 +110,59 @@ class AuthRepository(
             .document(user.uid)
             .set(userMap)
             .await()
+    }
+
+
+    /**
+     * Creates a basic Channel Partner profile through the authenticated server API.
+     * Firebase verifies the phone number; the server derives the UID and phone from
+     * the verified ID token. Sensitive KYC/payment details are deliberately excluded.
+     */
+    suspend fun registerChannelPartner(user: User) {
+        val firebaseUser = auth.currentUser
+            ?: throw SecurityException("Please verify your mobile number again.")
+        val idToken = firebaseUser.getIdToken(true).await().token
+            ?: throw SecurityException("Could not obtain a secure Firebase sign-in token.")
+
+        val payload = JSONObject().apply {
+            put("displayName", user.displayName.trim())
+            put("email", user.email.trim())
+            put("trades", JSONArray(user.trades))
+            put("experienceYears", user.experienceYears)
+            put("city", user.city.trim())
+            put("address", user.address.trim())
+        }
+
+        withContext(Dispatchers.IO) {
+            val connection = (URL("https://quickfix-india.onrender.com/api/partners/register")
+                .openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 15000
+                readTimeout = 20000
+                doOutput = true
+                setRequestProperty("Authorization", "Bearer $idToken")
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setRequestProperty("Accept", "application/json")
+            }
+            try {
+                connection.outputStream.use { output ->
+                    output.write(payload.toString().toByteArray(Charsets.UTF_8))
+                }
+                val status = connection.responseCode
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val body = if (response.isNotBlank()) JSONObject(response) else JSONObject()
+                if (status !in 200..299 || body.optBoolean("success", false).not()) {
+                    throw IllegalStateException(
+                        body.optString("error").ifBlank {
+                            "Secure registration failed (HTTP $status). Please try again."
+                        }
+                    )
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
     }
 
     suspend fun getUserProfile(uid: String): User? {
