@@ -205,7 +205,7 @@ fun TechnicianScreen(
                         Button(
                             onClick = {
                                 acceptingBookingId = offer.bookingId
-                                viewModel.acceptPartnerOffer(offer.bookingId)
+                                viewModel.acceptPartnerOffer(offer.bookingId) { acceptingBookingId = null }
                             },
                             enabled = acceptingBookingId == null,
                             modifier = Modifier.fillMaxWidth(),
