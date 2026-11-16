@@ -480,6 +480,23 @@ async function getLiveLocationParticipant(bookingId: string, uid: string) {
   return { ref, booking, role };
 }
 
+app.get('/api/bookings/:bookingId/location/consent', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
+    if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
+    const sharing = participant.booking.locationSharing || {};
+    return res.json({
+      success: true,
+      ownEnabled: sharing[participant.role + 'Enabled'] === true,
+      otherEnabled: sharing[participant.role === 'customer' ? 'partnerEnabled' : 'customerEnabled'] === true,
+    });
+  } catch (error) {
+    console.error('Live location consent lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not load location sharing permission.' });
+  }
+});
+
 app.post('/api/bookings/:bookingId/location/consent', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
