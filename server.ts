@@ -124,7 +124,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const verifiedPhone = identity.phone_number;
     const { displayName, email, trades, experienceYears, city, address } = req.body ?? {};
-    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider']);
+    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
