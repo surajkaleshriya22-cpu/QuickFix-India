@@ -94,6 +94,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Partner booking offers expose only a sanitized preview to the intended partner.
+    // All writes are server-owned; partners cannot forge or modify offers.
+    match /partner_booking_offers/{offerId} {
+      allow get, list: if signedIn() && resource.data.partnerUid == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
     // Admin-only application configuration (never wallet balances or payouts).
     match /system/{documentId} {
       allow read, write: if isAdmin();
