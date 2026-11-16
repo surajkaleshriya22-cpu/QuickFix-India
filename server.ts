@@ -227,16 +227,52 @@ app.get('/api/partners/wallet', authenticateFirebaseUser, async (req: Request, r
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Wallet service is unavailable.' });
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
     const db = getFirestore(firebaseAdminApp);
-    const [profileSnap, accountSnap, ledgerSnap] = await Promise.all([
-      db.collection('users').doc(uid).get(),
-      db.collection('walletAccounts').doc(uid).get(),
-      db.collection('partnerWalletLedger').where('partnerUid', '==', uid).limit(50).get(),
-    ]);
+    const profileSnap = await db.collection('users').doc(uid).get();
     const profile = profileSnap.data();
     if (!profileSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile?.role))) {
       return res.status(403).json({ success: false, error: 'A Channel Partner account is required.' });
     }
-    const account = accountSnap.data();
+
+    // Safely initialize legacy partner accounts with a zero-value wallet.
+    // This creates no deposit, credit or payment; it only enables a consistent ledger view.
+    const accountRef = db.collection('walletAccounts').doc(uid);
+    const openingLedgerRef = db.collection('partnerWalletLedger').doc();
+    const account = await db.runTransaction(async (transaction) => {
+      const accountSnap = await transaction.get(accountRef);
+      if (accountSnap.exists) return accountSnap.data();
+      transaction.create(accountRef, {
+        partnerUid: uid,
+        currency: 'INR',
+        availableBalance: 0,
+        lockedReserve: 0,
+        reserveRequired: 2000,
+        reserveStatus: 'not_funded',
+        withdrawalsEnabled: false,
+        schemaVersion: 1,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(openingLedgerRef, {
+        partnerUid: uid,
+        type: 'account_opened',
+        amount: 0,
+        currency: 'INR',
+        availableBalanceAfter: 0,
+        lockedReserveAfter: 0,
+        idempotencyKey: 'account-opened-' + uid,
+        createdAt: FieldValue.serverTimestamp(),
+        note: 'Legacy partner wallet initialized at zero. No deposit or payment received.',
+      });
+      return {
+        availableBalance: 0,
+        lockedReserve: 0,
+        reserveRequired: 2000,
+        reserveStatus: 'not_funded',
+        withdrawalsEnabled: false,
+      };
+    });
+    const ledgerSnap = await db.collection('partnerWalletLedger')
+      .where('partnerUid', '==', uid).limit(50).get();
     const ledger = ledgerSnap.docs
       .map((entry) => {
         const data = entry.data();
@@ -259,7 +295,7 @@ app.get('/api/partners/wallet', authenticateFirebaseUser, async (req: Request, r
         availableBalance: account ? Number(account.availableBalance || 0) : 0,
         lockedReserve: account ? Number(account.lockedReserve || 0) : 0,
         reserveRequired: 2000,
-        reserveStatus: account ? String(account.reserveStatus || 'not_funded') : 'not_initialized',
+        reserveStatus: String(account?.reserveStatus || 'not_funded'),
         withdrawalsEnabled: account?.withdrawalsEnabled === true,
         topupsEnabled: false,
         payoutEnabled: false,
