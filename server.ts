@@ -12,6 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isValidBookingDate } from './src/utils/bookingDate';
 
 dotenv.config();
 
