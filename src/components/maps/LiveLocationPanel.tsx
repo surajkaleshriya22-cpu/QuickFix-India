@@ -67,6 +67,18 @@ export const LiveLocationPanel: React.FC<LiveLocationPanelProps> = ({ bookingId,
     }
   };
 
+  // When a booking becomes inactive, make one authenticated read attempt.
+  // The server rejects ended bookings and idempotently deletes both saved GPS points.
+  useEffect(() => {
+    if (active) return;
+    let cancelled = false;
+    void request(`/api/bookings/${encodeURIComponent(bookingId)}/location/consent`).catch(() => {
+      // A 403 is expected for completed/cancelled bookings; server-side cleanup still ran.
+      if (cancelled) return;
+    });
+    return () => { cancelled = true; };
+  }, [active, bookingId]);
+
   useEffect(() => {
     if (!active || !consented || !otherConsented || !navigator.geolocation) return;
     let watchId: number | undefined;
