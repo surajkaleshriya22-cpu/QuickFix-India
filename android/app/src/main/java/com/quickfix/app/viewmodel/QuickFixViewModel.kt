@@ -311,6 +311,9 @@ class QuickFixViewModel : ViewModel() {
         customerAddress: String,
         scheduledDate: String,
         scheduledTimeSlot: String,
+        state: String,
+        district: String,
+        tehsil: String,
         notes: String = ""
     ): Booking {
         val firebaseUser = auth.currentUser
@@ -344,6 +347,10 @@ class QuickFixViewModel : ViewModel() {
                     .put("scheduledTimeSlot", scheduledTimeSlot)
                     .put("paymentMethod", "cash")
                     .put("address", customerAddress.trim())
+                    .put("serviceArea", org.json.JSONObject()
+                        .put("state", state.trim())
+                        .put("district", district.trim())
+                        .put("tehsil", tehsil.trim()))
                     .put("notes", notes.trim())
                 connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                 val status = connection.responseCode

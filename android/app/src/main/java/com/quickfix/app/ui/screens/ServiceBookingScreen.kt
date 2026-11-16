@@ -41,6 +41,9 @@ fun ServiceBookingScreen(
     val defaultAddress = ""
 
     var address by remember { mutableStateOf(defaultAddress) }
+    var state by remember { mutableStateOf("") }
+    var district by remember { mutableStateOf("") }
+    var tehsil by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
@@ -107,6 +110,8 @@ fun ServiceBookingScreen(
                                 bookingError = "Please choose a valid date today or later."
                             } else if (address.isBlank()) {
                                 bookingError = "Please enter your complete service address."
+                            } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
+                                bookingError = "Please enter State, District and Tehsil."
                             } else {
                                 isBooking = true
                                 bookingError = null
@@ -119,6 +124,9 @@ fun ServiceBookingScreen(
                                             customerAddress = address,
                                             scheduledDate = scheduledDate,
                                             scheduledTimeSlot = scheduledTimeSlot,
+                                            state = state,
+                                            district = district,
+                                            tehsil = tehsil,
                                             notes = notes
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
@@ -199,7 +207,28 @@ fun ServiceBookingScreen(
                         value = address,
                         onValueChange = { address = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("House / Flat, Landmark, City") }
+                        label = { Text("House / Flat, Landmark, Full Address") }
+                    )
+                    OutlinedTextField(
+                        value = state,
+                        onValueChange = { state = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("State") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = district,
+                        onValueChange = { district = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("District") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = tehsil,
+                        onValueChange = { tehsil = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Tehsil / Taluka") },
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = scheduledDate,
