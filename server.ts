@@ -190,7 +190,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     if (typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(scheduledDate) ||
+        !isValidBookingDate(scheduledDate) ||
         !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
         !['upi', 'cash'].includes(paymentMethod) ||
         (notes !== undefined && typeof notes !== 'string')) {
