@@ -59,13 +59,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [partnerDistrict, setPartnerDistrict] = useState('');
   const [partnerTehsil, setPartnerTehsil] = useState('');
   const [experienceYears, setExperienceYears] = useState(7);
-  const [kycType, setKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
-  const [kycNumber, setKycNumber] = useState('');
-  const [qualificationType, setQualificationType] = useState<'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma'>('ITI Trade Certificate');
-  const [qualificationRegNumber, setQualificationRegNumber] = useState('');
-  const [qualificationInstitute, setQualificationInstitute] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [partnerDeposit, setPartnerDeposit] = useState<number>(2000);
 
   // Admin Specific Fields
   const [adminPasscode, setAdminPasscode] = useState('');
