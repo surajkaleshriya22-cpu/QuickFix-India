@@ -255,6 +255,87 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
   }
 });
 
+// Channel Partner job feed. Only fully approved, verified, online partners with the
+// mandatory reserve funded may see unassigned requests in their city and trade.
+// The response intentionally excludes customer phone numbers, notes, OTPs and payment data.
+app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure job feed is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    if (!profileSnap.exists) {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner profile is required.' });
+    }
+
+    const profile = profileSnap.data()!;
+    const role = profile.role;
+    const walletBalance = Number(profile.walletBalance || 0);
+    const eligible = (role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN') &&
+      profile.approvalStatus === 'approved' &&
+      profile.isVerified === true &&
+      profile.isOnline === true &&
+      profile.securityDepositPaid === true &&
+      Number.isFinite(walletBalance) && walletBalance >= 2000;
+
+    if (!eligible) {
+      return res.status(403).json({
+        success: false,
+        error: 'Job access requires admin approval, verified KYC, online status and the fully funded ₹2,000 reserve.'
+      });
+    }
+
+    const city = typeof profile.city === 'string' ? profile.city.trim().toLocaleLowerCase('en-IN') : '';
+    const trades = Array.isArray(profile.trades) ? profile.trades.filter((trade): trade is string => typeof trade === 'string') : [];
+    if (!city || trades.length === 0) {
+      return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
+    }
+
+    const categories = new Set<string>();
+    for (const trade of trades) {
+      if (trade === 'ac_fridge') {
+        categories.add('ac_repair');
+        categories.add('fridge_repair');
+      } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+        categories.add(trade);
+      }
+    }
+
+    // Filter by exact city in Firestore before limiting so busy cities do not
+    // hide matching jobs behind the first 200 requests from other cities.
+    const snapshot = await db.collection('bookings')
+      .where('status', '==', 'requested')
+      .where('city', '==', typeof profile.city === 'string' ? profile.city.trim() : '')
+      .limit(200)
+      .get();
+    const bookings = snapshot.docs
+      .filter((document) => categories.has(String(document.data().category || '')))
+      .map((document) => {
+        const booking = document.data();
+        return {
+          id: document.id,
+          serviceTitle: String(booking.serviceTitle || ''),
+          category: String(booking.category || ''),
+          customerName: String(booking.customerName || ''),
+          // Do not disclose a customer's full home address before a partner
+          // atomically claims the job. A claim endpoint can reveal it afterward.
+          status: String(booking.status || 'requested'),
+          price: Number(booking.price || 0),
+          totalAmount: Number(booking.totalAmount || 0),
+          paymentStatus: String(booking.paymentStatus || 'pending'),
+          escrowStatus: String(booking.escrowStatus || 'not_funded')
+        };
+      });
+
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Secure Channel Partner job feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Available jobs could not be loaded securely. Please retry.' });
+  }
+});
+
 // API routes must verify Firebase identity; admin routes must additionally use requireServerAdmin.
 app.use('/api/places', authenticateFirebaseUser);
 app.use('/api/audio', authenticateFirebaseUser);
