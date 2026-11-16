@@ -78,6 +78,7 @@ interface QuickFixContextType {
     experienceYears: number;
     city: string;
     address?: string;
+    serviceArea?: { state: string; district: string; tehsil: string };
     rememberMe: boolean;
   }) => Promise<{ success: boolean; message?: string }>;
   logoutUser: () => Promise<void>;
@@ -448,7 +449,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           trades: params.trades,
           experienceYears: params.experienceYears,
           city: params.city,
-          address: params.address || ''
+          address: params.address || '',
+          ...(params.serviceArea ? { serviceArea: params.serviceArea } : {})
         })
       });
       const result = await response.json().catch(() => ({}));
