@@ -99,17 +99,19 @@ class AuthViewModel(
 
                 // Check if profile exists, otherwise save new profile
                 val existingProfile = repository.getUserProfile(uid)
-                if (existingProfile == null && pendingUser.role != UserRole.CUSTOMER) {
-                    throw SecurityException(
-                        "Secure Channel Partner registration is not enabled in this Android build. No partner profile was written. Please use the supported registration channel after secure API setup."
-                    )
-                }
-                val userToPersist = if (existingProfile != null) {
-                    existingProfile
-                } else {
-                    val newProfile = pendingUser.copy(uid = uid)
-                    repository.saveUserProfile(newProfile)
-                    newProfile
+                val userToPersist = when {
+                    existingProfile != null -> existingProfile
+                    pendingUser.role == UserRole.CHANNEL_PARTNER -> {
+                        repository.registerChannelPartner(pendingUser)
+                        repository.getUserProfile(uid)
+                            ?: throw IllegalStateException("Registration was accepted, but the partner profile could not be loaded. Please sign in again.")
+                    }
+                    pendingUser.role == UserRole.CUSTOMER -> {
+                        val newProfile = pendingUser.copy(uid = uid)
+                        repository.saveUserProfile(newProfile)
+                        newProfile
+                    }
+                    else -> throw SecurityException("This account type cannot be registered from this screen.")
                 }
 
                 _authState.value = AuthState.Authenticated(userToPersist)
