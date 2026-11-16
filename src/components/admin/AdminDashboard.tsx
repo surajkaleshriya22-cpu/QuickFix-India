@@ -1893,65 +1893,9 @@ export const AdminDashboard: React.FC = () => {
 
                         {/* Payment Actions Row */}
                         <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
-                          {/* Quick Status Toggles & Escrow Badge */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[11px] text-slate-500 font-semibold">Status:</span>
-                            {(['paid', 'pending', 'failed', 'refunded'] as PaymentStatus[]).map(st => (
-                              <button
-                                key={st}
-                                onClick={() => handlePaymentStatusChange(b.id, st)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors ${
-                                  b.paymentStatus === st
-                                    ? st === 'paid'
-                                      ? 'bg-emerald-600 text-white'
-                                      : st === 'pending'
-                                      ? 'bg-amber-600 text-white'
-                                      : st === 'refunded'
-                                      ? 'bg-purple-600 text-white'
-                                      : 'bg-rose-600 text-white'
-                                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                                }`}
-                              >
-                                {st}
-                              </button>
-                            ))}
-
-                            {/* Escrow Protection Badge */}
-                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                              b.paymentStatus === 'refunded'
-                                ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                                : b.paymentStatus === 'paid'
-                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                                : 'bg-slate-900 text-slate-400 border border-slate-800'
-                            }`}>
-                              <ShieldCheck className="w-3 h-3" />
-                              <span>
-                                {b.paymentStatus === 'refunded'
-                                  ? 'Refunded via Admin A/C'
-                                  : b.paymentStatus === 'paid'
-                                  ? 'Held in Admin Escrow'
-                                  : 'Awaiting Inflow'}
-                              </span>
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {/* Issue Refund from Admin Master Account Button */}
-                            {b.paymentStatus === 'paid' && (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Issue 100% refund of ₹${b.totalAmount} to customer ${b.customerName} directly from the QuickFix Admin Master Account?`)) {
-                                    const res = adminIssueCustomerRefund(b.id, b.totalAmount, 'Customer cancellation / satisfaction refund approved by Admin');
-                                    setStatusUpdateSuccessMsg(res.message);
-                                    setTimeout(() => setStatusUpdateSuccessMsg(''), 4500);
-                                  }
-                                }}
-                                className="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                              >
-                                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-                                <span>Issue Refund (Admin A/C)</span>
-                              </button>
-                            )}
+                          <p className="text-[11px] text-amber-300">
+                            Payment actions are disabled. QuickFix has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
+                          </p>
 
                             {/* View Invoice / Receipt Button */}
                             <button
