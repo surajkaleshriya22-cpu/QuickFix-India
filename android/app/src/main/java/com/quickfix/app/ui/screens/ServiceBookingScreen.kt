@@ -41,6 +41,9 @@ fun ServiceBookingScreen(
     val defaultAddress = ""
 
     var address by remember { mutableStateOf(defaultAddress) }
+    var serviceState by remember { mutableStateOf("") }
+    var serviceDistrict by remember { mutableStateOf("") }
+    var serviceTehsil by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
@@ -97,8 +100,8 @@ fun ServiceBookingScreen(
                     }
                     Button(
                         onClick = {
-                            if (address.isBlank()) {
-                                bookingError = "Please enter your complete service address."
+                            if (address.isBlank() || serviceState.isBlank() || serviceDistrict.isBlank() || serviceTehsil.isBlank()) {
+                                bookingError = "Please enter your complete address, State, District and Tehsil."
                             } else {
                                 isBooking = true
                                 bookingError = null
@@ -109,6 +112,9 @@ fun ServiceBookingScreen(
                                             serviceTitle = service.title,
                                             category = service.category,
                                             customerAddress = address,
+                                            serviceState = serviceState,
+                                            serviceDistrict = serviceDistrict,
+                                            serviceTehsil = serviceTehsil,
                                             scheduledDate = scheduledDate,
                                             scheduledTimeSlot = scheduledTimeSlot,
                                             notes = notes
@@ -125,7 +131,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && address.isNotBlank() && serviceState.isNotBlank() && serviceDistrict.isNotBlank() && serviceTehsil.isNotBlank() && scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -191,7 +197,28 @@ fun ServiceBookingScreen(
                         value = address,
                         onValueChange = { address = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("House / Flat, Landmark, City") }
+                        label = { Text("House / Flat, Street, Landmark, Pincode") }
+                    )
+                    OutlinedTextField(
+                        value = serviceState,
+                        onValueChange = { serviceState = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("State / UT") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = serviceDistrict,
+                        onValueChange = { serviceDistrict = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("District") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = serviceTehsil,
+                        onValueChange = { serviceTehsil = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Tehsil / Taluk / Mandal") },
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = scheduledDate,
