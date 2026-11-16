@@ -185,9 +185,16 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod } = req.body ?? {};
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea } = req.body ?? {};
+    const validServiceArea = serviceArea === undefined || (
+      serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
+      ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
+      ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined || (typeof serviceArea[key] === 'string' && serviceArea[key].trim().length <= 30)) &&
+      (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0) ||
+       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
+    );
 
-    if (typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validServiceArea || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -235,6 +242,16 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       scheduledTimeSlot,
       city: String(profile.city || '').slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
+      ...(validServiceArea && serviceArea ? {
+        serviceArea: {
+          state: serviceArea.state.trim(),
+          district: serviceArea.district.trim(),
+          tehsil: serviceArea.tehsil.trim(),
+          ...(serviceArea.stateCode ? { stateCode: serviceArea.stateCode.trim() } : {}),
+          ...(serviceArea.districtCode ? { districtCode: serviceArea.districtCode.trim() } : {}),
+          ...(serviceArea.tehsilCode ? { tehsilCode: serviceArea.tehsilCode.trim() } : {})
+        }
+      } : {}),
       paymentMethod,
       status: 'requested',
       startOtp: '',
