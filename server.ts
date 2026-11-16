@@ -489,6 +489,86 @@ app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUs
 });
 
 
+// Assigned partner acceptance is server-authoritative. The ₹1,000 wallet gate is
+// read from the server-owned user profile; acceptance does not debit commission.
+app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(req.params.bookingId);
+    const partnerRef = db.collection('users').doc(uid);
+    const now = Date.now();
+    const acceptedAt = new Date(now);
+    const serviceDeadline = new Date(now + 60 * 60 * 1000);
+
+    const outcome = await db.runTransaction(async (transaction) => {
+      const [bookingSnap, partnerSnap] = await Promise.all([
+        transaction.get(bookingRef), transaction.get(partnerRef)
+      ]);
+      if (!bookingSnap.exists) return { error: 'not_found' as const };
+      if (!partnerSnap.exists) return { error: 'partner_missing' as const };
+      const booking = bookingSnap.data()!;
+      const partner = partnerSnap.data()!;
+      if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return { error: 'not_assigned' as const };
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
+          partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
+          partner.accountStatus !== 'active' || partner.isSuspended === true) {
+        return { error: 'partner_unverified' as const };
+      }
+      // Firestore rules prohibit client writes to walletBalance; only trusted server/admin writes can change it.
+      if (typeof partner.walletBalance !== 'number' || !Number.isFinite(partner.walletBalance) || partner.walletBalance < 1000) {
+        return { error: 'wallet_low' as const };
+      }
+      if (booking.status === 'technician_en_route' && booking.acceptedAt) {
+        const existingAcceptedAt = booking.acceptedAt?.toDate?.() || booking.acceptedAt;
+        const existingDeadline = booking.serviceDeadline?.toDate?.() || booking.serviceDeadline;
+        return {
+          accepted: true as const,
+          acceptedAt: new Date(existingAcceptedAt).toISOString(),
+          serviceDeadline: existingDeadline ? new Date(existingDeadline).toISOString() : new Date(new Date(existingAcceptedAt).getTime() + 60 * 60 * 1000).toISOString(),
+          walletBalance: partner.walletBalance,
+          alreadyAccepted: true,
+        };
+      }
+      if (booking.status !== 'assigned') return { error: 'bad_status' as const };
+      transaction.update(bookingRef, {
+        status: 'technician_en_route',
+        acceptedAt: FieldValue.serverTimestamp(),
+        serviceDeadline,
+        acceptanceWalletBalanceChecked: partner.walletBalance,
+        acceptanceWalletCheckedAt: FieldValue.serverTimestamp(),
+      });
+      return {
+        accepted: true as const,
+        acceptedAt: acceptedAt.toISOString(),
+        serviceDeadline: serviceDeadline.toISOString(),
+        walletBalance: partner.walletBalance,
+        alreadyAccepted: false,
+      };
+    });
+
+    if ('error' in outcome) {
+      const status = outcome.error === 'not_found' || outcome.error === 'partner_missing' ? 404
+        : outcome.error === 'not_assigned' || outcome.error === 'partner_unverified' ? 403
+        : outcome.error === 'wallet_low' ? 402 : 409;
+      const messages: Record<string, string> = {
+        not_found: 'Booking not found.',
+        partner_missing: 'Partner profile not found.',
+        not_assigned: 'Only the partner assigned to this booking can accept it.',
+        partner_unverified: 'Your partner account must be approved, verified and active.',
+        wallet_low: 'Server-verified wallet balance must be at least ₹1,000. No job was accepted.',
+        bad_status: 'This booking is no longer available to accept.',
+      };
+      return res.status(status).json({ success: false, error: messages[outcome.error] || 'Booking could not be accepted.' });
+    }
+    return res.json({ success: true, status: 'technician_en_route', ...outcome });
+  } catch (error) {
+    console.error('Secure partner acceptance failed:', error);
+    return res.status(500).json({ success: false, error: 'Booking could not be accepted securely.' });
+  }
+});
+
 // Customer-only OTP retrieval. The readable code is decrypted only after checking
 // Firebase identity, booking ownership, status and expiry.
 app.get('/api/bookings/:bookingId/start-otp', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -541,7 +621,7 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       // The ₹1,000 acceptance gate is server-authoritative. Do not trust client wallet values.
       if (typeof partner.walletBalance !== 'number' || partner.walletBalance < 1000) return 'wallet_low';
       if (booking.status === 'in_progress') return 'already_started';
-      if (!['assigned', 'technician_en_route'].includes(String(booking.status))) return 'bad_status';
+      if (booking.status !== 'technician_en_route') return 'bad_status';
       const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
       if (!expiry || new Date(expiry).getTime() <= Date.now()) return 'expired';
       const attempts = Number(booking.startOtpAttempts || 0);
