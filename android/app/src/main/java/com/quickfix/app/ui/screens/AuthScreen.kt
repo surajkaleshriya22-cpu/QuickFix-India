@@ -58,9 +58,6 @@ fun AuthScreen(
     
     
 
-    // Admin specific
-    var adminPasscode by remember { mutableStateOf("") }
-
     // OTP
     var otpCode by remember { mutableStateOf("") }
 
@@ -223,37 +220,30 @@ fun AuthScreen(
                             Text("Verify OTP & Login", fontWeight = FontWeight.Bold)
                         }
                     } else if (selectedRole == UserRole.ADMIN) {
-                        // ADMIN AUTHENTICATION
-                        Text("HQ Administration Security Gate", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("Role-Based Access: Requires Master Administrative Passcode", fontSize = 11.sp, color = Color.Gray)
-
-                        OutlinedTextField(
-                            value = adminPasscode,
-                            onValueChange = { adminPasscode = it },
-                            label = { Text("Admin Security Passcode") },
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth()
+                        // Admin access is based only on an existing Firebase session
+                        // carrying an Admin SDK-issued custom claim. No client passcode is accepted.
+                        Text("Admin Secure Login", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            "Admin access requires an already authenticated, authorized Firebase account with the server-issued admin permission. A passcode or phone number entered here cannot grant admin access.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF64748B)
                         )
-
-                        OutlinedTextField(
-                            value = phone,
-                            onValueChange = { phone = it },
-                            label = { Text("Authorized Phone (+91)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
                         Button(
-                            onClick = {
-                                authViewModel.verifyAdminPasscode(adminPasscode, "+91 $phone") {
-                                    navController.navigate("admin_dashboard")
+                            onClick = { authViewModel.verifyAdminPasscode("", "") { adminUser ->
+                                navController.navigate("admin_dashboard") {
+                                    popUpTo("auth") { inclusive = true }
                                 }
-                            },
+                            } },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Unlock Admin Console", fontWeight = FontWeight.Bold)
+                            Text("Check Existing Admin Session", fontWeight = FontWeight.Bold)
                         }
+                        Text(
+                            "If you are not already signed in, sign in through the authorized Firebase account first. Admin permission must be assigned securely by the project administrator.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF92400E)
+                        )
                     } else {
                         // CUSTOMER & PARTNER FORM
                         Text(
