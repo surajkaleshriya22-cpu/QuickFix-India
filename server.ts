@@ -163,11 +163,16 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner registration is temporarily unavailable.' });
     const db = getFirestore(firebaseAdminApp);
     const userRef = db.collection('users').doc(identity.uid);
+    const walletRef = db.collection('walletAccounts').doc(identity.uid);
+    const openingLedgerRef = db.collection('partnerWalletLedger').doc();
     const result = await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       if (existing.exists) return 'exists';
       transaction.create(userRef, {
         uid: identity.uid,
+        walletBalance: 0,
+        securityDepositRequired: 2000,
+        securityDepositPaid: false,
         role: 'CHANNEL_PARTNER',
         displayName: displayName.trim(),
         phoneNumber: identity.phone_number,
@@ -183,6 +188,29 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         accountStatus: 'pending',
         createdAt: FieldValue.serverTimestamp(),
       });
+      transaction.create(walletRef, {
+        partnerUid: identity.uid,
+        currency: 'INR',
+        availableBalance: 0,
+        lockedReserve: 0,
+        reserveRequired: 2000,
+        reserveStatus: 'not_funded',
+        withdrawalsEnabled: false,
+        schemaVersion: 1,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(openingLedgerRef, {
+        partnerUid: identity.uid,
+        type: 'account_opened',
+        amount: 0,
+        currency: 'INR',
+        availableBalanceAfter: 0,
+        lockedReserveAfter: 0,
+        idempotencyKey: 'account-opened-' + identity.uid,
+        createdAt: FieldValue.serverTimestamp(),
+        note: 'Wallet account created with zero balance. No deposit or payment received.',
+      });
       return 'created';
     });
     if (result === 'exists') return res.status(409).json({ success: false, error: 'A QuickFix profile already exists for this account. Please contact support to link partner access safely.' });
@@ -190,6 +218,58 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   } catch (error) {
     console.error('Partner registration failed:', error);
     return res.status(500).json({ success: false, error: 'Partner application could not be saved. Please retry.' });
+  }
+});
+
+// Read-only partner wallet view. All balances and ledger records are server-owned.
+app.get('/api/partners/wallet', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Wallet service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const db = getFirestore(firebaseAdminApp);
+    const [profileSnap, accountSnap, ledgerSnap] = await Promise.all([
+      db.collection('users').doc(uid).get(),
+      db.collection('walletAccounts').doc(uid).get(),
+      db.collection('partnerWalletLedger').where('partnerUid', '==', uid).limit(50).get(),
+    ]);
+    const profile = profileSnap.data();
+    if (!profileSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile?.role))) {
+      return res.status(403).json({ success: false, error: 'A Channel Partner account is required.' });
+    }
+    const account = accountSnap.data();
+    const ledger = ledgerSnap.docs
+      .map((entry) => {
+        const data = entry.data();
+        return {
+          id: entry.id,
+          type: String(data.type || 'entry'),
+          amount: Number(data.amount || 0),
+          currency: 'INR',
+          availableBalanceAfter: Number(data.availableBalanceAfter || 0),
+          lockedReserveAfter: Number(data.lockedReserveAfter || 0),
+          createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
+          note: String(data.note || '').slice(0, 180),
+        };
+      })
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    return res.json({
+      success: true,
+      wallet: {
+        currency: 'INR',
+        availableBalance: account ? Number(account.availableBalance || 0) : 0,
+        lockedReserve: account ? Number(account.lockedReserve || 0) : 0,
+        reserveRequired: 2000,
+        reserveStatus: account ? String(account.reserveStatus || 'not_funded') : 'not_initialized',
+        withdrawalsEnabled: account?.withdrawalsEnabled === true,
+        topupsEnabled: false,
+        payoutEnabled: false,
+      },
+      ledger,
+      notice: 'Only verified server-side payment events can change balances. No payment or deposit is implied by this display.',
+    });
+  } catch (error) {
+    console.error('Partner wallet read failed:', error);
+    return res.status(500).json({ success: false, error: 'Wallet details could not be loaded.' });
   }
 });
 
@@ -510,14 +590,17 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
       if (!partnerSnap.exists) return { error: 'partner_missing' as const };
       const booking = bookingSnap.data()!;
       const partner = partnerSnap.data()!;
+      const walletSnap = await transaction.get(db.collection('walletAccounts').doc(uid));
+      const wallet = walletSnap.data();
       if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return { error: 'not_assigned' as const };
       if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
           partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
           partner.accountStatus !== 'active' || partner.isSuspended === true) {
         return { error: 'partner_unverified' as const };
       }
-      // Firestore rules prohibit client writes to walletBalance; only trusted server/admin writes can change it.
-      if (typeof partner.walletBalance !== 'number' || !Number.isFinite(partner.walletBalance) || partner.walletBalance < 1000) {
+      // Only the dedicated server-owned wallet account is a balance source of truth.
+      const availableBalance = wallet?.availableBalance;
+      if (!walletSnap.exists || typeof availableBalance !== 'number' || !Number.isFinite(availableBalance) || availableBalance < 1000) {
         return { error: 'wallet_low' as const };
       }
       if (booking.status === 'technician_en_route' && booking.acceptedAt) {
@@ -527,7 +610,7 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
           accepted: true as const,
           acceptedAt: new Date(existingAcceptedAt).toISOString(),
           serviceDeadline: existingDeadline ? new Date(existingDeadline).toISOString() : new Date(new Date(existingAcceptedAt).getTime() + 60 * 60 * 1000).toISOString(),
-          walletBalance: partner.walletBalance,
+          walletBalance: availableBalance,
           alreadyAccepted: true,
         };
       }
@@ -536,7 +619,7 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
         status: 'technician_en_route',
         acceptedAt: FieldValue.serverTimestamp(),
         serviceDeadline,
-        acceptanceWalletBalanceChecked: partner.walletBalance,
+        acceptanceWalletBalanceChecked: availableBalance,
         acceptanceWalletCheckedAt: FieldValue.serverTimestamp(),
       });
       return {
@@ -614,12 +697,14 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       if (!partnerSnap.exists) return 'partner_missing';
       const booking = bookingSnap.data()!;
       const partner = partnerSnap.data()!;
+      const walletSnap = await transaction.get(db.collection('walletAccounts').doc(uid));
+      const wallet = walletSnap.data();
       if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return 'not_assigned';
       if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
           partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
           partner.accountStatus !== 'active' || partner.isSuspended === true) return 'partner_unverified';
-      // The ₹1,000 acceptance gate is server-authoritative. Do not trust client wallet values.
-      if (typeof partner.walletBalance !== 'number' || partner.walletBalance < 1000) return 'wallet_low';
+      // The wallet gate reads only the server-owned wallet account.
+      if (!walletSnap.exists || typeof wallet?.availableBalance !== 'number' || wallet.availableBalance < 1000) return 'wallet_low';
       if (booking.status === 'in_progress') return 'already_started';
       if (booking.status !== 'technician_en_route') return 'bad_status';
       const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
