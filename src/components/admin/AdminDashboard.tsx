@@ -1287,58 +1287,11 @@ export const AdminDashboard: React.FC = () => {
                     );
                   })()}
 
-                  {/* Actions Bar */}
+                  {/* Sensitive partner actions stay unavailable until backed by audited server APIs. */}
                   <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
-                    {/* Qualification Audit controls */}
-                    {!tech.isVerified || tech.approvalStatus === 'pending_audit' ? (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => approveTechnicianQualification(tech.id)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Approve & Certify Qualification</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            const reason = prompt('Enter rejection reason (e.g. Invalid ITI certificate, Expired license):');
-                            if (reason) {
-                              rejectTechnicianQualification(tech.id, reason);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-rose-950 text-rose-300 border border-rose-800 hover:bg-rose-900 font-semibold text-xs rounded-xl transition-colors"
-                        >
-                          Reject with Note
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleTechnicianSuspension(tech.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                            tech.isSuspended
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800 hover:bg-emerald-900'
-                              : 'bg-slate-900 text-amber-400 border border-slate-800 hover:bg-amber-950'
-                          }`}
-                        >
-                          {tech.isSuspended ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                          <span>{tech.isSuspended ? 'Reactivate Partner' : 'Suspend Partner'}</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            const newR = prompt('Enter new rating (1.0 to 5.0):', tech.rating.toString());
-                            if (newR && !isNaN(Number(newR))) {
-                              updateTechnicianRating(tech.id, Math.min(5, Math.max(1, Number(newR))));
-                            }
-                          }}
-                          className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300"
-                        >
-                          Edit Rating
-                        </button>
-                      </div>
-                    )}
-
+                    <p className="text-[11px] text-amber-300">
+                      KYC certification, suspension changes and rating overrides are disabled until secure server-side review and audit workflows are deployed.
+                    </p>
                     <span className="text-[11px] font-mono text-slate-500">UPI: {tech.bankAccount.upiId}</span>
                   </div>
                 </div>
