@@ -112,6 +112,7 @@ export const TechnicianPortal: React.FC = () => {
     validateAndSetTechnicianOnline,
     bookings,
     updateBookingStatus,
+    completeBookingSecure,
     requestPayout,
     payouts,
     walletTransactions,
@@ -237,8 +238,13 @@ export const TechnicianPortal: React.FC = () => {
     }
   };
 
-  const handleCompleteJob = (bookingId: string) => {
-    updateBookingStatus(bookingId, 'completed');
+  const handleCompleteJob = async (bookingId: string) => {
+    const result = await completeBookingSecure(bookingId);
+    if (!result.success) {
+      window.alert(result.message || 'Job could not be completed.');
+      return;
+    }
+    window.alert(result.message || 'Job completed.');
   };
 
   const walletBalance = serverWallet?.availableBalance ?? 0;
