@@ -146,7 +146,7 @@ app.use('/api', apiRateLimit);
 app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { displayName, trades, experienceYears, qualificationType, qualificationRegNumber, qualificationInstitute, city } = req.body ?? {};
+    const { displayName, trades, experienceYears, qualificationType, qualificationRegNumber, qualificationInstitute, city, serviceArea } = req.body ?? {};
     const allowedTrades = ['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'home_care'];
     const allowedQualifications = ['ITI Trade Certificate', 'Skill India / NSDC Certified', 'State Wireman/Plumber License', 'Govt Polytechnic Diploma'];
     if (!identity.phone_number || !/^\+91\d{10}$/.test(identity.phone_number) ||
@@ -157,7 +157,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         !allowedQualifications.includes(qualificationType) ||
         typeof qualificationRegNumber !== 'string' || qualificationRegNumber.trim().length < 2 || qualificationRegNumber.length > 100 ||
         typeof qualificationInstitute !== 'string' || qualificationInstitute.trim().length < 2 || qualificationInstitute.length > 120 ||
-        typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100) {
+        typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100 ||
+        !serviceArea || typeof serviceArea !== 'object' ||
+        !['state','district','tehsil','stateCode','districtCode','tehsilCode'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].length <= 100)) {
       return res.status(400).json({ success: false, error: 'Partner registration details are incomplete or invalid.' });
     }
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner registration is temporarily unavailable.' });
@@ -178,6 +180,10 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         phoneNumber: identity.phone_number,
         email: typeof identity.email === 'string' ? identity.email : '',
         city: city.trim(),
+        serviceArea: {
+          state: serviceArea.state.trim(), district: serviceArea.district.trim(), tehsil: serviceArea.tehsil.trim(),
+          stateCode: serviceArea.stateCode.trim(), districtCode: serviceArea.districtCode.trim(), tehsilCode: serviceArea.tehsilCode.trim()
+        },
         trades: [...new Set(trades)],
         experienceYears,
         qualificationType,
