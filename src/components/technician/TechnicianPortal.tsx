@@ -1253,8 +1253,8 @@ export const TechnicianPortal: React.FC = () => {
               </div>
               <div className="text-[10px] text-slate-500 italic">
                 {currentActiveJob.paymentMethod === 'cash'
-                  ? '💵 Cash Booking: Customer hands full cash directly to you. Platform commission was debited from your wallet upon acceptance.'
-                  : '💳 Online Booking: Customer paid online to Admin Master Account. Net payout credited upon work completion.'}
+                  ? '💵 Cash Booking: Customer pays you directly. QuickFix commission settlement is not active yet; no wallet debit is made.'
+                  : '💳 Online Booking: Payment collection and partner payout are not connected yet. No payout is credited by this screen.'}
               </div>
             </div>
           </div>
