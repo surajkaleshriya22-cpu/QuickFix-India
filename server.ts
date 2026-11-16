@@ -538,6 +538,8 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
           partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
           partner.accountStatus !== 'active' || partner.isSuspended === true) return 'partner_unverified';
+      // The ₹1,000 acceptance gate is server-authoritative. Do not trust client wallet values.
+      if (typeof partner.walletBalance !== 'number' || partner.walletBalance < 1000) return 'wallet_low';
       if (booking.status === 'in_progress') return 'already_started';
       if (!['assigned', 'technician_en_route'].includes(String(booking.status))) return 'bad_status';
       const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
@@ -563,11 +565,13 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       const status = outcome === 'not_found' || outcome === 'partner_missing' ? 404
         : outcome === 'not_assigned' || outcome === 'partner_unverified' ? 403
         : outcome === 'invalid_otp' ? 401
+        : outcome === 'wallet_low' ? 402
         : outcome === 'expired' || outcome === 'locked' ? 410 : 409;
       const messages: Record<string, string> = {
         not_found: 'Booking not found.', partner_missing: 'Partner profile not found.',
         not_assigned: 'Only the assigned Channel Partner can start this job.',
         partner_unverified: 'Your Channel Partner account is not verified and active.',
+        wallet_low: 'Server-verified partner wallet balance must be at least ₹1,000 before starting a job. Wallet top-ups are not yet connected to the secure server ledger.',
         already_started: 'This job has already started.', bad_status: 'This booking is not ready to start.',
         expired: 'The job-start OTP has expired.', locked: 'Too many incorrect OTP attempts. Contact support.',
         invalid_otp: 'Incorrect OTP. Check with the customer and try again.'
