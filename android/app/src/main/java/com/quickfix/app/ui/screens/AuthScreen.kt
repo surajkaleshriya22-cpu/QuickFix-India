@@ -345,7 +345,7 @@ fun AuthScreen(
                                     Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
                                 Text(
-                                    "Android partner signup is paused until this app is connected to the authenticated partner-registration API. Existing approved partner accounts can still sign in. No KYC number, UPI ID or deposit is collected here.",
+                                    "Your mobile number is verified by Firebase. Basic partner details are submitted securely for admin review; KYC and payment setup happen later.",
                                     fontSize = 11.sp,
                                     color = Color(0xFF92400E)
                                 )
@@ -369,11 +369,11 @@ fun AuthScreen(
                         }
 
                         Button(
-                            enabled = selectedRole != UserRole.CHANNEL_PARTNER || !isSignUp,
+                            enabled = phone.filter { it.isDigit() }.length == 10 &&
+                                (!isSignUp || (displayName.trim().length >= 2 &&
+                                    email.contains("@") &&
+                                    (selectedRole != UserRole.CHANNEL_PARTNER || selectedTrades.isNotEmpty()))),
                             onClick = {
-                                if (selectedRole == UserRole.CHANNEL_PARTNER && isSignUp) {
-                                    return@Button
-                                }
                                 activity?.let { act ->
                                     authViewModel.sendOtp("+91 $phone", act)
                                 }
