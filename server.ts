@@ -560,7 +560,7 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
         wallet_low: 'Server-verified wallet balance must be at least ₹1,000. No job was accepted.',
         bad_status: 'This booking is no longer available to accept.',
       };
-      return res.status(status).json({ success: false, error: messages[outcome.error] || 'Booking could not be accepted.' });
+      return res.status(status).json({ success: false, error: messages[outcome.error || 'bad_status'] || 'Booking could not be accepted.' });
     }
     return res.json({ success: true, status: 'technician_en_route', ...outcome });
   } catch (error) {
