@@ -3096,7 +3096,7 @@ export const AdminDashboard: React.FC = () => {
                       INV-{selectedReceiptBooking.id}
                     </span>
                   </h3>
-                  <p className="text-[10px] text-slate-400">QuickFix Home Services Marketplace Pvt Ltd · GST Compliant</p>
+                  <p className="text-[10px] text-slate-400">QuickFix Home Services Marketplace Pvt Ltd</p>
                 </div>
               </div>
 
@@ -3116,7 +3116,7 @@ export const AdminDashboard: React.FC = () => {
                   <div>
                     <h4 className="font-bold text-white text-sm">QuickFix Technologies India Pvt Ltd</h4>
                     <p className="text-[11px] text-slate-400">Embassy TechVillage, Outer Ring Road, Bengaluru - 560103</p>
-                    <p className="text-[11px] text-slate-400 font-mono">GSTIN: <strong className="text-slate-200">29AABCQ1234F1Z8</strong> · SAC: 998719</p>
+                    <p className="text-[11px] text-slate-400 font-mono">Tax registration details are not configured</p>
                   </div>
                   <div className="text-right font-mono">
                     <span className="text-[10px] uppercase font-bold text-emerald-400 border border-emerald-700/80 bg-emerald-950 px-2 py-0.5 rounded block">
@@ -3142,7 +3142,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Fulfilled By (Partner):</span>
                   <p className="font-bold text-white">{selectedReceiptBooking.technicianName || 'QuickFix Direct Dispatch'}</p>
-                  <p className="text-slate-400 font-mono text-[11px]">{selectedReceiptBooking.technicianPhone || '+91 98000 12345'}</p>
+                  <p className="text-slate-400 font-mono text-[11px]">{selectedReceiptBooking.technicianPhone || 'Not provided'}</p>
                   <p className="text-blue-300 font-mono text-[10px] capitalize">Trade: {selectedReceiptBooking.category}</p>
                   <p className="text-slate-400 text-[10px]">Start OTP: <strong className="text-amber-400 font-mono">{selectedReceiptBooking.startOtp}</strong></p>
                 </div>
@@ -3195,7 +3195,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span className="font-sans">Gateway / Bank UTR:</span>
-                  <strong className="text-blue-300">{selectedReceiptBooking.transactionRef || 'COD-SETTLED-DIRECT'}</strong>
+                  <strong className="text-blue-300">{selectedReceiptBooking.transactionRef || 'Not recorded'}</strong>
                 </div>
                 <div className="flex justify-between text-purple-300 pt-1 border-t border-slate-800">
                   <span className="font-sans">Platform Retained Commission:</span>
@@ -3212,7 +3212,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="bg-slate-900 p-3 border-t border-slate-800 flex items-center justify-between">
               <button
                 onClick={() => {
-                  alert(`Invoice INV-${selectedReceiptBooking.id} downloaded as PDF (Simulated).`);
+                  alert('PDF invoice export is not available yet. No PDF was downloaded.');
                 }}
                 className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-xs"
               >
