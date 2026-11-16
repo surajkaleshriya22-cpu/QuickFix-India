@@ -303,16 +303,15 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       }
     }
 
+    // Filter by exact city in Firestore before limiting so busy cities do not
+    // hide matching jobs behind the first 200 requests from other cities.
     const snapshot = await db.collection('bookings')
       .where('status', '==', 'requested')
+      .where('city', '==', typeof profile.city === 'string' ? profile.city.trim() : '')
       .limit(200)
       .get();
     const bookings = snapshot.docs
-      .filter((document) => {
-        const booking = document.data();
-        const bookingCity = typeof booking.city === 'string' ? booking.city.trim().toLocaleLowerCase('en-IN') : '';
-        return bookingCity === city && categories.has(String(booking.category || ''));
-      })
+      .filter((document) => categories.has(String(document.data().category || '')))
       .map((document) => {
         const booking = document.data();
         return {
@@ -320,7 +319,8 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           serviceTitle: String(booking.serviceTitle || ''),
           category: String(booking.category || ''),
           customerName: String(booking.customerName || ''),
-          customerAddress: String(booking.customerAddress || ''),
+          // Do not disclose a customer's full home address before a partner
+          // atomically claims the job. A claim endpoint can reveal it afterward.
           status: String(booking.status || 'requested'),
           price: Number(booking.price || 0),
           totalAmount: Number(booking.totalAmount || 0),
