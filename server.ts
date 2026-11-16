@@ -124,13 +124,13 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const verifiedPhone = identity.phone_number;
     const { displayName, email, trades, experienceYears, city, address } = req.body ?? {};
-    const allowedTrades = new Set(['electrician', 'plumber', 'ac_repair', 'fridge_repair']);
+    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-        !Array.isArray(trades) || trades.length < 1 || trades.length > 4 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 9 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
