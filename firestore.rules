@@ -44,10 +44,7 @@ service cloud.firestore {
           'pincode',
           'trades',
           'experienceYears',
-          'kycDocType',
-          'kycDocNumber',
           'isVerified',
-          'upiId',
           'createdAt'
         ]);
 
