@@ -221,32 +221,12 @@ export const TechnicianPortal: React.FC = () => {
   const withdrawableAmount = currentTechnician.withdrawableBalance ?? Math.max(0, (currentTechnician.walletBalance ?? 0) - 2000);
 
   const handleWithdrawPayout = () => {
-    setPayoutError('');
     setPayoutSuccess('');
-    if (withdrawableAmount <= 0) {
-      setPayoutError('Withdrawal Blocked: Base ₹2,000 security reserve cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.');
-      setTimeout(() => setPayoutError(''), 6000);
-      return;
-    }
-    const res = requestPayout(currentTechnician.id, withdrawableAmount);
-    if (res.success) {
-      setPayoutSuccess(res.message);
-      setTimeout(() => setPayoutSuccess(''), 6000);
-    } else {
-      setPayoutError(res.message);
-      setTimeout(() => setPayoutError(''), 6000);
-    }
+    setPayoutError('Withdrawals are temporarily disabled until the server-side wallet ledger and verified payout-provider webhook are live. No payout has been requested or sent.');
   };
 
-  const handleTopupWallet = (amount: number) => {
-    const res = topupTechnicianWallet(currentTechnician.id, amount);
-    if (res.success) {
-      setTopupFeedback(res.message);
-      setTimeout(() => {
-        setTopupFeedback('');
-        setShowTopupModal(false);
-      }, 1600);
-    }
+  const handleTopupWallet = (_amount: number) => {
+    setTopupFeedback('Wallet top-ups are temporarily disabled. No payment has been collected and no wallet balance has been added.');
   };
 
   // If not logged in
@@ -873,13 +853,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Platform Cash Commission Rule:</strong> When customers pay in cash, QuickFix commission is auto-deducted from your wallet. The ₹2,000 security reserve remains locked to guarantee platform settlements.
+                <strong>Cash commission auto-debit is not enabled yet. No commission will be deducted until the server-side ledger is implemented and audited. The ₹2,000 reserve is not collected through this screen.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Safe Payout Protocol:</strong> Withdrawals reserve funds from your wallet and are reviewed by Admin HQ. Approved payouts are dispatched via payment gateway and marked settled only upon verified webhook confirmation.
+                <strong>Payout requests are disabled until the payment provider, server-side reserve handling and verified webhook are configured. This screen does not send money.
               </span>
             </div>
           </div>
