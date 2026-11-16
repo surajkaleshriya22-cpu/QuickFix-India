@@ -11,6 +11,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
@@ -77,6 +78,32 @@ try {
 }
 
 type AuthenticatedRequest = Request & { firebaseUser?: import('firebase-admin/auth').DecodedIdToken };
+
+// In-app job-start OTP encryption. Configure OTP_ENCRYPTION_KEY as 64 hex characters
+// (32 random bytes) in the Render environment before accepting new bookings.
+function getOtpEncryptionKey(): Buffer {
+  const configured = process.env.OTP_ENCRYPTION_KEY || '';
+  if (!/^[a-fA-F0-9]{64}$/.test(configured)) {
+    throw new Error('OTP_ENCRYPTION_KEY must be configured as 64 hexadecimal characters.');
+  }
+  return Buffer.from(configured, 'hex');
+}
+function encryptBookingOtp(otp: string) {
+  const key = getOtpEncryptionKey();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(otp, 'utf8'), cipher.final()]);
+  return { iv: iv.toString('hex'), tag: cipher.getAuthTag().toString('hex'), data: encrypted.toString('hex') };
+}
+function decryptBookingOtp(payload: { iv: string; tag: string; data: string }): string {
+  const decipher = createDecipheriv('aes-256-gcm', getOtpEncryptionKey(), Buffer.from(payload.iv, 'hex'));
+  decipher.setAuthTag(Buffer.from(payload.tag, 'hex'));
+  return Buffer.concat([decipher.update(Buffer.from(payload.data, 'hex')), decipher.final()]).toString('utf8');
+}
+function bookingOtpDigest(otp: string): Buffer {
+  return createHmac('sha256', getOtpEncryptionKey()).update(otp).digest();
+}
+
 
 const apiRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -285,6 +312,15 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     const taxes = Math.round(subtotal * INITIAL_COMMISSION_SETTINGS.gstPct / 100);
     const totalAmount = subtotal + taxes;
     const bookingRef = db.collection('bookings').doc();
+    let otp: string;
+    let encryptedOtp: ReturnType<typeof encryptBookingOtp>;
+    try {
+      otp = String(randomInt(0, 10000)).padStart(4, '0');
+      encryptedOtp = encryptBookingOtp(otp);
+    } catch (error) {
+      console.error('Booking OTP encryption is not configured:', error);
+      return res.status(503).json({ success: false, error: 'Secure job-start OTP is not configured yet. Please try again later.' });
+    }
 
     await bookingRef.create({
       id: bookingRef.id,
@@ -302,7 +338,12 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       pincode: String(profile.pincode || '').slice(0, 12),
       paymentMethod,
       status: 'requested',
+      // Never store the readable OTP or return it in booking creation responses.
       startOtp: '',
+      startOtpEncrypted: encryptedOtp,
+      startOtpHash: bookingOtpDigest(otp).toString('hex'),
+      startOtpAttempts: 0,
+      startOtpExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       price,
       convenienceFee,
       discount,
@@ -444,6 +485,99 @@ app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUs
   } catch (error) {
     console.error('Secure partner assignment failed:', error);
     return res.status(500).json({ success: false, error: 'Partner could not be assigned securely.' });
+  }
+});
+
+
+// Customer-only OTP retrieval. The readable code is decrypted only after checking
+// Firebase identity, booking ownership, status and expiry.
+app.get('/api/bookings/:bookingId/start-otp', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const ref = getFirestore(firebaseAdminApp).collection('bookings').doc(req.params.bookingId);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ success: false, error: 'Booking not found.' });
+    const booking = snap.data()!;
+    if (booking.customerUid !== uid) return res.status(403).json({ success: false, error: 'Only the booking customer can view this OTP.' });
+    if (!['assigned', 'technician_en_route'].includes(String(booking.status))) {
+      return res.status(409).json({ success: false, error: 'OTP is available after a Channel Partner is assigned.' });
+    }
+    const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
+    if (!expiry || new Date(expiry).getTime() <= Date.now() || !booking.startOtpEncrypted) {
+      return res.status(410).json({ success: false, error: 'This job-start OTP has expired. Contact QuickFix support.' });
+    }
+    const otp = decryptBookingOtp(booking.startOtpEncrypted);
+    return res.json({ success: true, otp, expiresAt: new Date(expiry).toISOString() });
+  } catch (error) {
+    console.error('Customer OTP retrieval failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not securely load the job-start OTP.' });
+  }
+});
+
+// Assigned, verified Channel Partner submits the customer-provided OTP.
+// Attempts are counted transactionally and the code expires after 24 hours.
+app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const otp = req.body?.otp;
+    if (typeof otp !== 'string' || !/^\\d{4}$/.test(otp)) {
+      return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(req.params.bookingId);
+    const partnerRef = db.collection('users').doc(uid);
+    const outcome = await db.runTransaction(async (transaction) => {
+      const [bookingSnap, partnerSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(partnerRef)]);
+      if (!bookingSnap.exists) return 'not_found';
+      if (!partnerSnap.exists) return 'partner_missing';
+      const booking = bookingSnap.data()!;
+      const partner = partnerSnap.data()!;
+      if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return 'not_assigned';
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
+          partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
+          partner.accountStatus !== 'active' || partner.isSuspended === true) return 'partner_unverified';
+      if (booking.status === 'in_progress') return 'already_started';
+      if (!['assigned', 'technician_en_route'].includes(String(booking.status))) return 'bad_status';
+      const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
+      if (!expiry || new Date(expiry).getTime() <= Date.now()) return 'expired';
+      const attempts = Number(booking.startOtpAttempts || 0);
+      if (attempts >= 5) return 'locked';
+      const expected = typeof booking.startOtpHash === 'string' ? Buffer.from(booking.startOtpHash, 'hex') : Buffer.alloc(0);
+      const supplied = bookingOtpDigest(otp);
+      if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+        transaction.update(bookingRef, { startOtpAttempts: attempts + 1, startOtpLastAttemptAt: FieldValue.serverTimestamp() });
+        return 'invalid_otp';
+      }
+      transaction.update(bookingRef, {
+        status: 'in_progress',
+        startedAt: FieldValue.serverTimestamp(),
+        startOtpVerifiedAt: FieldValue.serverTimestamp(),
+        startOtpHash: FieldValue.delete(),
+        startOtpEncrypted: FieldValue.delete(),
+      });
+      return 'started';
+    });
+    if (outcome !== 'started') {
+      const status = outcome === 'not_found' || outcome === 'partner_missing' ? 404
+        : outcome === 'not_assigned' || outcome === 'partner_unverified' ? 403
+        : outcome === 'invalid_otp' ? 401
+        : outcome === 'expired' || outcome === 'locked' ? 410 : 409;
+      const messages: Record<string, string> = {
+        not_found: 'Booking not found.', partner_missing: 'Partner profile not found.',
+        not_assigned: 'Only the assigned Channel Partner can start this job.',
+        partner_unverified: 'Your Channel Partner account is not verified and active.',
+        already_started: 'This job has already started.', bad_status: 'This booking is not ready to start.',
+        expired: 'The job-start OTP has expired.', locked: 'Too many incorrect OTP attempts. Contact support.',
+        invalid_otp: 'Incorrect OTP. Check with the customer and try again.'
+      };
+      return res.status(status).json({ success: false, error: messages[outcome] || 'Job could not be started.' });
+    }
+    return res.json({ success: true, status: 'in_progress' });
+  } catch (error) {
+    console.error('Secure job start failed:', error);
+    return res.status(500).json({ success: false, error: 'Job could not be started securely.' });
   }
 });
 
