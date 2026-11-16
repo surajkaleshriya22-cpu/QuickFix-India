@@ -449,7 +449,7 @@ app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUs
 
 // Consent-based live location API. Coordinates are server-owned and never exposed
 // through direct client Firestore access. Both booking participants must opt in.
-const liveLocationStatuses = new Set(['assigned', 'technician_en_route']);
+const liveLocationStatuses = new Set(['assigned', 'technician_en_route', 'in_progress']);
 const validCoordinates = (lat: unknown, lng: unknown) =>
   typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
   typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
