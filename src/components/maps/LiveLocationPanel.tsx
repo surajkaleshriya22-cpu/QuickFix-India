@@ -96,27 +96,34 @@ export const LiveLocationPanel: React.FC<LiveLocationPanelProps> = ({ bookingId,
   }, [active, consented, otherConsented, bookingId]);
 
   useEffect(() => {
-    if (!active || !consented) return;
+    if (!active) return;
     let cancelled = false;
-    const load = async () => {
+    const loadConsentAndLocations = async () => {
       try {
-        const data = await request(`/api/bookings/${encodeURIComponent(bookingId)}/location`);
-        if (!cancelled) {
-          setLocations(data);
-          setOtherConsented(true);
+        const consent = await request(`/api/bookings/${encodeURIComponent(bookingId)}/location/consent`);
+        if (cancelled) return;
+        setConsented(consent.ownEnabled === true);
+        setOtherConsented(consent.otherEnabled === true);
+        if (consent.ownEnabled === true && consent.otherEnabled === true) {
+          const data = await request(`/api/bookings/${encodeURIComponent(bookingId)}/location`);
+          if (!cancelled) setLocations(data);
+        } else {
+          setLocations(null);
+          setMessage('Location sharing is waiting for both participants to opt in.');
         }
       } catch (error) {
         if (!cancelled) {
-          setOtherConsented(false);
           setLocations(null);
-          setMessage(error instanceof Error ? error.message : 'Waiting for both participants to opt in.');
+          setConsented(false);
+          setOtherConsented(false);
+          setMessage(error instanceof Error ? error.message : 'Could not load location permission.');
         }
       }
     };
-    void load();
-    const timer = window.setInterval(() => void load(), 15000);
+    void loadConsentAndLocations();
+    const timer = window.setInterval(() => void loadConsentAndLocations(), 15000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [active, consented, bookingId]);
+  }, [active, bookingId]);
 
   const own = role === 'customer' ? locations?.customer : locations?.partner;
   const other = role === 'customer' ? locations?.partner : locations?.customer;
