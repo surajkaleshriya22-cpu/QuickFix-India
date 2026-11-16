@@ -24,6 +24,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { ServiceCategoryType, UserRole, isAuthorizedAdminEmail } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
+import { IndiaLocationSelector, IndiaLocation } from '../shared/IndiaLocationSelector';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -50,6 +51,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [partnerLocation, setPartnerLocation] = useState<IndiaLocation | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
   // Partner Specific Fields
@@ -105,7 +107,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
         setFormError('Partner sign-in is not enabled yet. Choose Register as Service Partner to submit a new application.');
         return;
       }
-      if (displayName.trim().length < 2 || partnerTrades.length < 1 ||
+      if (!partnerLocation || displayName.trim().length < 2 || partnerTrades.length < 1 ||
           qualificationRegNumber.trim().length < 2 || qualificationInstitute.trim().length < 2 ||
           !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 50) {
         setFormError('Please complete your name, at least one trade, qualification details and experience.');
@@ -201,7 +203,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
             qualificationType,
             qualificationRegNumber: qualificationRegNumber.trim(),
             qualificationInstitute: qualificationInstitute.trim(),
-            city: currentCity
+            city: currentCity,
+            serviceArea: partnerLocation
           })
         });
         const payload = await response.json().catch(() => ({}));
@@ -460,6 +463,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                   </div>
                   <div ref={recaptchaContainerRef} id="quickfix-recaptcha-container" className="fixed left-0 top-0 h-px w-px overflow-hidden opacity-0" aria-hidden="true" />
                 </>
+              )}
+
+              {selectedRoleTab === 'technician' && isSignupMode && (
+                <section className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 space-y-2">
+                  <h3 className="text-[11px] font-bold text-slate-700">Service Area · State, District and Tehsil</h3>
+                  <IndiaLocationSelector onLocationChange={setPartnerLocation} />
+                  <p className="text-[10px] text-slate-500">Choose the exact service area where you want to receive work. This is saved with your application for review.</p>
+                </section>
               )}
 
               {/* PARTNER FORM */}
