@@ -153,6 +153,29 @@ export const TechnicianPortal: React.FC = () => {
   const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
+  const [serverWallet, setServerWallet] = useState<{ availableBalance: number; lockedReserve: number; reserveRequired: number; reserveStatus: string; withdrawalsEnabled: boolean; topupsEnabled: boolean; payoutEnabled: boolean } | null>(null);
+  const [walletLoadState, setWalletLoadState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+
+  // Wallet figures are read only from the authenticated server API, never local demo state.
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = auth.onAuthStateChanged(async user => {
+      if (!user) {
+        if (active) { setServerWallet(null); setWalletLoadState('unavailable'); }
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/partners/wallet', { headers: { Authorization: 'Bearer ' + token } });
+        const result = await response.json();
+        if (!response.ok || !result.success || !result.wallet) throw new Error('Wallet unavailable');
+        if (active) { setServerWallet(result.wallet); setWalletLoadState('ready'); }
+      } catch {
+        if (active) { setServerWallet(null); setWalletLoadState('unavailable'); }
+      }
+    });
+    return () => { active = false; unsubscribe(); };
+  }, []);
 
   // Find active job assigned to this technician
   const assignedJobs = bookings.filter(
@@ -218,7 +241,9 @@ export const TechnicianPortal: React.FC = () => {
     updateBookingStatus(bookingId, 'completed');
   };
 
-  const withdrawableAmount = currentTechnician.withdrawableBalance ?? Math.max(0, (currentTechnician.walletBalance ?? 0) - 2000);
+  const walletBalance = serverWallet?.availableBalance ?? 0;
+  const reserveBalance = serverWallet?.lockedReserve ?? 0;
+  const withdrawableAmount = 0; // Payouts remain disabled until a verified provider is connected.
 
   const handleWithdrawPayout = () => {
     setPayoutSuccess('');
@@ -417,7 +442,7 @@ export const TechnicianPortal: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-[10px] text-amber-800 leading-tight">
-                  Technicians must maintain a minimum balance of <strong>₹2,000</strong> to complete registration. This initial ₹2,000 deposit is permanently locked to guarantee customer cash commissions and cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.
+                  Technicians must maintain a minimum balance of <strong>₹2,000</strong> to complete registration. This initial ₹2,000 deposit is permanently locked to guarantee customer cash commissions and cannot be withdrawn. Withdrawals are currently disabled.
                 </p>
                 <div className="pt-0.5">
                   <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
@@ -542,8 +567,8 @@ export const TechnicianPortal: React.FC = () => {
                   setTimeout(() => setQualificationAlertMsg(''), 7000);
                   return;
                 }
-                if ((currentTechnician.walletBalance ?? 0) < 2000) {
-                  const deficit = 2000 - (currentTechnician.walletBalance ?? 0);
+                if ((walletBalance) < 2000) {
+                  const deficit = 2000 - (walletBalance);
                   setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${currentTechnician.walletBalance ?? 0}. Please top-up ₹${deficit}.`);
                   setTimeout(() => setQualificationAlertMsg(''), 7000);
                   return;
@@ -655,14 +680,14 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>Security Reserve Deficit (Balance: ₹{currentTechnician.walletBalance ?? 0})</span>
+                <span>Security Reserve Deficit (Balance: ₹{walletBalance})</span>
               </span>
               <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
                 Need ₹{2000 - (currentTechnician.walletBalance ?? 0)}
               </span>
             </div>
             <p className="text-xs text-rose-900 leading-relaxed">
-              QuickFix India safety policy requires service partners to maintain a mandatory <strong className="font-bold">₹2,000 security reserve</strong>. You cannot activate duty or accept new bookings until this reserve is topped up.
+              The required security reserve is ₹2,000. The server currently records ₹{reserveBalance} as locked. Deposits and top-ups are not enabled, so do not send money.
             </p>
             <button
               onClick={() => {
@@ -758,7 +783,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
-                <span className="text-[10px] text-slate-400">Escrow Protected · Real-Time Settled</span>
+                <span className="text-[10px] text-slate-400">{walletLoadState === 'ready' ? 'Server ledger · Read only' : walletLoadState === 'loading' ? 'Loading server wallet…' : 'Server wallet unavailable'}</span>
               </div>
             </div>
 
@@ -766,7 +791,7 @@ export const TechnicianPortal: React.FC = () => {
               {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>₹2,000 Reserve Maintained</span>
+                  <span>Reserve recorded</span>
                 </span>
               ) : (
                 <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -794,9 +819,9 @@ export const TechnicianPortal: React.FC = () => {
                 <span>Base Reserve</span>
               </span>
               <div className="text-lg font-extrabold font-mono text-amber-300 mt-0.5">
-                ₹2,000
+                {walletLoadState === 'ready' ? `₹${reserveBalance}` : 'Unavailable'}
               </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Locked (Non-withdrawable)</span>
+              <span className="text-[9px] text-slate-500 block leading-tight">Server-recorded locked reserve</span>
             </div>
 
             {/* Net Withdrawable Earnings */}
@@ -812,12 +837,12 @@ export const TechnicianPortal: React.FC = () => {
           {/* Cash Ledger & Commission Breakdown Stats */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Cash Handed by Customers</span>
-              <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
+              <span className="text-[10px] text-slate-400 block">Cash Handed by Customers (not synced)</span>
+              <span className="font-bold text-white font-mono">₹{—}</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Cash Commission Debited</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
+              <span className="text-[10px] text-slate-400 block">Cash Commission Debited (not active)</span>
+              <span className="font-bold text-rose-400 font-mono">-₹{—}</span>
             </div>
           </div>
 
@@ -1166,7 +1191,7 @@ export const TechnicianPortal: React.FC = () => {
                         className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 shadow-2xs"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
-                        <span>Recharge Wallet (+₹1,000)</span>
+                        <span>Top-ups currently unavailable</span>
                       </button>
                     </div>
                   ) : (
@@ -1363,7 +1388,7 @@ export const TechnicianPortal: React.FC = () => {
             <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Reserve Guarantee:</strong> The base ₹2,000 security reserve is locked and cannot be withdrawn. It guarantees automated platform commission deductions when customers pay cash.
+                <strong>Reserve requirement:</strong> ₹2,000 is required by policy, but deposits and commission deductions are not enabled. No payment will be collected here.
               </span>
             </div>
 
@@ -1380,7 +1405,7 @@ export const TechnicianPortal: React.FC = () => {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-98 transition-all"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Confirm & Add ₹{topupAmount} to Wallet</span>
+              <span>Top-ups unavailable — no payment will be collected</span>
             </button>
           </div>
         </div>
