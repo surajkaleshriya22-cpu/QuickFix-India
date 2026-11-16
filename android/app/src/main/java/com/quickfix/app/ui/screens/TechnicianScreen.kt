@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quickfix.app.viewmodel.QuickFixViewModel
+import com.quickfix.app.data.model.PartnerBookingOffer
 
 private val BrandBlue = Color(0xFF2563EB)
 private val DeepNavy = Color(0xFF0F172A)
@@ -32,7 +33,10 @@ fun TechnicianScreen(
 ) {
     val bookings by viewModel.bookings.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
+    val partnerOffers by viewModel.partnerOffers.collectAsState()
+    val offersLoading by viewModel.partnerOffersLoading.collectAsState()
 
+    var acceptingBookingId by remember { mutableStateOf<String?>(null) }
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
@@ -159,6 +163,57 @@ fun TechnicianScreen(
                         color = Color(0xFFCBD5E1),
                         fontSize = 11.sp
                     )
+                }
+            }
+
+
+            // New city/trade-matched offers. The API returns only a sanitized preview,
+            // so customer phone, street address and private notes are not exposed here.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("New Booking Offers", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                TextButton(onClick = { viewModel.refreshPartnerOffers() }, enabled = !offersLoading) {
+                    Text(if (offersLoading) "Loading..." else "Refresh")
+                }
+            }
+            if (partnerOffers.isEmpty()) {
+                Text(
+                    if (offersLoading) "Checking eligible offers..." else "Abhi koi eligible booking offer nahi hai.",
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+            }
+            partnerOffers.forEach { offer ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(offer.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                        Text("City: ${offer.city}", fontSize = 12.sp, color = TextSecondary)
+                        Text("Date: ${offer.scheduledDate}  •  Time: ${offer.scheduledTimeSlot}", fontSize = 12.sp, color = TextSecondary)
+                        Text("Estimated service price: ₹${offer.price}", fontSize = 12.sp, color = TextSecondary)
+                        Text("Customer details booking accept hone ke baad hi available honge.", fontSize = 11.sp, color = TextSecondary)
+                        Button(
+                            onClick = {
+                                acceptingBookingId = offer.bookingId
+                                viewModel.acceptPartnerOffer(offer.bookingId) { acceptingBookingId = null }
+                            },
+                            enabled = acceptingBookingId == null,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                        ) {
+                            Text(if (acceptingBookingId == offer.bookingId) "Accepting..." else "Accept Booking")
+                        }
+                    }
                 }
             }
 

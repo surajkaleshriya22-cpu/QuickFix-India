@@ -62,3 +62,16 @@ data class PayoutRecord(
     val bankUtr: String? = null,
     val upiId: String
 )
+
+
+/** Sanitized preview returned by the trusted city-based dispatch API. */
+data class PartnerBookingOffer(
+    val offerId: String,
+    val bookingId: String,
+    val serviceTitle: String,
+    val category: String,
+    val city: String,
+    val scheduledDate: String,
+    val scheduledTimeSlot: String,
+    val price: Int
+)
