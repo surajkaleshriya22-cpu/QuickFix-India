@@ -442,7 +442,7 @@ export const TechnicianPortal: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-[10px] text-amber-800 leading-tight">
-                  Technicians must maintain a minimum balance of <strong>₹2,000</strong> to complete registration. This initial ₹2,000 deposit is permanently locked to guarantee customer cash commissions and cannot be withdrawn. Withdrawals are currently disabled.
+                  A ₹2,000 security reserve is required by policy, but the deposit/payment flow is not configured. No payment is collected here; do not transfer money through this screen.
                 </p>
                 <div className="pt-0.5">
                   <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
@@ -569,7 +569,7 @@ export const TechnicianPortal: React.FC = () => {
                 }
                 if ((walletBalance) < 2000) {
                   const deficit = 2000 - (walletBalance);
-                  setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${currentTechnician.walletBalance ?? 0}. Please top-up ₹${deficit}.`);
+                  setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${walletBalance}. Please top-up ₹${deficit}.`);
                   setTimeout(() => setQualificationAlertMsg(''), 7000);
                   return;
                 }
@@ -838,7 +838,7 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Handed by Customers (not synced)</span>
-              <span className="font-bold text-white font-mono">₹{—}</span>
+              <span className="font-bold text-white font-mono">—</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Commission Debited (not active)</span>
@@ -1332,7 +1332,7 @@ export const TechnicianPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Top-Up Partner Wallet</h3>
-                  <p className="text-[10px] text-slate-500">Maintain ₹2,000 reserve to activate duty</p>
+                  <p className="text-[10px] text-slate-500">Payment collection is not enabled</p>
                 </div>
               </div>
               <button
