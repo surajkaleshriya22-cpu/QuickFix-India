@@ -72,12 +72,15 @@ class QuickFixViewModel : ViewModel() {
                     else -> firestore.collection("bookings").whereEqualTo("customerUid", firebaseUser.uid)
                 }
 
+                // Assigned work remains a Firestore listener. Unassigned requests are
+                // delivered by the authenticated server feed because Firestore rules
+                // intentionally do not expose every customer's booking to partners.
                 bookingsListener = bookingQuery.addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         _firestoreSyncStatus.value = "Booking load failed: " + (error.localizedMessage ?: "permission/network error")
                         return@addSnapshotListener
                     }
-                    _bookings.value = snapshot?.documents?.mapNotNull { document ->
+                    val assignedOrOwned = snapshot?.documents?.mapNotNull { document ->
                         val data = document.data ?: return@mapNotNull null
                         Booking(
                             id = data["id"] as? String ?: document.id,
@@ -96,7 +99,78 @@ class QuickFixViewModel : ViewModel() {
                             escrowStatus = data["escrowStatus"] as? String ?: "not_funded"
                         )
                     } ?: emptyList()
-                    _firestoreSyncStatus.value = "Bookings loaded from Firestore."
+                    if (isTechnician) {
+                        val available = _bookings.value.filter { it.status == "requested" }
+                        _bookings.value = (available + assignedOrOwned).distinctBy { it.id }
+                    } else {
+                        _bookings.value = assignedOrOwned
+                    }
+                    _firestoreSyncStatus.value = if (isTechnician) {
+                        "Assigned bookings loaded; checking secure available jobs."
+                    } else {
+                        "Bookings loaded from Firestore."
+                    }
+                }
+
+                if (isTechnician) {
+                    viewModelScope.launch {
+                        while (auth.currentUser?.uid == firebaseUser.uid) {
+                            try {
+                                val idToken = firebaseUser.getIdToken(true).await().token
+                                    ?: throw SecurityException("Could not obtain a secure Firebase sign-in token.")
+                                val responseBody = withContext(Dispatchers.IO) {
+                                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings")
+                                        .openConnection() as java.net.HttpURLConnection
+                                    try {
+                                        connection.requestMethod = "GET"
+                                        connection.connectTimeout = 15000
+                                        connection.readTimeout = 20000
+                                        connection.setRequestProperty("Authorization", "Bearer $idToken")
+                                        connection.setRequestProperty("Accept", "application/json")
+                                        val status = connection.responseCode
+                                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                        if (status !in 200..299) {
+                                            val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                                            throw IllegalStateException(message?.takeIf { it.isNotBlank() }
+                                                ?: "Secure job feed returned HTTP $status.")
+                                        }
+                                        body
+                                    } finally {
+                                        connection.disconnect()
+                                    }
+                                }
+                                val result = org.json.JSONObject(responseBody)
+                                if (!result.optBoolean("success")) {
+                                    throw IllegalStateException("Secure job feed did not confirm the request.")
+                                }
+                                val available = result.optJSONArray("bookings") ?: org.json.JSONArray()
+                                val availableBookings = (0 until available.length()).mapNotNull { index ->
+                                    val item = available.optJSONObject(index) ?: return@mapNotNull null
+                                    val id = item.optString("id")
+                                    if (id.isBlank()) return@mapNotNull null
+                                    Booking(
+                                        id = id,
+                                        serviceTitle = item.optString("serviceTitle"),
+                                        category = item.optString("category"),
+                                        customerName = item.optString("customerName"),
+                                        customerAddress = item.optString("customerAddress"),
+                                        status = item.optString("status", "requested"),
+                                        price = item.optInt("price"),
+                                        totalAmount = item.optInt("totalAmount"),
+                                        paymentStatus = item.optString("paymentStatus", "pending"),
+                                        escrowStatus = item.optString("escrowStatus", "not_funded")
+                                    )
+                                }
+                                val assigned = _bookings.value.filter { it.status != "requested" }
+                                _bookings.value = (availableBookings + assigned).distinctBy { it.id }
+                                _firestoreSyncStatus.value = "Secure available jobs refreshed."
+                            } catch (error: Exception) {
+                                _firestoreSyncStatus.value = "Available jobs unavailable: " + (error.localizedMessage ?: "secure feed error")
+                            }
+                            kotlinx.coroutines.delay(30_000L)
+                        }
+                    }
                 }
 
                 if (isAdmin) {
