@@ -62,6 +62,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
+import { AdminWalletAuditSection } from './AdminWalletAuditSection';
 import { auth } from '../../lib/firebase';
 import { getIdToken } from 'firebase/auth';
 
@@ -122,7 +123,7 @@ export const AdminDashboard: React.FC = () => {
   const [reviewRatingFilter, setReviewRatingFilter] = useState<number | 'all'>('all');
 
   // Payment & Commission Management States
-  const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence'>('history');
+  const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence' | 'wallet_audit'>('history');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'paid' | 'pending' | 'failed' | 'refunded'>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'upi' | 'card' | 'cash' | 'netbanking'>('all');
   const [paymentCategoryFilter, setPaymentCategoryFilter] = useState<'all' | ServiceCategoryType>('all');
@@ -1714,6 +1715,14 @@ export const AdminDashboard: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setPaymentSubTab('wallet_audit')}
+                className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-2 ${paymentSubTab === 'wallet_audit' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span>Server Wallet Audit</span>
+              </button>
+
+              <button
                 onClick={() => setPaymentSubTab('reports')}
                 className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
                   paymentSubTab === 'reports'
@@ -1751,6 +1760,8 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* ================= SUB-TAB 1: BOOKING-WISE PAYMENT HISTORY ================= */}
+            {paymentSubTab === 'wallet_audit' && <AdminWalletAuditSection />}
+
             {paymentSubTab === 'history' && (
               <div className="space-y-3">
                 {/* Search & Filter Toolbar */}
