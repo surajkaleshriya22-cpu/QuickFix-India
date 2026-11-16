@@ -27,5 +27,8 @@ jobs:
       - name: TypeScript check
         run: npm run lint
 
+      - name: Booking date regression tests
+        run: npm test
+
       - name: Build
         run: npm run build

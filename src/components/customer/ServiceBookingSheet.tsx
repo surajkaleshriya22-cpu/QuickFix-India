@@ -3,6 +3,8 @@ import { X, Calendar, Clock, MapPin, CheckCircle2, Shield, IndianRupee, AlertCir
 import { ServiceItem, PaymentMethod } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { PlaceAutocompleteInput } from '../maps/PlaceAutocompleteInput';
+import { getIndiaBookingDate } from '../../utils/bookingDate';
+import { auth } from '../../lib/firebase';
 
 interface ServiceBookingSheetProps {
   service: ServiceItem;
@@ -14,7 +16,12 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState('Today');
+  const dateOptions = [
+    { label: 'Today', value: getIndiaBookingDate(0) },
+    { label: 'Tomorrow', value: getIndiaBookingDate(1) },
+    { label: 'Day After', value: getIndiaBookingDate(2) },
+  ];
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0].value);
   const [selectedSlot, setSelectedSlot] = useState('Express (Within 45 Mins)');
   const defaultCityAddress =
     customer.addresses.find(a => a.city.toLowerCase() === currentCity.toLowerCase())?.addressLine ||
@@ -56,9 +63,17 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         reader.onloadend = async () => {
           try {
             const base64Data = (reader.result as string).split(',')[1];
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser) {
+              throw new Error('Please sign in again before using voice transcription.');
+            }
+            const idToken = await firebaseUser.getIdToken();
             const response = await fetch('/api/audio/transcribe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${idToken}`,
+              },
               body: JSON.stringify({ audioBase64: base64Data, mimeType: 'audio/webm' }),
             });
             const data = await response.json();
@@ -96,7 +111,6 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const taxes = Math.round((taxable * commissionSettings.gstPct) / 100);
   const totalAmount = taxable + taxes;
 
-  const dateOptions = ['Today', 'Tomorrow', 'Day After'];
   const slotOptions = [
     'Express (Within 45 Mins)',
     '09:00 AM - 12:00 PM',
@@ -163,16 +177,16 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             <div className="grid grid-cols-3 gap-2">
               {dateOptions.map(day => (
                 <button
-                  key={day}
+                  key={day.label}
                   type="button"
-                  onClick={() => setSelectedDate(day)}
+                  onClick={() => setSelectedDate(day.value)}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-all ${
-                    selectedDate === day
+                    selectedDate === day.value
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
                   }`}
                 >
-                  {day}
+                  {day.label}
                 </button>
               ))}
             </div>
