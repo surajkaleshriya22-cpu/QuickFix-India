@@ -62,8 +62,9 @@ class AuthViewModel(
                         "Firebase Config Required: Add your Android SHA-1 fingerprint to Firebase Console (Project Settings > Android App)."
                     rawMsg.contains("39") || rawMsg.contains("Play Integrity") || rawMsg.contains("reCAPTCHA") ->
                         "Play Integrity / SafetyNet check failed. Ensure SHA-256 fingerprint is added to Firebase Console."
-                    rawMsg.contains("BILLING") || rawMsg.contains("quota") ->
-                        "SMS Quota Reached: Test with Firebase Authentication Test Phone Numbers configured in Firebase Console."
+                    rawMsg.contains("BILLING") || rawMsg.contains("quota", ignoreCase = true) ||
+                        rawMsg.contains("too many requests", ignoreCase = true) ->
+                        "Firebase SMS limit reached or SMS billing is not enabled. For real OTP, link a Cloud Billing account and use the Blaze plan in Firebase Console. For app testing, add a Firebase test phone number and its fixed test code; no SMS will be sent."
                     else ->
                         if (rawMsg.isNotEmpty()) rawMsg else "Failed to send SMS OTP. Please check mobile network or Firebase Phone Auth settings."
                 }
