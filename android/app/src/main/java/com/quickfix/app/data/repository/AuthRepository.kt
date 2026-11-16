@@ -175,10 +175,10 @@ class AuthRepository(
         val data = snapshot.data ?: return null
 
         val roleStr = data["role"] as? String ?: "CUSTOMER"
-        val role = try {
-            UserRole.valueOf(roleStr)
-        } catch (e: Exception) {
-            UserRole.CUSTOMER
+        val role = when (roleStr.uppercase()) {
+            "CHANNEL_PARTNER", "TECHNICIAN" -> UserRole.TECHNICIAN
+            "ADMIN" -> UserRole.ADMIN
+            else -> UserRole.CUSTOMER
         }
 
         @Suppress("UNCHECKED_CAST")
