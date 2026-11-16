@@ -125,6 +125,7 @@ export const TechnicianPortal: React.FC = () => {
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
   const [acceptError, setAcceptError] = useState('');
+  const [acceptedJob, setAcceptedJob] = useState<{ id: string; acceptedAt: string; serviceDeadline: string } | null>(null);
   const [payoutSuccess, setPayoutSuccess] = useState('');
   const [payoutError, setPayoutError] = useState('');
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
@@ -160,17 +161,30 @@ export const TechnicianPortal: React.FC = () => {
   const currentActiveJob = assignedJobs.find(
     b => b.status === 'assigned' || b.status === 'technician_en_route' || b.status === 'in_progress'
   );
+  const jobAccepted = !!currentActiveJob && (currentActiveJob.status === 'technician_en_route' || acceptedJob?.id === currentActiveJob.id);
 
-  const handleAcceptJob = (bookingId: string) => {
+  const handleAcceptJob = async (bookingId: string) => {
     setAcceptError('');
-    const techBal = currentTechnician.walletBalance ?? 0;
-    if (techBal < 1000) {
-      setAcceptError(`Service Acceptance Blocked: Minimum ₹1,000 partner wallet balance is required to accept service notifications. Current balance: ₹${techBal}. Please top up your wallet.`);
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setAcceptError('Please sign in with your verified Channel Partner account.');
       return;
     }
-    const result = updateBookingStatus(bookingId, 'technician_en_route');
-    if (!result.success) {
-      setAcceptError(result.message || 'Could not accept booking.');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/bookings/' + encodeURIComponent(bookingId) + '/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Could not accept booking.');
+      setAcceptedJob({
+        id: bookingId,
+        acceptedAt: result.acceptedAt,
+        serviceDeadline: result.serviceDeadline,
+      });
+    } catch (error: any) {
+      setAcceptError(error?.message || 'Booking could not be accepted securely.');
     }
   };
 
@@ -1134,30 +1148,24 @@ export const TechnicianPortal: React.FC = () => {
             </div>
 
             {/* 1-Hour SLA Countdown Timer Banner */}
-            {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
+            {(jobAccepted || currentActiveJob.status === 'in_progress') && (
               <SlaCountdownBadge
-                deadline={currentActiveJob.serviceDeadline}
-                acceptedAt={currentActiveJob.acceptedAt}
+                deadline={acceptedJob?.id === currentActiveJob.id ? acceptedJob.serviceDeadline : currentActiveJob.serviceDeadline}
+                acceptedAt={acceptedJob?.id === currentActiveJob.id ? acceptedJob.acceptedAt : currentActiveJob.acceptedAt}
                 createdAt={currentActiveJob.createdAt}
               />
             )}
 
-            {/* Non-Refundable Commission Auto-Debit Disclosure */}
-            {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-xs text-blue-900 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-blue-950">
-                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Platform Commission Auto-Debited (Non-Refundable)</span>
-                </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
-                  Platform fee of <strong>₹{currentActiveJob.adminCommission}</strong> ({currentTechnician.customCommissionPct !== undefined ? `${currentTechnician.customCommissionPct}% custom rate` : `${currentActiveJob.commissionRate}% standard rate`}) was immediately auto-debited from your wallet upon acceptance and credited to Admin HQ. Service must be delivered within the 1-hour SLA window.
-                </p>
+            {/* Commission settlement is not enabled until a trusted ledger/payment provider is connected. */}
+            {jobAccepted && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-900">
+                Commission debit and payout settlement are not active yet. No commission has been deducted by accepting this job.
               </div>
             )}
 
             {/* Step Actions for the Technician */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              {currentActiveJob.status === 'assigned' && (
+              {currentActiveJob.status === 'assigned' && !jobAccepted && (
                 <div className="space-y-2">
                   {/* Minimum ₹1,000 Wallet Gate Warning */}
                   {(currentTechnician.walletBalance ?? 0) < 1000 ? (
@@ -1188,7 +1196,7 @@ export const TechnicianPortal: React.FC = () => {
                         <span>1-Hour Service Delivery SLA & Immediate Commission Rule:</span>
                       </div>
                       <p className="text-slate-600 leading-tight">
-                        Upon accepting, platform commission (<strong>₹{currentActiveJob.adminCommission}</strong>) will be auto-debited immediately from your wallet to Admin HQ and is non-refundable whether you visit or not. You must deliver service within 1 hour.
+                        Acceptance checks the server-verified minimum wallet balance of ₹1,000. The 1-hour service deadline starts when the server confirms acceptance. Commission debit is not active yet.
                       </p>
                     </div>
                   )}
@@ -1215,7 +1223,7 @@ export const TechnicianPortal: React.FC = () => {
                 </div>
               )}
 
-              {currentActiveJob.status === 'technician_en_route' && (
+              {jobAccepted && currentActiveJob.status !== 'in_progress' && (
                 <div className="space-y-2">
                   <div className="text-xs text-slate-600 font-medium">
                     Ask customer for the 4-digit start OTP to begin repair:
