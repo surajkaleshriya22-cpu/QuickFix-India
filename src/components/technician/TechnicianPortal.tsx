@@ -592,7 +592,7 @@ export const TechnicianPortal: React.FC = () => {
                 ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
                 : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
                 ? 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 cursor-pointer'
-                : (currentTechnician.walletBalance ?? 0) < 2000
+                : (walletBalance) < 2000
                 ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 cursor-pointer'
                 : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
             }`}
@@ -842,7 +842,7 @@ export const TechnicianPortal: React.FC = () => {
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Commission Debited (not active)</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{—}</span>
+              <span className="font-bold text-rose-400 font-mono">Not active</span>
             </div>
           </div>
 
