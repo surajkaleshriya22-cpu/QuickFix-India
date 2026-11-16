@@ -241,7 +241,7 @@ export const AdminDashboard: React.FC = () => {
       }
       setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
       setPartnerReviewNotice(decision === 'approve'
-        ? 'Application accepted. Partner remains unverified and cannot receive bookings until identity/KYC documents are securely verified.'
+        ? 'Application accepted. Partner remains unverified and cannot receive bookings until professional qualification documents are physically inspected and verified.'
         : 'Partner application rejected and the decision was recorded.');
       await triggerFirestoreSync();
     } catch (error) {
@@ -253,9 +253,9 @@ export const AdminDashboard: React.FC = () => {
 
   const handleManualPartnerVerification = async (partnerUid: string) => {
     if (partnerReviewBusyUid) return;
-    const confirmed = window.confirm('Confirm only if you have physically inspected the partner’s original professional certificate and matched it to this application. This action enables booking eligibility.');
+    const confirmed = window.confirm('Confirm only if you have physically inspected the partner’s original professional qualification certificate and matched it to this application. This verifies the professional credential only; it does NOT verify government identity. This action enables booking eligibility.');
     if (!confirmed) return;
-    const inspectionNote = window.prompt('Enter a brief note: document type checked, issuing institute, and in-person inspection date (do not enter Aadhaar/PAN numbers).');
+    const inspectionNote = window.prompt('Enter a brief note: professional certificate type, issuing institute, and inspection date. Do not enter Aadhaar, PAN, phone, or other personal ID numbers.');
     if (!inspectionNote?.trim() || inspectionNote.trim().length < 5) return;
     setPartnerReviewBusyUid(partnerUid);
     setPartnerReviewError('');
@@ -272,7 +272,7 @@ export const AdminDashboard: React.FC = () => {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload.success !== true) throw new Error(typeof payload.error === 'string' ? payload.error : 'Manual KYC verification failed.');
       setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
-      setPartnerReviewNotice('Manual KYC recorded. The partner is now marked verified; dispatch eligibility is controlled by the server.');
+      setPartnerReviewNotice('Professional certificate inspection recorded. The partner is marked professionally verified; this is not government identity verification.');
       await triggerFirestoreSync();
     } catch (error) {
       setPartnerReviewError(error instanceof Error ? error.message : 'Manual KYC verification failed.');
