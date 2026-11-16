@@ -13,6 +13,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
+import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 
 dotenv.config();
 
@@ -312,13 +313,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     }
 
     const profile = profileSnap.data()!;
-    const walletBalance = Number(profile.walletBalance || 0);
-    const eligible = (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
-      profile.approvalStatus === 'approved' &&
-      profile.isVerified === true &&
-      profile.isOnline === true &&
-      profile.securityDepositPaid === true &&
-      Number.isFinite(walletBalance) && walletBalance >= 2000;
+    const eligible = isPartnerEligibleForDispatch(profile);
     if (!eligible) {
       return res.status(403).json({
         success: false,
