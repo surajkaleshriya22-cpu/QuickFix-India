@@ -122,7 +122,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const { displayName, trades, experienceYears, qualificationType, qualificationRegNumber, qualificationInstitute, city } = req.body ?? {};
     const allowedTrades = ['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'home_care'];
     const allowedQualifications = ['ITI Trade Certificate', 'Skill India / NSDC Certified', 'State Wireman/Plumber License', 'Govt Polytechnic Diploma'];
-    if (!identity.phone_number || !/^\\+91\\d{10}$/.test(identity.phone_number) ||
+    if (!identity.phone_number || !/^\+91\d{10}$/.test(identity.phone_number) ||
         typeof displayName !== 'string' || displayName.trim().length < 2 || displayName.trim().length > 100 ||
         !Array.isArray(trades) || trades.length < 1 || trades.length > 12 ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.includes(trade)) ||
