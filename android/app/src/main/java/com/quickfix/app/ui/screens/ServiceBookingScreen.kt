@@ -53,6 +53,12 @@ fun ServiceBookingScreen(
     val discount = 20
     val taxes = (basePrice * commissionSettings.gstPct) / 100
     val totalAmount = basePrice + visitFee + taxes - discount
+    val isValidBookingDate = remember(scheduledDate) {
+        runCatching {
+            val parsedDate = java.time.LocalDate.parse(scheduledDate)
+            !parsedDate.isBefore(java.time.LocalDate.now())
+        }.getOrDefault(false)
+    }
 
     Scaffold(
         topBar = {
@@ -97,7 +103,9 @@ fun ServiceBookingScreen(
                     }
                     Button(
                         onClick = {
-                            if (address.isBlank()) {
+                            if (!isValidBookingDate) {
+                                bookingError = "Please choose a valid date today or later."
+                            } else if (address.isBlank()) {
                                 bookingError = "Please enter your complete service address."
                             } else {
                                 isBooking = true
@@ -125,7 +133,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -198,7 +206,9 @@ fun ServiceBookingScreen(
                         onValueChange = { scheduledDate = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Service date (YYYY-MM-DD)") },
-                        supportingText = { Text("Example: ${java.time.LocalDate.now()}") },
+                        supportingText = {
+                            Text(if (isValidBookingDate) "Choose today or a future date" else "Enter a real date today or later, e.g. ${java.time.LocalDate.now()}")
+                        },
                         singleLine = true
                     )
                     OutlinedTextField(
