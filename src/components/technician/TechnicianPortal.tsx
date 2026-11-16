@@ -1117,7 +1117,7 @@ export const TechnicianPortal: React.FC = () => {
                 </button>
               </div>
 
-              <LiveLocationPanel bookingId={currentActiveJob.id} role="partner" active={currentActiveJob.status === 'assigned' || currentActiveJob.status === 'technician_en_route'} />
+              <LiveLocationPanel bookingId={currentActiveJob.id} role="partner" active={currentActiveJob.status === 'assigned' || currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress'} />
             </div>
 
             {/* 1-Hour SLA Countdown Timer Banner */}
