@@ -379,7 +379,7 @@ app.get('/api/admin/partners/verified', authenticateFirebaseUser, requireServerA
       const profile = doc.data();
       const supportedRole = profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN';
       const approved = profile.approvalStatus === 'approved';
-      if (!supportedRole || !approved || profile.accountStatus === 'suspended' || profile.isSuspended === true) return [];
+      if (!supportedRole || !approved || profile.accountStatus !== 'active' || profile.isSuspended === true) return [];
       return [{ uid: doc.id, name: String(profile.displayName || 'Channel Partner').slice(0, 100), phone: String(profile.phoneNumber || '').slice(0, 30), trades: Array.isArray(profile.trades) ? profile.trades.filter((trade: unknown) => typeof trade === 'string').slice(0, 12) : [], city: String(profile.city || '').slice(0, 100) }];
     });
     return res.json({ success: true, partners });
@@ -419,7 +419,7 @@ app.post('/api/admin/bookings/:bookingId/assign-partner', authenticateFirebaseUs
       const supportedRole = partner.role === 'CHANNEL_PARTNER' || partner.role === 'TECHNICIAN';
       const approved = partner.approvalStatus === 'approved';
       const hasMatchingTrade = Array.isArray(partner.trades) && partner.trades.includes(String(booking.category || ''));
-      if (!supportedRole || partner.isVerified !== true || !approved || !hasMatchingTrade || partner.accountStatus === 'suspended' || partner.isSuspended === true) {
+      if (!supportedRole || partner.isVerified !== true || !approved || partner.accountStatus !== 'active' || !hasMatchingTrade || partner.isSuspended === true) {
         return { error: 'PARTNER_NOT_ELIGIBLE' as const };
       }
 
