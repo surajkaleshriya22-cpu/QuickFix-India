@@ -116,7 +116,7 @@ class QuickFixViewModel : ViewModel() {
                     viewModelScope.launch {
                         while (auth.currentUser?.uid == firebaseUser.uid) {
                             try {
-                                val idToken = firebaseUser.getIdToken(true).await().token
+                                val idToken = firebaseUser.getIdToken(false).await().token
                                     ?: throw SecurityException("Could not obtain a secure Firebase sign-in token.")
                                 val responseBody = withContext(Dispatchers.IO) {
                                     val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings")
