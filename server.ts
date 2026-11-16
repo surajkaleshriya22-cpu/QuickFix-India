@@ -333,10 +333,16 @@ app.get('/api/partners/offers', authenticateFirebaseUser, async (req: Request, r
     const offers = [];
     for (const offerDoc of offersSnap.docs) {
       const offer = offerDoc.data();
-      const bookingSnap = await db.collection('bookings').doc(String(offer.bookingId || '')).get();
+      // Revalidate every offer against its owner and booking before exposing it.
+      // This also prevents stale or mismatched offer documents from appearing.
+      if (offer.status !== 'offered' || offer.partnerUid !== identity.uid ||
+          typeof offer.bookingId !== 'string' || offer.bookingId.length > 128) continue;
+      const bookingSnap = await db.collection('bookings').doc(offer.bookingId).get();
       if (!bookingSnap.exists) continue;
       const booking = bookingSnap.data()!;
       if (booking.status !== 'requested' || booking.technicianUid ||
+          offer.serviceId !== booking.serviceId || offer.category !== booking.category ||
+          String(offer.city || '').trim().toLocaleLowerCase('en-IN') !== String(booking.city || '').trim().toLocaleLowerCase('en-IN') ||
           String(booking.city || '').trim().toLocaleLowerCase('en-IN') !== String(partner.city || '').trim().toLocaleLowerCase('en-IN') ||
           !Array.isArray(partner.trades) || !partner.trades.includes(booking.category)) continue;
       offers.push({
