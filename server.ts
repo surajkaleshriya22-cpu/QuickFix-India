@@ -462,7 +462,20 @@ async function getLiveLocationParticipant(bookingId: string, uid: string) {
   const role = booking.customerUid === uid ? 'customer'
     : (booking.technicianUid === uid || booking.assignedPartnerUid === uid) ? 'partner' : null;
   if (!role) return { error: 'NOT_A_BOOKING_PARTICIPANT' as const };
-  if (!liveLocationStatuses.has(String(booking.status))) return { error: 'TRACKING_NOT_AVAILABLE_FOR_BOOKING_STATUS' as const };
+  if (!liveLocationStatuses.has(String(booking.status))) {
+    // A completed/cancelled booking must not retain readable GPS points.
+    // Cleanup is idempotent and runs whenever either participant next accesses tracking.
+    const partnerUid = booking.technicianUid || booking.assignedPartnerUid;
+    const participantUids = [booking.customerUid, partnerUid].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0
+    );
+    await Promise.all(participantUids.map((participantUid) =>
+      ref.collection('liveLocations').doc(participantUid).delete().catch((error) => {
+        console.warn('Could not clear ended-booking live-location point:', error);
+      })
+    ));
+    return { error: 'TRACKING_NOT_AVAILABLE_FOR_BOOKING_STATUS' as const };
+  }
   return { ref, booking, role };
 }
 
