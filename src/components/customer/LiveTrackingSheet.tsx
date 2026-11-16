@@ -102,7 +102,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
 
           </div>
 
-          <LiveLocationPanel bookingId={booking.id} role="customer" active={booking.status === 'assigned' || booking.status === 'technician_en_route'} />
+          <LiveLocationPanel bookingId={booking.id} role="customer" active={booking.status === 'assigned' || booking.status === 'technician_en_route' || booking.status === 'in_progress'} />
 
           {/* Quick link to Nearby Hardware & Spare Parts Stores */}
           <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs shadow-2xs">
@@ -157,10 +157,12 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-slate-600 mt-0.5">
-                    <div className="flex items-center text-amber-500 font-semibold gap-0.5">
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <span>{booking.technicianRating || 4.9}</span>
-                    </div>
+                    {typeof booking.technicianRating === 'number' && booking.technicianRating > 0 && (
+                      <div className="flex items-center text-amber-500 font-semibold gap-0.5">
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <span>{booking.technicianRating.toFixed(1)}</span>
+                      </div>
+                    )}
                     <span>· Verified Partner</span>
                   </div>
                 </div>
