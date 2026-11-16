@@ -285,11 +285,15 @@ export const CustomerHome: React.FC = () => {
               {/* Meta & Book Action */}
               <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <div className="flex items-center text-amber-500 font-semibold gap-0.5">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{service.rating}</span>
-                  </div>
-                  <span>·</span>
+                  {service.rating > 0 && (
+                  <>
+                    <div className="flex items-center text-amber-500 font-semibold gap-0.5">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>{service.rating.toFixed(1)}</span>
+                    </div>
+                    <span>·</span>
+                  </>
+                )}
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     <span>{service.durationMinutes}m</span>
