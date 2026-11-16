@@ -4,6 +4,7 @@ import { ServiceItem, PaymentMethod } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { PlaceAutocompleteInput } from '../maps/PlaceAutocompleteInput';
 import { getIndiaBookingDate } from '../../utils/bookingDate';
+import { auth } from '../../lib/firebase';
 
 interface ServiceBookingSheetProps {
   service: ServiceItem;
@@ -62,9 +63,17 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         reader.onloadend = async () => {
           try {
             const base64Data = (reader.result as string).split(',')[1];
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser) {
+              throw new Error('Please sign in again before using voice transcription.');
+            }
+            const idToken = await firebaseUser.getIdToken();
             const response = await fetch('/api/audio/transcribe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${idToken}`,
+              },
               body: JSON.stringify({ audioBase64: base64Data, mimeType: 'audio/webm' }),
             });
             const data = await response.json();
