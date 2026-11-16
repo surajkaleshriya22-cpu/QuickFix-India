@@ -489,6 +489,9 @@ class QuickFixViewModel : ViewModel() {
         serviceTitle: String,
         category: String,
         customerAddress: String,
+        serviceState: String,
+        serviceDistrict: String,
+        serviceTehsil: String,
         scheduledDate: String,
         scheduledTimeSlot: String,
         notes: String = ""
@@ -496,6 +499,8 @@ class QuickFixViewModel : ViewModel() {
         val firebaseUser = auth.currentUser
             ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
         require(customerAddress.isNotBlank()) { "Please enter your complete service address." }
+        require(serviceState.isNotBlank() && serviceDistrict.isNotBlank() && serviceTehsil.isNotBlank()) { "Please select State, District and Tehsil." }
+        require(serviceState.length <= 100 && serviceDistrict.length <= 100 && serviceTehsil.length <= 100) { "Service area details are too long." }
         require(scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { "Date must be in YYYY-MM-DD format." }
         require(scheduledTimeSlot.isNotBlank()) { "Please select a service time slot." }
 
@@ -524,6 +529,10 @@ class QuickFixViewModel : ViewModel() {
                     .put("scheduledTimeSlot", scheduledTimeSlot)
                     .put("paymentMethod", "cash")
                     .put("address", customerAddress.trim())
+                    .put("serviceArea", org.json.JSONObject()
+                        .put("state", serviceState.trim())
+                        .put("district", serviceDistrict.trim())
+                        .put("tehsil", serviceTehsil.trim()))
                     .put("notes", notes.trim())
                 connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                 val status = connection.responseCode
