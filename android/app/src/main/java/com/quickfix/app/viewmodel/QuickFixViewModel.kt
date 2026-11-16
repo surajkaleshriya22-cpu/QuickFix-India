@@ -21,6 +21,15 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
+data class PartnerJob(
+    val id: String,
+    val serviceTitle: String,
+    val category: String,
+    val customerName: String,
+    val price: Int,
+    val totalAmount: Int
+)
+
 data class AdminMetrics(
     val totalCustomers: Int = 0,
     val totalElectricians: Int = 0,
@@ -167,6 +176,12 @@ class QuickFixViewModel : ViewModel() {
 
     private val _bookings = MutableStateFlow<List<Booking>>(emptyList())
     val bookings: StateFlow<List<Booking>> = _bookings.asStateFlow()
+
+    private val _partnerJobs = MutableStateFlow<List<PartnerJob>>(emptyList())
+    val partnerJobs: StateFlow<List<PartnerJob>> = _partnerJobs.asStateFlow()
+
+    private val _partnerJobsStatus = MutableStateFlow("Available jobs have not been refreshed.")
+    val partnerJobsStatus: StateFlow<String> = _partnerJobsStatus.asStateFlow()
 
     private val _adminPaymentConfig = MutableStateFlow(AdminMasterPaymentConfig())
     val adminPaymentConfig: StateFlow<AdminMasterPaymentConfig> = _adminPaymentConfig.asStateFlow()
@@ -394,6 +409,66 @@ class QuickFixViewModel : ViewModel() {
         // The Firestore listener remains the source of the server-calculated price and booking state.
         _bookings.value = listOf(newBooking) + _bookings.value
         return newBooking
+    }
+
+    fun refreshPartnerJobs() {
+        val user = auth.currentUser
+        if (user == null) {
+            _partnerJobs.value = emptyList()
+            _partnerJobsStatus.value = "Available jobs देखने के लिए पहले sign in करें."
+            return
+        }
+        _partnerJobsStatus.value = "Available jobs लोड हो रहे हैं..."
+        viewModelScope.launch {
+            try {
+                val token = user.getIdToken(true).await().token
+                    ?: throw SecurityException("Secure sign-in token unavailable.")
+                val body = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Accept", "application/json")
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(response).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Job feed returned HTTP $status.")
+                        }
+                        response
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                val json = org.json.JSONObject(body)
+                if (!json.optBoolean("success")) throw IllegalStateException("Server did not confirm the job feed.")
+                val items = json.optJSONArray("bookings")
+                val jobs = buildList {
+                    if (items != null) for (index in 0 until items.length()) {
+                        val item = items.optJSONObject(index) ?: continue
+                        val id = item.optString("id")
+                        if (id.isBlank()) continue
+                        add(PartnerJob(
+                            id = id,
+                            serviceTitle = item.optString("serviceTitle", "Service request"),
+                            category = item.optString("category", ""),
+                            customerName = item.optString("customerName", "Customer"),
+                            price = item.optInt("price", 0),
+                            totalAmount = item.optInt("totalAmount", 0)
+                        ))
+                    }
+                }
+                _partnerJobs.value = jobs
+                _partnerJobsStatus.value = if (jobs.isEmpty()) "अभी आपके शहर और काम के अनुसार कोई नया काम उपलब्ध नहीं है." else "${jobs.size} उपलब्ध काम मिले हैं."
+            } catch (error: Exception) {
+                _partnerJobs.value = emptyList()
+                _partnerJobsStatus.value = error.localizedMessage ?: "Available jobs लोड नहीं हो सके."
+            }
+        }
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
