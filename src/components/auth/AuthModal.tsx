@@ -55,6 +55,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
 
   // Partner Specific Fields
   const [partnerTrades, setPartnerTrades] = useState<ServiceCategoryType[]>(['electrician']);
+  const [partnerState, setPartnerState] = useState('');
+  const [partnerDistrict, setPartnerDistrict] = useState('');
+  const [partnerTehsil, setPartnerTehsil] = useState('');
   const [experienceYears, setExperienceYears] = useState(7);
   const [kycType, setKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
   const [kycNumber, setKycNumber] = useState('');
@@ -195,6 +198,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
           experienceYears,
           city: currentCity,
           address,
+          serviceArea: { state: partnerState, district: partnerDistrict, tehsil: partnerTehsil },
           rememberMe
         });
         if (!result.success) {
@@ -530,6 +534,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             <span>Fridge/Freezer</span>
                           </button>
                         </div>
+                      </div>
+
+                      {/* Structured service area is used for local job matching. */}
+                      <div className="space-y-2">
+                        <div className="font-bold text-slate-700 text-xs">Service Area</div>
+                        <input
+                          type="text"
+                          required
+                          maxLength={100}
+                          value={partnerState}
+                          onChange={e => setPartnerState(e.target.value)}
+                          placeholder="State (e.g. Madhya Pradesh)"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                        />
+                        <input
+                          type="text"
+                          required
+                          maxLength={100}
+                          value={partnerDistrict}
+                          onChange={e => setPartnerDistrict(e.target.value)}
+                          placeholder="District (e.g. Burhanpur)"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                        />
+                        <input
+                          type="text"
+                          required
+                          maxLength={100}
+                          value={partnerTehsil}
+                          onChange={e => setPartnerTehsil(e.target.value)}
+                          placeholder="Tehsil / Taluka"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                        />
                       </div>
 
                       {/* Basic registration only. KYC and payments are deliberately deferred. */}
