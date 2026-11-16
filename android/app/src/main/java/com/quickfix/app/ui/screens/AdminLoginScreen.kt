@@ -44,7 +44,7 @@ fun AdminLoginScreen(
     val authState by authViewModel.authState.collectAsState()
 
     var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(null) }
 
     // If authenticated as admin, navigate directly to admin dashboard
@@ -201,10 +201,11 @@ fun AdminLoginScreen(
             )
 
             OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Registered Mobile Number") },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF64748B)) },
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Firebase Account Password") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -215,8 +216,7 @@ fun AdminLoginScreen(
                     focusedLabelColor = BrandBlueLight,
                     unfocusedLabelColor = Color(0xFF94A3B8)
                 ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                singleLine = true
             )
 
             Surface(
@@ -256,16 +256,15 @@ fun AdminLoginScreen(
             Button(
                 onClick = {
                     val cleanEmail = email.trim().lowercase()
-                    if (cleanEmail.isBlank()) {
-                        localError = "Enter the email address of your signed-in Firebase administrator account."
+                    if (cleanEmail.isBlank() || password.isBlank()) {
+                        localError = "Enter your authorized Firebase admin email and password."
                         return@Button
                     }
 
                     localError = null
-                    authViewModel.verifyAdminPasscode(
+                    authViewModel.signInAdmin(
                         email = cleanEmail,
-                        passcode = "",
-                        phone = phone,
+                        password = password,
                         onSuccess = {
                             navController.navigate("admin_dashboard") {
                                 popUpTo("admin_login") { inclusive = true }
@@ -286,7 +285,7 @@ fun AdminLoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Authenticate & Unlock Admin HQ", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Sign In & Verify Admin Permission", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
                 }
             }
