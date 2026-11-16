@@ -30,7 +30,7 @@ import { LiveTrackingSheet } from './LiveTrackingSheet';
 import { ReviewModal } from './ReviewModal';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
-import { INDIAN_CITIES } from '../../data/mockData';
+import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -81,15 +81,10 @@ export const CustomerHome: React.FC = () => {
             </div>
             <div>
               <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Your City</div>
-              <select
-                value={currentCity}
-                onChange={e => setCurrentCity(e.target.value)}
-                className="font-bold text-slate-900 bg-transparent cursor-pointer focus:outline-none"
-              >
-                {INDIAN_CITIES.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <IndiaLocationSelector
+                compact
+                onLocationChange={(location) => setCurrentCity(location.tehsil)}
+              />
             </div>
           </div>
 
@@ -205,96 +200,34 @@ export const CustomerHome: React.FC = () => {
             <span className="text-[11px] text-slate-500">{filteredServices.length} options available</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {/* All */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'all'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'all' ? 'bg-white/20' : 'bg-slate-100 text-slate-700'}`}>
-                <span className="text-[10px] font-bold">ALL</span>
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">All Services</span>
-                <span className={`text-[9px] block ${selectedCategory === 'all' ? 'text-blue-100' : 'text-slate-400'}`}>सभी सेवाएं</span>
-              </div>
-            </button>
-
-            {/* Electrician */}
-            <button
-              onClick={() => setSelectedCategory('electrician')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'electrician'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'electrician' ? 'bg-white/20 text-amber-300' : 'bg-amber-50 text-amber-600'}`}>
-                <Zap className="w-3.5 h-3.5 fill-current" />
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">Electrician</span>
-                <span className={`text-[9px] block ${selectedCategory === 'electrician' ? 'text-blue-100' : 'text-slate-400'}`}>बिजली मिस्त्री</span>
-              </div>
-            </button>
-
-            {/* Plumber */}
-            <button
-              onClick={() => setSelectedCategory('plumber')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'plumber'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'plumber' ? 'bg-white/20 text-cyan-200' : 'bg-cyan-50 text-cyan-600'}`}>
-                <Wrench className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">Plumber</span>
-                <span className={`text-[9px] block ${selectedCategory === 'plumber' ? 'text-blue-100' : 'text-slate-400'}`}>नल व पाइप</span>
-              </div>
-            </button>
-
-            {/* AC Repair */}
-            <button
-              onClick={() => setSelectedCategory('ac_repair')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'ac_repair'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'ac_repair' ? 'bg-white/20 text-sky-200' : 'bg-sky-50 text-sky-600'}`}>
-                <Wind className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">AC Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'ac_repair' ? 'text-blue-100' : 'text-slate-400'}`}>एसी सर्विस</span>
-              </div>
-            </button>
-
-            {/* Fridge & Freezer */}
-            <button
-              onClick={() => setSelectedCategory('fridge_repair')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'fridge_repair'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'fridge_repair' ? 'bg-white/20 text-teal-200' : 'bg-teal-50 text-teal-600'}`}>
-                <Snowflake className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">Fridge Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'fridge_repair' ? 'text-blue-100' : 'text-slate-400'}`}>फ्रिज व फ्रीजर</span>
-              </div>
-            </button>
+              className={`p-2 rounded-xl border text-left text-xs font-bold ${selectedCategory === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'}`}
+            >All Services · सभी सेवाएं</button>
+            {([
+              ['electrician', 'Electrician', 'बिजली मिस्त्री'],
+              ['plumber', 'Plumber', 'प्लंबर'],
+              ['ac_repair', 'AC Repair', 'एसी सर्विस'],
+              ['fridge_repair', 'Fridge Repair', 'फ्रिज रिपेयर'],
+              ['welder', 'Welder', 'वेल्डर'],
+              ['mechanic', 'Mechanic', 'मैकेनिक'],
+              ['driver', 'Driver', 'ड्राइवर'],
+              ['tourist_guide', 'Tourist Guide', 'टूरिस्ट गाइड'],
+              ['contractor', 'Contractor', 'कॉन्ट्रैक्टर'],
+              ['bike_rider', 'Bike Rider Captain', 'बाइक राइडर'],
+              ['labour', 'Labour / Helper', 'मजदूर / हेल्पर'],
+              ['home_care', 'Home Care', 'घरेलू सेवाएं']
+            ] as const).map(([category, label, hindi]) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`p-2 rounded-xl border text-left transition-all ${selectedCategory === category ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'}`}
+              >
+                <span className="block text-xs font-bold">{label}</span>
+                <span className={`block text-[10px] ${selectedCategory === category ? 'text-blue-100' : 'text-slate-400'}`}>{hindi}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -352,11 +285,15 @@ export const CustomerHome: React.FC = () => {
               {/* Meta & Book Action */}
               <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <div className="flex items-center text-amber-500 font-semibold gap-0.5">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{service.rating}</span>
-                  </div>
-                  <span>·</span>
+                  {service.rating > 0 && (
+                  <>
+                    <div className="flex items-center text-amber-500 font-semibold gap-0.5">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>{service.rating.toFixed(1)}</span>
+                    </div>
+                    <span>·</span>
+                  </>
+                )}
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     <span>{service.durationMinutes}m</span>

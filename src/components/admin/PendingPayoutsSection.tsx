@@ -176,7 +176,7 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
           <span>Secure Payout Protocol & Webhook Settlement Gate</span>
         </div>
         <p className="text-[11px] text-blue-200 leading-relaxed">
-          Admin approval queues requests in <strong>Processing</strong> state. In accordance with zero-fake-settlement security rules, payouts are never marked <strong>Settled</strong> until a verified payment-provider webhook confirmation arrives. Rejection immediately restores the reserved funds to the partner’s wallet.
+          Payout controls are currently disabled because the trusted server-side wallet ledger and payment-provider integration are not active. No funds are reserved, transferred, restored or marked settled by these controls. A future settlement must be confirmed by a verified provider webhook.
         </p>
       </div>
 

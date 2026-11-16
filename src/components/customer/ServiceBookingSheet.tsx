@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, CheckCircle2, Shield, IndianRupee, AlertCir
 import { ServiceItem, PaymentMethod } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { PlaceAutocompleteInput } from '../maps/PlaceAutocompleteInput';
+import { IndiaLocationSelector } from '../shared/IndiaLocationSelector';
 
 interface ServiceBookingSheetProps {
   service: ServiceItem;
@@ -11,7 +12,7 @@ interface ServiceBookingSheetProps {
 }
 
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
-  const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
+  const { customer, currentCity, setCurrentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState('Today');
@@ -200,6 +201,14 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* India-wide service area selection */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Service Area (State → District → Tehsil)</label>
+            <IndiaLocationSelector
+              onLocationChange={(location) => setCurrentCity(location.tehsil)}
+            />
           </div>
 
           {/* Service Location with Google Places Autocomplete */}

@@ -299,6 +299,187 @@ class QuickFixViewModel : ViewModel() {
                 rating = 4.91,
                 warrantyDays = 45
             )
+            ,
+            ServiceItem(
+                id = "ac-jet-clean",
+                category = "ac_repair",
+                title = "Split / Window AC Deep Jet Service",
+                hindiTitle = "एसी जेट वाश और केमिकल सर्विस",
+                startingPrice = 499,
+                rating = 4.92,
+                warrantyDays = 30
+            ),
+            ServiceItem(
+                id = "fridge-cooling-fix",
+                category = "fridge_repair",
+                title = "Refrigerator Not Cooling / Compressor Check",
+                hindiTitle = "फ्रिज कूलिंग व कंप्रेसर जांच",
+                startingPrice = 299,
+                rating = 4.87,
+                warrantyDays = 30
+            ),
+            ServiceItem(
+                id = "weld-gate",
+                category = "welder",
+                title = "Gate, Grill & Railing Welding",
+                hindiTitle = "गेट, ग्रिल और रेलिंग वेल्डिंग",
+                startingPrice = 399,
+                rating = 4.80,
+                warrantyDays = 30
+            ),
+            ServiceItem(
+                id = "mech-bike",
+                category = "mechanic",
+                title = "Two-Wheeler Breakdown & Basic Repair",
+                hindiTitle = "बाइक और स्कूटर की बेसिक मरम्मत",
+                startingPrice = 249,
+                rating = 4.82,
+                warrantyDays = 7
+            ),
+            ServiceItem(
+                id = "driver-local",
+                category = "driver",
+                title = "Local Hourly Driver",
+                hindiTitle = "लोकल घंटे के हिसाब से ड्राइवर",
+                startingPrice = 399,
+                rating = 4.86,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "guide-city",
+                category = "tourist_guide",
+                title = "Local City Sightseeing Guide",
+                hindiTitle = "शहर घूमने के लिए लोकल गाइड",
+                startingPrice = 599,
+                rating = 4.88,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "contractor-inspection",
+                category = "contractor",
+                title = "Home Repair & Renovation Site Visit",
+                hindiTitle = "घर की मरम्मत और रिनोवेशन साइट विजिट",
+                startingPrice = 499,
+                rating = 4.83,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "labour-helper",
+                category = "labour",
+                title = "General Helper / Daily Labour",
+                hindiTitle = "सामान्य मजदूर / रोज़ाना लेबर",
+                startingPrice = 499,
+                rating = 4.80,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "labour-construction",
+                category = "labour",
+                title = "Construction & Site Labour",
+                hindiTitle = "निर्माण कार्य और साइट मजदूर",
+                startingPrice = 599,
+                rating = 4.82,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-cooking",
+                category = "home_care",
+                title = "Home Cooking & Meal Preparation",
+                hindiTitle = "घर का खाना बनाना",
+                startingPrice = 299,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-laundry",
+                category = "home_care",
+                title = "Laundry Washing & Folding",
+                hindiTitle = "कपड़े धोना और तह करना",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-ironing",
+                category = "home_care",
+                title = "Clothes Ironing",
+                hindiTitle = "कपड़ों पर प्रेस करना",
+                startingPrice = 149,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-dishes",
+                category = "home_care",
+                title = "Utensil & Dish Washing",
+                hindiTitle = "बर्तन धोना",
+                startingPrice = 149,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-sweep-mop",
+                category = "home_care",
+                title = "Sweeping & Floor Mopping",
+                hindiTitle = "झाड़ू और पोछा",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-bathroom",
+                category = "home_care",
+                title = "Bathroom & Toilet Cleaning",
+                hindiTitle = "बाथरूम और टॉयलेट की सफाई",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-dusting",
+                category = "home_care",
+                title = "Dusting & Room Tidying",
+                hindiTitle = "धूल साफ करना और कमरा व्यवस्थित करना",
+                startingPrice = 199,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-kitchen",
+                category = "home_care",
+                title = "Kitchen & Platform Cleaning",
+                hindiTitle = "किचन और स्लैब की सफाई",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-full-clean",
+                category = "home_care",
+                title = "Full Home Routine Cleaning",
+                hindiTitle = "पूरे घर की सामान्य सफाई",
+                startingPrice = 699,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "home-elder-assist",
+                category = "home_care",
+                title = "Household Help & Daily Chores",
+                hindiTitle = "घर के रोज़मर्रा के कामों में मदद",
+                startingPrice = 249,
+                rating = 0.0,
+                warrantyDays = 0
+            ),
+            ServiceItem(
+                id = "bike-pickup",
+                category = "bike_rider",
+                title = "Bike Pickup & Local Delivery",
+                hindiTitle = "बाइक से पिकअप और लोकल डिलीवरी",
+                startingPrice = 99,
+                rating = 4.85,
+                warrantyDays = 0
+            )
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()

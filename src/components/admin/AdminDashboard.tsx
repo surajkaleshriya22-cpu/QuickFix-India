@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   TrendingUp,
   Percent,
@@ -62,6 +62,9 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
+import { AdminWalletAuditSection } from './AdminWalletAuditSection';
+import { auth } from '../../lib/firebase';
+import { getIdToken } from 'firebase/auth';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -120,10 +123,10 @@ export const AdminDashboard: React.FC = () => {
   const [reviewRatingFilter, setReviewRatingFilter] = useState<number | 'all'>('all');
 
   // Payment & Commission Management States
-  const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence'>('history');
+  const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence' | 'wallet_audit'>('history');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'paid' | 'pending' | 'failed' | 'refunded'>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'upi' | 'card' | 'cash' | 'netbanking'>('all');
-  const [paymentCategoryFilter, setPaymentCategoryFilter] = useState<'all' | 'electrician' | 'plumber'>('all');
+  const [paymentCategoryFilter, setPaymentCategoryFilter] = useState<'all' | ServiceCategoryType>('all');
   const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
   const [reportPeriod, setReportPeriod] = useState<'daily' | 'monthly'>('daily');
   const [simulatorAmount, setSimulatorAmount] = useState<number>(500);
@@ -160,6 +163,149 @@ export const AdminDashboard: React.FC = () => {
 
   // Reassignment Modal state
   const [reassignBookingId, setReassignBookingId] = useState<string | null>(null);
+  const [dispatchPartners, setDispatchPartners] = useState<Array<{ uid: string; name: string; phone: string; trades: string[]; city: string }>>([]);
+  const [dispatchLoading, setDispatchLoading] = useState(false);
+  const [dispatchError, setDispatchError] = useState('');
+  const [dispatchingUid, setDispatchingUid] = useState<string | null>(null);
+  const [pendingPartnerApplications, setPendingPartnerApplications] = useState<Array<{ uid: string; name: string; phone: string; city: string; trades: string[]; experienceYears: number; qualificationType: string; qualificationRegNumber: string; qualificationInstitute: string; approvalStatus: string; accountStatus: string }>>([]);
+  const [pendingPartnersLoading, setPendingPartnersLoading] = useState(false);
+  const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
+  const [partnerReviewError, setPartnerReviewError] = useState('');
+  const [partnerReviewNotice, setPartnerReviewNotice] = useState('');
+
+  useEffect(() => {
+    if (!reassignBookingId) return;
+    let cancelled = false;
+    const loadVerifiedPartners = async () => {
+      setDispatchLoading(true); setDispatchError(''); setDispatchPartners([]);
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+        const token = await getIdToken(user);
+        const response = await fetch('/api/admin/partners/verified', { headers: { Authorization: 'Bearer ' + token } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.success !== true || !Array.isArray(payload.partners)) throw new Error(typeof payload.error === 'string' ? payload.error : 'Verified partner list could not be loaded.');
+        if (!cancelled) setDispatchPartners(payload.partners);
+      } catch (error) {
+        if (!cancelled) setDispatchError(error instanceof Error ? error.message : 'Verified partner list could not be loaded.');
+      } finally { if (!cancelled) setDispatchLoading(false); }
+    };
+    void loadVerifiedPartners();
+    return () => { cancelled = true; };
+  }, [reassignBookingId]);
+
+  useEffect(() => {
+    if (activeTab !== 'technicians') return;
+    let cancelled = false;
+    const loadPendingPartnerApplications = async () => {
+      setPendingPartnersLoading(true);
+      setPartnerReviewError('');
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+        const token = await getIdToken(user);
+        const response = await fetch('/api/admin/partners/pending', { headers: { Authorization: 'Bearer ' + token } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.success !== true || !Array.isArray(payload.partners)) {
+          throw new Error(typeof payload.error === 'string' ? payload.error : 'Pending applications could not be loaded.');
+        }
+        if (!cancelled) setPendingPartnerApplications(payload.partners);
+      } catch (error) {
+        if (!cancelled) setPartnerReviewError(error instanceof Error ? error.message : 'Pending applications could not be loaded.');
+      } finally {
+        if (!cancelled) setPendingPartnersLoading(false);
+      }
+    };
+    void loadPendingPartnerApplications();
+    return () => { cancelled = true; };
+  }, [activeTab]);
+
+  const handlePartnerReview = async (partnerUid: string, decision: 'approve' | 'reject') => {
+    if (partnerReviewBusyUid) return;
+    const reason = decision === 'reject' ? window.prompt('Rejection reason (required):') : '';
+    if (decision === 'reject' && !reason?.trim()) return;
+    setPartnerReviewBusyUid(partnerUid);
+    setPartnerReviewError('');
+    setPartnerReviewNotice('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/partners/' + encodeURIComponent(partnerUid) + '/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ decision, reason: reason || undefined })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) {
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'Partner review could not be saved.');
+      }
+      setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
+      setPartnerReviewNotice(decision === 'approve'
+        ? 'Application accepted. Partner remains unverified and cannot receive bookings until professional qualification documents are physically inspected and verified.'
+        : 'Partner application rejected and the decision was recorded.');
+      await triggerFirestoreSync();
+    } catch (error) {
+      setPartnerReviewError(error instanceof Error ? error.message : 'Partner review could not be saved.');
+    } finally {
+      setPartnerReviewBusyUid(null);
+    }
+  };
+
+  const handleManualPartnerVerification = async (partnerUid: string) => {
+    if (partnerReviewBusyUid) return;
+    const confirmed = window.confirm('Confirm only if you have physically inspected the partner’s original professional qualification certificate and matched it to this application. This verifies the professional credential only; it does NOT verify government identity. This action enables booking eligibility.');
+    if (!confirmed) return;
+    const inspectionNote = window.prompt('Enter a brief note: professional certificate type, issuing institute, and inspection date. Do not enter Aadhaar, PAN, phone, or other personal ID numbers.');
+    if (!inspectionNote?.trim() || inspectionNote.trim().length < 5) return;
+    setPartnerReviewBusyUid(partnerUid);
+    setPartnerReviewError('');
+    setPartnerReviewNotice('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/partners/' + encodeURIComponent(partnerUid) + '/verify-manual-kyc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ confirmOriginalInspected: true, inspectionNote: inspectionNote.trim() })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) throw new Error(typeof payload.error === 'string' ? payload.error : 'Manual KYC verification failed.');
+      setPendingPartnerApplications(items => items.filter(item => item.uid !== partnerUid));
+      setPartnerReviewNotice('Professional certificate inspection recorded. The partner is marked professionally verified; this is not government identity verification.');
+      await triggerFirestoreSync();
+    } catch (error) {
+      setPartnerReviewError(error instanceof Error ? error.message : 'Manual KYC verification failed.');
+    } finally {
+      setPartnerReviewBusyUid(null);
+    }
+  };
+
+  const handleSecurePartnerAssignment = async (partnerUid: string) => {
+    if (!reassignBookingId || dispatchingUid) return;
+    setDispatchingUid(partnerUid); setDispatchError('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Admin Firebase session expired. Please sign in again.');
+      const token = await getIdToken(user);
+      const response = await fetch('/api/admin/bookings/' + encodeURIComponent(reassignBookingId) + '/assign-partner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ partnerUid })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) {
+        const messages: Record<string, string> = { BOOKING_NOT_FOUND: 'Booking nahi mili.', PARTNER_NOT_FOUND: 'Channel Partner profile nahi mili.', BOOKING_NOT_ASSIGNABLE: 'Yeh booking ab assign nahi ho sakti. Booking refresh karke dekhein.', PARTNER_NOT_ELIGIBLE: 'Yeh partner verified/approved nahi hai ya suspended hai.' };
+        throw new Error(messages[payload.error] || (typeof payload.error === 'string' ? payload.error : 'Assignment failed.'));
+      }
+      setStatusUpdateSuccessMsg('Booking securely assigned to the selected verified Channel Partner.');
+      setReassignBookingId(null);
+      await triggerFirestoreSync();
+    } catch (error) {
+      setDispatchError(error instanceof Error ? error.message : 'Secure assignment failed.');
+    } finally { setDispatchingUid(null); }
+  };
 
   // Review reply state
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -178,7 +324,7 @@ export const AdminDashboard: React.FC = () => {
   const totalRevenueGMV = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
   const totalCommissionCut = bookings.reduce((sum, b) => sum + b.adminCommission, 0);
   const totalDisbursedNet = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + b.technicianPayout, 0);
-  const pendingKycCount = technicians.filter(t => !t.isVerified).length;
+  const pendingKycCount = technicians.filter(t => t.approvalStatus !== 'approved' || !t.isVerified).length;
 
   // Granular Payment & Commission Calculations
   const paidBookings = bookings.filter(b => b.paymentStatus === 'paid');
@@ -900,6 +1046,54 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
+            <section className="mb-4 rounded-2xl border border-amber-700/60 bg-amber-950/20 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-amber-200">Pending Channel Partner Applications</h3>
+                  <p className="text-[11px] text-slate-400">Step 1: review application. Step 2: inspect the original professional certificate in person and record verification. No document uploads or Aadhaar/PAN collection.</p>
+                </div>
+                <span className="rounded-full bg-amber-900/60 px-2.5 py-1 text-xs font-bold text-amber-200">{pendingPartnerApplications.length} pending</span>
+              </div>
+              {partnerReviewError && <p className="text-xs text-rose-300">{partnerReviewError}</p>}
+              {partnerReviewNotice && <p className="text-xs text-emerald-300">{partnerReviewNotice}</p>}
+              {pendingPartnersLoading ? (
+                <p className="text-xs text-slate-400">Loading secure applications…</p>
+              ) : pendingPartnerApplications.length === 0 ? (
+                <p className="text-xs text-slate-400">No pending applications found.</p>
+              ) : pendingPartnerApplications.map(application => (
+                <div key={application.uid} className="rounded-xl border border-slate-700 bg-slate-950 p-3 space-y-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-white">{application.name}</p>
+                      <p className="text-[11px] text-slate-400">{application.phone} · {application.city}</p>
+                    </div>
+                    <span className="text-[10px] rounded-full bg-amber-900/50 px-2 py-1 text-amber-200">{application.approvalStatus === 'pending_audit' ? 'Application review' : 'Awaiting in-person KYC'}</span>
+                  </div>
+                  <p className="text-xs text-slate-300">Trades: {application.trades.join(', ')}</p>
+                  <p className="text-xs text-slate-300">Experience: {application.experienceYears} years</p>
+                  <p className="text-xs text-slate-300">Certificate: {application.qualificationType} · {application.qualificationRegNumber}</p>
+                  <p className="text-xs text-slate-300">Institute: {application.qualificationInstitute}</p>
+                  {application.approvalStatus === 'pending_audit' ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                        {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Accept Application'}
+                      </button>
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handlePartnerReview(application.uid, 'reject')} className="rounded-lg border border-rose-700 bg-rose-950 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-[11px] text-amber-300">Application accepted. Partner must show the original professional certificate in person. Do not collect/store Aadhaar or PAN here.</p>
+                      <button disabled={partnerReviewBusyUid !== null} onClick={() => void handleManualPartnerVerification(application.uid)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                        {partnerReviewBusyUid === application.uid ? 'Saving…' : 'Confirm Original Inspected & Verify'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
+
             {/* Technicians List */}
             <div className="space-y-3">
               {filteredTechs.map(tech => (
@@ -915,7 +1109,7 @@ export const AdminDashboard: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-white">{tech.name}</h4>
-                          {tech.approvalStatus === 'approved' || (tech.isVerified && tech.approvalStatus !== 'rejected') ? (
+                          {tech.approvalStatus === 'approved' && tech.isVerified ? (
                             <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.2 rounded-full flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3 text-emerald-400" />
                               <span>Certified & Verified</span>
@@ -1324,37 +1518,25 @@ export const AdminDashboard: React.FC = () => {
               ))}
             </div>
 
-            {/* Reassignment Modal */}
+            {/* Secure Reassignment Modal: candidates and assignment are server-verified. */}
             {reassignBookingId && (
               <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
                 <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-white text-sm">Reassign Booking {reassignBookingId}</h3>
-                    <button
-                      onClick={() => setReassignBookingId(null)}
-                      className="w-7 h-7 rounded-full bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <h3 className="font-bold text-white text-sm">Assign Booking {reassignBookingId}</h3>
+                    <button onClick={() => setReassignBookingId(null)} disabled={Boolean(dispatchingUid)} className="w-7 h-7 rounded-full bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center"><X className="w-4 h-4" /></button>
                   </div>
-
-                  <p className="text-xs text-slate-400">Select an online verified technician to dispatch:</p>
-
+                  <p className="text-xs text-slate-400">Only server-verified and approved Channel Partners are shown.</p>
+                  {dispatchLoading && <p className="text-xs text-blue-300">Loading verified partners…</p>}
+                  {dispatchError && <div role="alert" className="rounded-lg border border-rose-800 bg-rose-950/50 p-2.5 text-xs text-rose-300">{dispatchError}</div>}
+                  {!dispatchLoading && !dispatchError && dispatchPartners.length === 0 && <p className="rounded-lg border border-amber-800 bg-amber-950/40 p-3 text-xs text-amber-200">No verified and approved Channel Partners are currently available. No assignment was made.</p>}
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {technicians.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          reassignBookingTechnician(reassignBookingId, t.id);
-                          setReassignBookingId(null);
-                        }}
-                        className="w-full text-left p-2.5 rounded-xl border border-slate-800 hover:border-blue-500 hover:bg-slate-900 flex items-center justify-between text-xs transition-colors"
-                      >
-                        <div>
-                          <div className="font-bold text-white">{t.name}</div>
-                          <div className="text-[10px] text-slate-400 capitalize">{t.trades.join(', ')} · {t.city}</div>
-                        </div>
-                        <span className="text-amber-400 font-bold">{t.rating} ★</span>
+                    {dispatchPartners.map(partner => (
+                      <button key={partner.uid} type="button" disabled={Boolean(dispatchingUid) || dispatchLoading} onClick={() => void handleSecurePartnerAssignment(partner.uid)} className="w-full text-left p-2.5 rounded-xl border border-slate-800 hover:border-blue-500 hover:bg-slate-900 disabled:opacity-50 text-xs transition-colors">
+                        <div className="font-bold text-white">{partner.name}</div>
+                        <div className="text-[10px] text-slate-400 capitalize">{partner.trades.join(', ') || 'Trade not listed'} · {partner.city || 'Location not listed'}</div>
+                        {partner.phone && <div className="text-[10px] text-slate-500">{partner.phone}</div>}
+                        {dispatchingUid === partner.uid && <div className="mt-1 text-[10px] text-blue-300">Assigning securely…</div>}
                       </button>
                     ))}
                   </div>
@@ -1533,6 +1715,14 @@ export const AdminDashboard: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setPaymentSubTab('wallet_audit')}
+                className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-2 ${paymentSubTab === 'wallet_audit' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span>Server Wallet Audit</span>
+              </button>
+
+              <button
                 onClick={() => setPaymentSubTab('reports')}
                 className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
                   paymentSubTab === 'reports'
@@ -1570,6 +1760,8 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* ================= SUB-TAB 1: BOOKING-WISE PAYMENT HISTORY ================= */}
+            {paymentSubTab === 'wallet_audit' && <AdminWalletAuditSection />}
+
             {paymentSubTab === 'history' && (
               <div className="space-y-3">
                 {/* Search & Filter Toolbar */}
@@ -1597,7 +1789,7 @@ export const AdminDashboard: React.FC = () => {
 
                     {/* Category Filter */}
                     <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-                      {(['all', 'electrician', 'plumber'] as const).map(cat => (
+                      {(['all', 'electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'home_care'] as const).map(cat => (
                         <button
                           key={cat}
                           onClick={() => setPaymentCategoryFilter(cat)}

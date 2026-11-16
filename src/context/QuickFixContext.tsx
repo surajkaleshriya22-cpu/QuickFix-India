@@ -123,6 +123,7 @@ interface QuickFixContextType {
   }) => Booking;
   submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
+  completeBookingSecure: (bookingId: string) => Promise<{ success: boolean; message?: string }>;
   addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
 
   // Technicians & Partner App
@@ -1158,6 +1159,35 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { success: true };
   };
 
+  const completeBookingSecure = async (bookingId: string): Promise<{ success: boolean; message?: string }> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return { success: false, message: 'Please sign in with your verified Channel Partner account.' };
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/bookings/' + encodeURIComponent(bookingId) + '/complete', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        return { success: false, message: result.error || 'Booking could not be completed securely.' };
+      }
+      setBookings(prev => prev.map(booking => booking.id === bookingId
+        ? { ...booking, status: 'completed' as BookingStatus }
+        : booking
+      ));
+      return {
+        success: true,
+        message: result.locationsCleared === false
+          ? 'Job completed. Location cleanup will retry when tracking is next opened. No payment or payout was processed.'
+          : 'Job completed successfully. Live-location sharing has been stopped. No payment or payout was processed.'
+      };
+    } catch (error: any) {
+      return { success: false, message: error?.message || 'Network error while completing the booking.' };
+    }
+  };
+
   // Customer Management
   // Customer management must be populated from verified Firestore records, not demo profiles.
   const [customers, setCustomers] = useState<CustomerUser[]>([]);
@@ -1274,6 +1304,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createBooking,
         submitCustomerBooking,
         updateBookingStatus,
+        completeBookingSecure,
         addReview,
         technicians,
         currentTechnician,
