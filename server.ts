@@ -626,7 +626,7 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
         accepted: true as const,
         acceptedAt: acceptedAt.toISOString(),
         serviceDeadline: serviceDeadline.toISOString(),
-        walletBalance: partner.walletBalance,
+        walletBalance: availableBalance,
         alreadyAccepted: false,
       };
     });
