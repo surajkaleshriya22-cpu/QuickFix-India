@@ -475,28 +475,9 @@ export const TechnicianPortal: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setRegError('');
-                  const res = registerTechnician({
-                    name: regName,
-                    phone: regPhone,
-                    email: regEmail,
-                    trades: regTrades,
-                    experienceYears: Math.max(2, regExp),
-                    city: regCity,
-                    qualificationType: regQualType,
-                    qualificationRegNumber: regQualNumber,
-                    qualificationInstitute: regQualInst,
-                    kycDocType: regKycType,
-                    kycDocNumber: regKycDoc,
-                    upiId: regUpi,
-                    initialDepositAmount: regDeposit
-                  });
-                  if (res && !res.success) {
-                    setRegError(res.message || 'Registration failed');
-                  }
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
+                disabled
+                aria-disabled="true"
+                className="w-full bg-slate-300 text-slate-600 font-bold py-2 rounded-xl mt-2 cursor-not-allowed"
               >
                 Registration unavailable — secure identity and deposit setup pending
               </button>
