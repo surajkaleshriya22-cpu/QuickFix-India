@@ -31,6 +31,8 @@ fun TechnicianScreen(
     viewModel: QuickFixViewModel
 ) {
     val bookings by viewModel.bookings.collectAsState()
+    val partnerJobs by viewModel.partnerJobs.collectAsState()
+    val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
 
     var enteredOtp by remember { mutableStateOf("") }
@@ -159,6 +161,31 @@ fun TechnicianScreen(
                         color = Color(0xFFCBD5E1),
                         fontSize = 11.sp
                     )
+                }
+            }
+
+            // Available jobs are read from the authenticated, city/trade-matched server feed.
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Available Jobs / उपलब्ध काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                        TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text("Refresh") }
+                    }
+                    Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
+                    partnerJobs.forEach { job ->
+                        Divider(color = Color(0xFFE2E8F0))
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
+                            Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
+                            Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
+                            Text("काम स्वीकार करने की सुविधा सुरक्षित server workflow जुड़ने के बाद उपलब्ध होगी.", fontSize = 10.sp, color = TextSecondary)
+                        }
+                    }
                 }
             }
 
