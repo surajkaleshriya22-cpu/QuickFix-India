@@ -590,19 +590,14 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
       if (!partnerSnap.exists) return { error: 'partner_missing' as const };
       const booking = bookingSnap.data()!;
       const partner = partnerSnap.data()!;
-      const walletSnap = await transaction.get(db.collection('walletAccounts').doc(uid));
-      const wallet = walletSnap.data();
       if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return { error: 'not_assigned' as const };
       if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
           partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
           partner.accountStatus !== 'active' || partner.isSuspended === true) {
         return { error: 'partner_unverified' as const };
       }
-      // Only the dedicated server-owned wallet account is a balance source of truth.
-      const availableBalance = wallet?.availableBalance;
-      if (!walletSnap.exists || typeof availableBalance !== 'number' || !Number.isFinite(availableBalance) || availableBalance < 1000) {
-        return { error: 'wallet_low' as const };
-      }
+      // Idempotent retries must return the original acceptance even if the
+      // available balance changes after acceptance; never re-run the entry gate.
       if (booking.status === 'technician_en_route' && booking.acceptedAt) {
         const existingAcceptedAt = booking.acceptedAt?.toDate?.() || booking.acceptedAt;
         const existingDeadline = booking.serviceDeadline?.toDate?.() || booking.serviceDeadline;
@@ -610,11 +605,18 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
           accepted: true as const,
           acceptedAt: new Date(existingAcceptedAt).toISOString(),
           serviceDeadline: existingDeadline ? new Date(existingDeadline).toISOString() : new Date(new Date(existingAcceptedAt).getTime() + 60 * 60 * 1000).toISOString(),
-          walletBalance: availableBalance,
+          walletBalance: Number(booking.acceptanceWalletBalanceChecked || 0),
           alreadyAccepted: true,
         };
       }
       if (booking.status !== 'assigned') return { error: 'bad_status' as const };
+      const walletSnap = await transaction.get(db.collection('walletAccounts').doc(uid));
+      const wallet = walletSnap.data();
+      // Only the dedicated server-owned wallet account is a balance source of truth.
+      const availableBalance = wallet?.availableBalance;
+      if (!walletSnap.exists || typeof availableBalance !== 'number' || !Number.isFinite(availableBalance) || availableBalance < 1000) {
+        return { error: 'wallet_low' as const };
+      }
       transaction.update(bookingRef, {
         status: 'technician_en_route',
         acceptedAt: FieldValue.serverTimestamp(),
@@ -697,14 +699,10 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
       if (!partnerSnap.exists) return 'partner_missing';
       const booking = bookingSnap.data()!;
       const partner = partnerSnap.data()!;
-      const walletSnap = await transaction.get(db.collection('walletAccounts').doc(uid));
-      const wallet = walletSnap.data();
       if ((booking.technicianUid || booking.assignedPartnerUid) !== uid) return 'not_assigned';
       if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
           partner.isVerified !== true || partner.approvalStatus !== 'approved' ||
           partner.accountStatus !== 'active' || partner.isSuspended === true) return 'partner_unverified';
-      // The wallet gate reads only the server-owned wallet account.
-      if (!walletSnap.exists || typeof wallet?.availableBalance !== 'number' || wallet.availableBalance < 1000) return 'wallet_low';
       if (booking.status === 'in_progress') return 'already_started';
       if (booking.status !== 'technician_en_route') return 'bad_status';
       const expiry = booking.startOtpExpiresAt?.toDate?.() || booking.startOtpExpiresAt;
@@ -736,7 +734,6 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
         not_found: 'Booking not found.', partner_missing: 'Partner profile not found.',
         not_assigned: 'Only the assigned Channel Partner can start this job.',
         partner_unverified: 'Your Channel Partner account is not verified and active.',
-        wallet_low: 'Server-verified partner wallet balance must be at least ₹1,000 before starting a job. Wallet top-ups are not yet connected to the secure server ledger.',
         already_started: 'This job has already started.', bad_status: 'This booking is not ready to start.',
         expired: 'The job-start OTP has expired.', locked: 'Too many incorrect OTP attempts. Contact support.',
         invalid_otp: 'Incorrect OTP. Check with the customer and try again.'
