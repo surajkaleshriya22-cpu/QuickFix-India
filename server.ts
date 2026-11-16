@@ -124,7 +124,21 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     }
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const verifiedPhone = identity.phone_number;
-    const { displayName, email, trades, experienceYears, city, address } = req.body ?? {};
+    const { displayName, email, trades, experienceYears, city, address, serviceArea } = req.body ?? {};
+    const validServiceArea = serviceArea === undefined || (
+      serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
+      ['state', 'district', 'tehsil'].every((key) =>
+        typeof serviceArea[key] === 'string' &&
+        serviceArea[key].trim().length > 0 &&
+        serviceArea[key].trim().length <= 100
+      ) &&
+      ['stateCode', 'districtCode', 'tehsilCode'].every((key) =>
+        serviceArea[key] === undefined ||
+        (typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 30)
+      ) &&
+      (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
+       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
+    );
     const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
@@ -136,6 +150,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
         typeof city !== 'string' || city.trim().length < 2 || city.trim().length > 100 ||
+        !validServiceArea ||
         (address !== undefined && (typeof address !== 'string' || address.trim().length > 500))) {
       return res.status(400).json({ success: false, error: 'Partner profile details are invalid.' });
     }
@@ -155,6 +170,16 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         role: 'CHANNEL_PARTNER',
         city: city.trim(),
         address: typeof address === 'string' ? address.trim() : '',
+        ...(validServiceArea && serviceArea ? {
+          serviceArea: {
+            state: serviceArea.state.trim(),
+            district: serviceArea.district.trim(),
+            tehsil: serviceArea.tehsil.trim(),
+            ...(serviceArea.stateCode ? { stateCode: serviceArea.stateCode.trim() } : {}),
+            ...(serviceArea.districtCode ? { districtCode: serviceArea.districtCode.trim() } : {}),
+            ...(serviceArea.tehsilCode ? { tehsilCode: serviceArea.tehsilCode.trim() } : {})
+          }
+        } : {}),
         trades: [...new Set(trades)],
         experienceYears,
         isVerified: false,
