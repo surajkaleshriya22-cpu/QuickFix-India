@@ -21,3 +21,17 @@ export function isValidBookingDate(value: unknown, now: Date = new Date()): valu
 
   return value >= indiaToday;
 }
+
+/** Returns a YYYY-MM-DD booking date based on the India calendar day. */
+export function getIndiaBookingDate(offsetDays = 0, now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  return new Date(Date.UTC(year, month - 1, day + offsetDays)).toISOString().slice(0, 10);
+}
