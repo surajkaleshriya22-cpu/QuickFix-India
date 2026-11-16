@@ -219,8 +219,33 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     const taxes = Math.round(subtotal * INITIAL_COMMISSION_SETTINGS.gstPct / 100);
     const totalAmount = subtotal + taxes;
     const bookingRef = db.collection('bookings').doc();
+    const bookingCity = String(profile.city || '').trim();
+    const normalizedCity = bookingCity.toLocaleLowerCase('en-IN');
 
-    await bookingRef.create({
+    // Dispatch only to real, fully approved partners. Registration/basic profile
+    // approval is not enough: KYC, online state, ₹2,000 reserve and wallet are
+    // all server-checked. Missing fields deliberately make a profile ineligible.
+    const partnerSnapshot = await db.collection('users')
+      .where('role', '==', 'CHANNEL_PARTNER')
+      .where('isOnline', '==', true)
+      .limit(500)
+      .get();
+    const eligiblePartners = partnerSnapshot.docs.filter((partnerDoc) => {
+      const partner = partnerDoc.data();
+      const partnerTrades = Array.isArray(partner.trades) ? partner.trades : [];
+      return String(partner.city || '').trim().toLocaleLowerCase('en-IN') === normalizedCity &&
+        partner.isVerified === true &&
+        partner.approvalStatus === 'approved' &&
+        partner.kycStatus === 'approved' &&
+        partner.securityDepositPaid === true &&
+        Number.isFinite(partner.walletBalance) &&
+        partner.walletBalance >= 2000 &&
+        partner.isSuspended !== true &&
+        partnerTrades.includes(service.category);
+    }).slice(0, 50);
+
+    const batch = db.batch();
+    batch.create(bookingRef, {
       id: bookingRef.id,
       customerUid: identity.uid,
       customerName: String(profile.displayName || '').slice(0, 100),
@@ -232,10 +257,12 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       notes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '',
       scheduledDate,
       scheduledTimeSlot,
-      city: String(profile.city || '').slice(0, 100),
+      city: bookingCity.slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
       paymentMethod,
       status: 'requested',
+      dispatchStatus: eligiblePartners.length ? 'offered' : 'no_eligible_partner',
+      offeredPartnerUids: eligiblePartners.map((partner) => partner.id),
       startOtp: '',
       price,
       convenienceFee,
@@ -247,10 +274,142 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       createdAt: FieldValue.serverTimestamp()
     });
 
-    return res.status(201).json({ success: true, bookingId: bookingRef.id });
+    // Offers contain no customer phone, street address or private notes. Partners
+    // receive only a service/city/time preview until a server accepts their offer.
+    for (const partnerDoc of eligiblePartners) {
+      const offerRef = db.collection('partner_booking_offers').doc(`${bookingRef.id}_${partnerDoc.id}`);
+      batch.create(offerRef, {
+        bookingId: bookingRef.id,
+        partnerUid: partnerDoc.id,
+        serviceId: service.id,
+        serviceTitle: service.title,
+        category: service.category,
+        city: bookingCity.slice(0, 100),
+        scheduledDate,
+        scheduledTimeSlot,
+        price,
+        status: 'offered',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    }
+    await batch.commit();
+
+    return res.status(201).json({
+      success: true,
+      bookingId: bookingRef.id,
+      dispatchStatus: eligiblePartners.length ? 'offered' : 'no_eligible_partner',
+      eligiblePartnerCount: eligiblePartners.length
+    });
   } catch (error) {
     console.error('Secure booking creation failed:', error);
     return res.status(500).json({ success: false, error: 'Booking could not be saved securely. Please retry.' });
+  }
+});
+
+// Return only the authenticated partner's sanitized booking offers.
+app.get('/api/partners/offers', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure dispatch is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const partnerSnap = await db.collection('users').doc(identity.uid).get();
+    if (!partnerSnap.exists) return res.status(403).json({ success: false, error: 'Channel Partner profile is required.' });
+    const partner = partnerSnap.data()!;
+    const eligible = partner.role === 'CHANNEL_PARTNER' &&
+      partner.isVerified === true &&
+      partner.approvalStatus === 'approved' &&
+      partner.kycStatus === 'approved' &&
+      partner.securityDepositPaid === true &&
+      Number.isFinite(partner.walletBalance) && partner.walletBalance >= 2000 &&
+      partner.isOnline === true && partner.isSuspended !== true;
+    if (!eligible) return res.status(403).json({ success: false, error: 'Partner is not currently eligible for booking offers.' });
+
+    const offersSnap = await db.collection('partner_booking_offers')
+      .where('partnerUid', '==', identity.uid)
+      .where('status', '==', 'offered')
+      .limit(50)
+      .get();
+    const offers = [];
+    for (const offerDoc of offersSnap.docs) {
+      const offer = offerDoc.data();
+      const bookingSnap = await db.collection('bookings').doc(String(offer.bookingId || '')).get();
+      if (!bookingSnap.exists) continue;
+      const booking = bookingSnap.data()!;
+      if (booking.status !== 'requested' || booking.technicianUid ||
+          String(booking.city || '').trim().toLocaleLowerCase('en-IN') !== String(partner.city || '').trim().toLocaleLowerCase('en-IN') ||
+          !Array.isArray(partner.trades) || !partner.trades.includes(booking.category)) continue;
+      offers.push({
+        offerId: offerDoc.id,
+        bookingId: offer.bookingId,
+        serviceId: offer.serviceId,
+        serviceTitle: offer.serviceTitle,
+        category: offer.category,
+        city: offer.city,
+        scheduledDate: offer.scheduledDate,
+        scheduledTimeSlot: offer.scheduledTimeSlot,
+        price: offer.price,
+        status: offer.status
+      });
+    }
+    return res.json({ success: true, offers });
+  } catch (error) {
+    console.error('Partner offer lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Booking offers could not be loaded.' });
+  }
+});
+
+// Accept an offer atomically. Eligibility is rechecked at acceptance time so an
+// offline, suspended, unverified or under-reserve partner cannot claim a job.
+app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure dispatch is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(bookingId)) {
+      return res.status(400).json({ success: false, error: 'Booking ID is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const offerRef = db.collection('partner_booking_offers').doc(`${bookingId}_${identity.uid}`);
+    await db.runTransaction(async (transaction) => {
+      const [partnerSnap, bookingSnap, offerSnap] = await Promise.all([
+        transaction.get(partnerRef), transaction.get(bookingRef), transaction.get(offerRef)
+      ]);
+      if (!partnerSnap.exists || !bookingSnap.exists || !offerSnap.exists) throw new Error('OFFER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      const booking = bookingSnap.data()!;
+      const eligible = partner.role === 'CHANNEL_PARTNER' &&
+        partner.isVerified === true && partner.approvalStatus === 'approved' &&
+        partner.kycStatus === 'approved' && partner.securityDepositPaid === true &&
+        Number.isFinite(partner.walletBalance) && partner.walletBalance >= 2000 &&
+        partner.isOnline === true && partner.isSuspended !== true &&
+        String(partner.city || '').trim().toLocaleLowerCase('en-IN') === String(booking.city || '').trim().toLocaleLowerCase('en-IN') &&
+        Array.isArray(partner.trades) && partner.trades.includes(booking.category);
+      if (!eligible) throw new Error('PARTNER_NOT_ELIGIBLE');
+      if (booking.status !== 'requested' || booking.technicianUid) throw new Error('BOOKING_ALREADY_CLAIMED');
+      transaction.update(bookingRef, {
+        technicianUid: identity.uid,
+        technicianName: String(partner.displayName || '').slice(0, 100),
+        status: 'assigned',
+        dispatchStatus: 'accepted',
+        assignedAt: FieldValue.serverTimestamp(),
+        acceptedAt: FieldValue.serverTimestamp()
+      });
+      transaction.delete(offerRef);
+    });
+    const otherOffers = await db.collection('partner_booking_offers').where('bookingId', '==', bookingId).get();
+    const cleanup = db.batch();
+    otherOffers.docs.forEach((doc) => cleanup.delete(doc.ref));
+    if (!otherOffers.empty) await cleanup.commit();
+    return res.json({ success: true, bookingId, status: 'assigned' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'OFFER_NOT_FOUND') return res.status(404).json({ success: false, error: 'This booking offer is no longer available.' });
+    if (code === 'PARTNER_NOT_ELIGIBLE') return res.status(403).json({ success: false, error: 'Partner eligibility requirements are not met.' });
+    if (code === 'BOOKING_ALREADY_CLAIMED') return res.status(409).json({ success: false, error: 'This booking has already been accepted or is no longer available.' });
+    console.error('Partner booking acceptance failed:', error);
+    return res.status(500).json({ success: false, error: 'Booking could not be accepted securely.' });
   }
 });
 
