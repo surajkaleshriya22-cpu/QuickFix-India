@@ -71,3 +71,18 @@ test('payout confirmation webhook remains disabled until a verified provider flo
   const block = routeBlock('post', '/api/webhooks/payout-confirmation');
   assert.match(block, /status\(503\)/);
 });
+
+test('secure job completion requires the assigned verified partner and an in-progress booking', () => {
+  const declaration = routeDeclaration('post', '/api/bookings/:bookingId/complete');
+  assert.match(declaration, /authenticateFirebaseUser/);
+  const block = routeBlock('post', '/api/bookings/:bookingId/complete');
+  assert.match(block, /booking\.technicianUid !== uid/);
+  assert.match(block, /booking\.assignedPartnerUid !== uid/);
+  assert.match(block, /partner\.isVerified !== true/);
+  assert.match(block, /partner\.accountStatus !== 'active'/);
+  assert.match(block, /booking\.status !== 'in_progress'/);
+  assert.match(block, /status: 'completed'/);
+  assert.match(block, /liveLocations/);
+  assert.match(block, /customerEnabled: false/);
+  assert.match(block, /does not confirm customer payment or trigger any payout/);
+});
