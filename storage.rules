@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Private Channel Partner KYC documents.
+    // Documents are never publicly readable. The owner may upload/read their own
+    // files; only a trusted Firebase Admin custom claim may review or delete them.
+    match /partner-kyc/{partnerUid}/{fileName} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == partnerUid;
+      }
+
+      function isAdmin() {
+        return request.auth != null && request.auth.token.admin == true;
+      }
+
+      function validKycUpload() {
+        return request.resource != null
+          && request.resource.size > 0
+          && request.resource.size <= 10 * 1024 * 1024
+          && request.resource.contentType.matches('image/(jpeg|png)|application/pdf');
+      }
+
+      // Create only: no client overwrite or metadata update.
+      allow create: if isOwner() && validKycUpload();
+      allow get: if isOwner() || isAdmin();
+      allow list: if false;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Default deny for every other Storage path until explicitly reviewed.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
