@@ -55,8 +55,8 @@ fun AuthScreen(
     // Partner specific
     val selectedTrades = remember { mutableStateListOf("electrician") }
     var experienceYears by remember { mutableStateOf("7") }
-    var kycNumber by remember { mutableStateOf("") }
-    var upiId by remember { mutableStateOf("") }
+    
+    
 
     // Admin specific
     var adminPasscode by remember { mutableStateOf("") }
@@ -208,8 +208,6 @@ fun AuthScreen(
                                     city = city,
                                     trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
                                     experienceYears = experienceYears.toIntOrNull() ?: 5,
-                                    kycDocNumber = kycNumber,
-                                    upiId = upiId
                                 )
                                 authViewModel.verifyOtp(otpCode, pendingUser) { verifiedUser ->
                                     when (verifiedUser.role) {
@@ -346,17 +344,10 @@ fun AuthScreen(
                                 if (selectedTrades.isEmpty()) {
                                     Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
-                                OutlinedTextField(
-                                    value = kycNumber,
-                                    onValueChange = { kycNumber = it },
-                                    label = { Text("KYC Document Number (Aadhaar / Skill Cert)") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                OutlinedTextField(
-                                    value = upiId,
-                                    onValueChange = { upiId = it },
-                                    label = { Text("UPI ID for Instant Payouts") },
-                                    modifier = Modifier.fillMaxWidth()
+                                Text(
+                                    "Android partner signup is paused until this app is connected to the authenticated partner-registration API. Existing approved partner accounts can still sign in. No KYC number, UPI ID or deposit is collected here.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF92400E)
                                 )
                             }
                         }
@@ -378,8 +369,11 @@ fun AuthScreen(
                         }
 
                         Button(
-                            enabled = selectedRole != UserRole.CHANNEL_PARTNER || !isSignUp || selectedTrades.isNotEmpty(),
+                            enabled = selectedRole != UserRole.CHANNEL_PARTNER || !isSignUp,
                             onClick = {
+                                if (selectedRole == UserRole.CHANNEL_PARTNER && isSignUp) {
+                                    return@Button
+                                }
                                 activity?.let { act ->
                                     authViewModel.sendOtp("+91 $phone", act)
                                 }
