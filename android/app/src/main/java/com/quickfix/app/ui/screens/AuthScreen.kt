@@ -345,7 +345,7 @@ fun AuthScreen(
                                     Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
                                 Text(
-                                    "Your mobile number is verified by Firebase. Basic partner details are submitted securely for admin review; KYC and payment setup happen later.",
+                                    "Next step: enter your 10-digit mobile number below and tap Send Firebase Mobile OTP. Your partner profile is submitted only after Firebase verifies the OTP; KYC and payment setup happen later.",
                                     fontSize = 11.sp,
                                     color = Color(0xFF92400E)
                                 )
@@ -355,7 +355,7 @@ fun AuthScreen(
                         OutlinedTextField(
                             value = phone,
                             onValueChange = { phone = it },
-                            label = { Text("Indian Mobile Number (+91)") },
+                            label = { Text("Mobile Number for Firebase OTP (+91)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth()
                         )
