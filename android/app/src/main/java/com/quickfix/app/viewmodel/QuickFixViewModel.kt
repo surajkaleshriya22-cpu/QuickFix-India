@@ -33,6 +33,15 @@ data class AdminMetrics(
 
 class QuickFixViewModel : ViewModel() {
 
+    private val dispatchApiBaseUrl = "https://quickfix-india.onrender.com"
+
+    private val _partnerOffers = MutableStateFlow<List<com.quickfix.app.data.model.PartnerBookingOffer>>(emptyList())
+    val partnerOffers: StateFlow<List<com.quickfix.app.data.model.PartnerBookingOffer>> = _partnerOffers.asStateFlow()
+
+    private val _partnerOffersLoading = MutableStateFlow(false)
+    val partnerOffersLoading: StateFlow<Boolean> = _partnerOffersLoading.asStateFlow()
+
+
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -66,6 +75,8 @@ class QuickFixViewModel : ViewModel() {
                 val ownProfile = firestore.collection("users").document(firebaseUser.uid).get().await()
                 val ownRole = ownProfile.getString("role")
                 val isTechnician = ownRole == "CHANNEL_PARTNER" || ownRole == "TECHNICIAN"
+                if (ownRole == "CHANNEL_PARTNER") refreshPartnerOffers()
+                else _partnerOffers.value = emptyList()
                 val bookingQuery = when {
                     isAdmin -> firestore.collection("bookings")
                     isTechnician -> firestore.collection("bookings").whereEqualTo("technicianUid", firebaseUser.uid)
@@ -181,6 +192,114 @@ class QuickFixViewModel : ViewModel() {
 
     init {
         auth.addAuthStateListener(authStateListener)
+    }
+
+
+    /** Loads only sanitized offer previews; customer contact/address data is never requested here. */
+    fun refreshPartnerOffers() {
+        val firebaseUser = auth.currentUser ?: run {
+            _partnerOffers.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _partnerOffersLoading.value = true
+            try {
+                val token = firebaseUser.getIdToken(false).await().token
+                    ?: throw SecurityException("Secure sign-in token unavailable.")
+                val body = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("$dispatchApiBaseUrl/api/partners/offers")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Accept", "application/json")
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(response).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() }
+                                ?: "Offer service returned HTTP $status.")
+                        }
+                        response
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                val json = org.json.JSONObject(body)
+                if (!json.optBoolean("success")) throw IllegalStateException("Offers could not be loaded.")
+                val array = json.optJSONArray("offers") ?: org.json.JSONArray()
+                _partnerOffers.value = (0 until array.length()).mapNotNull { index ->
+                    val item = array.optJSONObject(index) ?: return@mapNotNull null
+                    val bookingId = item.optString("bookingId")
+                    if (bookingId.isBlank()) return@mapNotNull null
+                    com.quickfix.app.data.model.PartnerBookingOffer(
+                        offerId = item.optString("offerId"),
+                        bookingId = bookingId,
+                        serviceTitle = item.optString("serviceTitle", "Service booking"),
+                        category = item.optString("category"),
+                        city = item.optString("city"),
+                        scheduledDate = item.optString("scheduledDate"),
+                        scheduledTimeSlot = item.optString("scheduledTimeSlot"),
+                        price = item.optInt("price")
+                    )
+                }
+                _firestoreSyncStatus.value = "Booking offers refreshed."
+            } catch (error: Exception) {
+                _firestoreSyncStatus.value = "Offers load failed: " + (error.localizedMessage ?: "network error")
+            } finally {
+                _partnerOffersLoading.value = false
+            }
+        }
+    }
+
+    /** Acceptance is performed only by the trusted API's atomic transaction. */
+    fun acceptPartnerOffer(bookingId: String) {
+        val firebaseUser = auth.currentUser ?: run {
+            _firestoreSyncStatus.value = "Please sign in again to accept a booking."
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val token = firebaseUser.getIdToken(false).await().token
+                    ?: throw SecurityException("Secure sign-in token unavailable.")
+                val response = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("$dispatchApiBaseUrl/api/bookings/${java.net.URLEncoder.encode(bookingId, "UTF-8")}/accept")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write("{}".toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() }
+                                ?: "Booking acceptance failed (HTTP $status).")
+                        }
+                        body
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                if (!org.json.JSONObject(response).optBoolean("success")) {
+                    throw IllegalStateException("Server did not confirm booking acceptance.")
+                }
+                _partnerOffers.value = _partnerOffers.value.filterNot { it.bookingId == bookingId }
+                _firestoreSyncStatus.value = "Booking accepted. Assigned booking will appear shortly."
+                refreshPartnerOffers()
+            } catch (error: Exception) {
+                _firestoreSyncStatus.value = "Booking not accepted: " + (error.localizedMessage ?: "please retry.")
+                refreshPartnerOffers()
+            }
+        }
     }
 
     fun updateAdminPaymentConfig(updated: AdminMasterPaymentConfig) {
@@ -329,7 +448,7 @@ class QuickFixViewModel : ViewModel() {
             ?: throw SecurityException("Could not obtain a secure sign-in token.")
 
         val responseBody = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val connection = java.net.URL("https://quickfix-india-1.onrender.com/api/bookings")
+            val connection = java.net.URL("$dispatchApiBaseUrl/api/bookings")
                 .openConnection() as java.net.HttpURLConnection
             try {
                 connection.requestMethod = "POST"
