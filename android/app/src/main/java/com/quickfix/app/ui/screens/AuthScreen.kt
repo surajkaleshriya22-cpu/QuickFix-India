@@ -178,7 +178,7 @@ fun AuthScreen(
                     if (authState is AuthState.OtpSent) {
                         // OTP VERIFICATION VIEW
                         Text(
-                            text = "Enter 4-Digit Firebase SMS OTP",
+                            text = "Enter Firebase SMS OTP",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = Color(0xFF1E293B)
