@@ -256,7 +256,7 @@ class QuickFixViewModel : ViewModel() {
     }
 
     /** Acceptance is performed only by the trusted API's atomic transaction. */
-    fun acceptPartnerOffer(bookingId: String) {
+    fun acceptPartnerOffer(bookingId: String, onFinished: () -> Unit = {}) {
         val firebaseUser = auth.currentUser ?: run {
             _firestoreSyncStatus.value = "Please sign in again to accept a booking."
             return
@@ -298,6 +298,8 @@ class QuickFixViewModel : ViewModel() {
             } catch (error: Exception) {
                 _firestoreSyncStatus.value = "Booking not accepted: " + (error.localizedMessage ?: "please retry.")
                 refreshPartnerOffers()
+            } finally {
+                onFinished()
             }
         }
     }
