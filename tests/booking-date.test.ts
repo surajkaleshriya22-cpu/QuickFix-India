@@ -26,3 +26,11 @@ test('compares against the India-local calendar day', () => {
   assert.equal(isValidBookingDate('2026-01-02', now), true);
   assert.equal(isValidBookingDate('2026-01-03', now), true);
 });
+
+test('produces API-compatible India-local dates for Today, Tomorrow and Day After', async () => {
+  const { getIndiaBookingDate } = await import('../src/utils/bookingDate.ts');
+  const now = new Date('2026-01-01T20:00:00Z'); // 2026-01-02 in India
+  assert.equal(getIndiaBookingDate(0, now), '2026-01-02');
+  assert.equal(getIndiaBookingDate(1, now), '2026-01-03');
+  assert.equal(getIndiaBookingDate(2, now), '2026-01-04');
+});
