@@ -297,6 +297,109 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
   }
 });
 
+// Channel Partner job feed. It reveals only eligible, unassigned requests and never
+// exposes customer contact details, notes, OTPs, payment data or the full address.
+app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure job feed is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    if (!profileSnap.exists) {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner profile is required.' });
+    }
+
+    const profile = profileSnap.data()!;
+    const walletBalance = Number(profile.walletBalance || 0);
+    const eligible = (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
+      profile.approvalStatus === 'approved' &&
+      profile.isVerified === true &&
+      profile.isOnline === true &&
+      profile.securityDepositPaid === true &&
+      Number.isFinite(walletBalance) && walletBalance >= 2000;
+    if (!eligible) {
+      return res.status(403).json({
+        success: false,
+        error: 'Job access requires admin approval, verified KYC, online status and the fully funded ₹2,000 reserve.'
+      });
+    }
+
+    const city = typeof profile.city === 'string' ? profile.city.trim() : '';
+    const trades = Array.isArray(profile.trades)
+      ? profile.trades.filter((trade): trade is string => typeof trade === 'string')
+      : [];
+    if (city.length < 2 || trades.length === 0) {
+      return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
+    }
+
+    const categories = new Set<string>();
+    for (const trade of trades) {
+      if (trade === 'ac_fridge') {
+        categories.add('ac_repair');
+        categories.add('fridge_repair');
+      } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+        categories.add(trade);
+      }
+    }
+
+    const normalizeAreaValue = (value: unknown) =>
+      typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
+    const partnerArea = profile.serviceArea && typeof profile.serviceArea === 'object'
+      ? profile.serviceArea as Record<string, unknown>
+      : null;
+    const partnerHasArea = Boolean(partnerArea &&
+      ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(partnerArea[key])));
+
+    // Query only the partner's city. Structured area matching is then applied
+    // before returning requests; legacy records without complete area data use city.
+    const snapshot = await db.collection('bookings')
+      .where('status', '==', 'requested')
+      .where('city', '==', city)
+      .limit(200)
+      .get();
+
+    const bookings = snapshot.docs
+      .filter((document) => {
+        const booking = document.data();
+        if (!categories.has(String(booking.category || ''))) return false;
+        const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
+          ? booking.serviceArea as Record<string, unknown>
+          : null;
+        const bookingHasArea = Boolean(bookingArea &&
+          ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(bookingArea[key])));
+        if (partnerHasArea && bookingHasArea) {
+          return ['state', 'district', 'tehsil'].every((key) =>
+            normalizeAreaValue(partnerArea![key]) === normalizeAreaValue(bookingArea![key])
+          );
+        }
+        // Backward compatibility for older customer/partner profiles without
+        // complete structured area details. City is already Firestore-filtered.
+        return true;
+      })
+      .map((document) => {
+        const booking = document.data();
+        return {
+          id: document.id,
+          serviceTitle: String(booking.serviceTitle || ''),
+          category: String(booking.category || ''),
+          customerName: String(booking.customerName || ''),
+          status: 'requested',
+          price: Number(booking.price || 0),
+          totalAmount: Number(booking.totalAmount || 0),
+          paymentStatus: String(booking.paymentStatus || 'pending'),
+          escrowStatus: String(booking.escrowStatus || 'not_funded')
+        };
+      });
+
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Secure Channel Partner job feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Available jobs could not be loaded securely. Please retry.' });
+  }
+});
+
 // API routes must verify Firebase identity; admin routes must additionally use requireServerAdmin.
 app.use('/api/places', authenticateFirebaseUser);
 app.use('/api/audio', authenticateFirebaseUser);
