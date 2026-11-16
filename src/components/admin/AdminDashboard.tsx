@@ -1893,10 +1893,13 @@ export const AdminDashboard: React.FC = () => {
 
                         {/* Payment Actions Row */}
                         <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
-                          <p className="text-[11px] text-amber-300">
-                            Payment actions are disabled. QuickFix has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[11px] text-amber-300">
+                              Payment actions are disabled. QuickFix has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
+                            </p>
+                          </div>
 
+                          <div className="flex items-center gap-2">
                             {/* View Invoice / Receipt Button */}
                             <button
                               onClick={() => setSelectedReceiptBooking(b)}
