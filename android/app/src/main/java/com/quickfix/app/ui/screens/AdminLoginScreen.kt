@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,9 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -159,7 +156,7 @@ fun AdminLoginScreen(
                     }
 
                     Text(
-                        "Only Firebase accounts granted the admin security claim by the project administrator can access this console.",
+                        "Sign in with the authorized Firebase email and password. Access is granted only when the account has the server-issued admin security claim.",
                         color = Color(0xFF94A3B8),
                         fontSize = 11.sp
                     )
@@ -225,7 +222,7 @@ fun AdminLoginScreen(
                 color = Color(0xFF1E293B)
             ) {
                 Text(
-                    "Admin access is verified using Firebase Authentication and a server-issued admin claim. Static passcodes and PINs are not accepted.",
+                    "Firebase email/password sign-in is checked against a server-issued admin claim. Static passcodes and PINs are not accepted.",
                     color = Color(0xFFBFDBFE),
                     fontSize = 11.sp,
                     modifier = Modifier.padding(12.dp)
@@ -292,7 +289,7 @@ fun AdminLoginScreen(
 
             // Non-Admin info
             Text(
-                "Non-admin accounts will be automatically rejected by the zero-trust gatekeeper.",
+                "Accounts without the server-issued admin claim will be rejected.",
                 color = Color(0xFF64748B),
                 fontSize = 11.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
