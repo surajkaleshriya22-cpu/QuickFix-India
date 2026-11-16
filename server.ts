@@ -380,6 +380,18 @@ app.post('/api/bookings/:bookingId/accept', authenticateFirebaseUser, async (req
       if (!partnerSnap.exists || !bookingSnap.exists || !offerSnap.exists) throw new Error('OFFER_NOT_FOUND');
       const partner = partnerSnap.data()!;
       const booking = bookingSnap.data()!;
+      const offer = offerSnap.data()!;
+      // Never trust the document ID alone: verify the offer's own binding and
+      // state inside the same transaction as the booking claim.
+      if (offer.status !== 'offered' ||
+          offer.bookingId !== bookingId ||
+          offer.partnerUid !== identity.uid ||
+          offer.serviceId !== booking.serviceId ||
+          offer.category !== booking.category ||
+          String(offer.city || '').trim().toLocaleLowerCase('en-IN') !==
+            String(booking.city || '').trim().toLocaleLowerCase('en-IN')) {
+        throw new Error('OFFER_NOT_FOUND');
+      }
       const eligible = partner.role === 'CHANNEL_PARTNER' &&
         partner.isVerified === true && partner.approvalStatus === 'approved' &&
         partner.kycStatus === 'approved' && partner.securityDepositPaid === true &&
