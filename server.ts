@@ -522,7 +522,7 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
     const otp = req.body?.otp;
-    if (typeof otp !== 'string' || !/^\\d{4}$/.test(otp)) {
+    if (typeof otp !== 'string' || !/^\d{4}$/.test(otp)) {
       return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
     }
     const db = getFirestore(firebaseAdminApp);
