@@ -526,6 +526,51 @@ app.post('/api/admin/partners/:partnerUid/verify-manual-kyc', authenticateFireba
   }
 });
 
+ 
+// Read-only Admin wallet audit. Requires a verified Firebase custom admin claim.
+app.get('/api/admin/wallet-audit', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Wallet audit is temporarily unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const accountsSnap = await db.collection('walletAccounts').limit(200).get();
+    const accounts = accountsSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        partnerUid: doc.id,
+        availableBalance: Number(data.availableBalance || 0),
+        lockedReserve: Number(data.lockedReserve || 0),
+        reserveRequired: Number(data.reserveRequired || 2000),
+        reserveStatus: String(data.reserveStatus || 'not_funded'),
+        withdrawalsEnabled: data.withdrawalsEnabled === true,
+      };
+    });
+    const ledgerSnap = await db.collection('partnerWalletLedger').limit(300).get();
+    const ledger = ledgerSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        partnerUid: String(data.partnerUid || ''),
+        type: String(data.type || 'entry'),
+        amount: Number(data.amount || 0),
+        availableBalanceAfter: Number(data.availableBalanceAfter || 0),
+        lockedReserveAfter: Number(data.lockedReserveAfter || 0),
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
+        note: String(data.note || '').slice(0, 180),
+      };
+    }).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    return res.json({
+      success: true,
+      accounts,
+      ledger,
+      readOnly: true,
+      notice: 'Audit-only view. No funds can be credited, debited, reserved, released, approved, or transferred here.',
+    });
+  } catch (error) {
+    console.error('Admin wallet audit failed:', error);
+    return res.status(500).json({ success: false, error: 'Wallet audit could not be loaded.' });
+  }
+});
+
 // Return only the minimum profile fields needed by the Admin dispatch picker.
 app.get('/api/admin/partners/verified', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
   try {
