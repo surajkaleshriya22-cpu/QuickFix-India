@@ -827,6 +827,72 @@ app.post('/api/bookings/:bookingId/start', authenticateFirebaseUser, async (req:
   }
 });
 
+// Secure job completion. This changes booking status only; it never settles payments or payouts.
+app.post('/api/bookings/:bookingId/complete', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Booking completion is temporarily unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(req.params.bookingId);
+    const partnerRef = db.collection('users').doc(uid);
+    const outcome = await db.runTransaction(async (transaction) => {
+      const [bookingSnap, partnerSnap] = await Promise.all([
+        transaction.get(bookingRef),
+        transaction.get(partnerRef),
+      ]);
+      if (!bookingSnap.exists) return 'not_found';
+      if (!partnerSnap.exists) return 'partner_missing';
+      const booking = bookingSnap.data()!;
+      const partner = partnerSnap.data()!;
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partner.role)) ||
+          partner.isVerified !== true || partner.accountStatus !== 'active' ||
+          (booking.technicianUid !== uid && booking.assignedPartnerUid !== uid)) return 'not_assigned_or_unverified';
+      if (booking.status === 'completed') return 'already_completed';
+      if (booking.status !== 'in_progress') return 'bad_status';
+      transaction.update(bookingRef, {
+        status: 'completed',
+        completedAt: FieldValue.serverTimestamp(),
+        locationSharing: {
+          customerEnabled: false,
+          partnerEnabled: false,
+          disabledAt: FieldValue.serverTimestamp(),
+        },
+      });
+      return 'completed';
+    });
+    if (outcome === 'not_found') return res.status(404).json({ success: false, error: 'Booking not found.' });
+    if (outcome === 'partner_missing' || outcome === 'not_assigned_or_unverified') {
+      return res.status(403).json({ success: false, error: 'Only the verified, active Channel Partner assigned to this booking can complete it.' });
+    }
+    if (outcome === 'bad_status') return res.status(409).json({ success: false, error: 'Only a job already started with the customer OTP can be completed.' });
+    const bookingSnap = await bookingRef.get();
+    const booking = bookingSnap.data() || {};
+    const partnerUid = booking.technicianUid || booking.assignedPartnerUid;
+    const participantUids = [booking.customerUid, partnerUid].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0
+    );
+    let locationsCleared = true;
+    try {
+      const batch = db.batch();
+      participantUids.forEach((participantUid) => batch.delete(bookingRef.collection('liveLocations').doc(participantUid)));
+      await batch.commit();
+    } catch (cleanupError) {
+      locationsCleared = false;
+      console.warn('Completed booking location cleanup will retry on next tracking access:', cleanupError);
+    }
+    return res.json({
+      success: true,
+      status: 'completed',
+      alreadyCompleted: outcome === 'already_completed',
+      locationsCleared,
+      notice: 'Booking completion does not confirm customer payment or trigger any payout.',
+    });
+  } catch (error) {
+    console.error('Secure booking completion failed:', error);
+    return res.status(500).json({ success: false, error: 'Booking could not be completed securely.' });
+  }
+});
+
 // Consent-based live location API. Coordinates are server-owned and never exposed
 // through direct client Firestore access. Both booking participants must opt in.
 const liveLocationStatuses = new Set(['assigned', 'technician_en_route', 'in_progress']);
