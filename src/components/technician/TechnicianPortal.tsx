@@ -769,7 +769,11 @@ export const TechnicianPortal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {(walletBalance) >= 2000 ? (
+              {walletLoadState !== 'ready' ? (
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  Wallet status unknown
+                </span>
+              ) : (walletBalance) >= 2000 ? (
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" />
                   <span>Reserve recorded</span>
@@ -789,7 +793,7 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Wallet</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
-                ₹{walletBalance}
+                {walletLoadState === 'ready' ? `₹${walletBalance}` : 'Unavailable'}
               </div>
             </div>
 
