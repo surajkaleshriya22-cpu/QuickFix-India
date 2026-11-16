@@ -12,6 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isValidBookingDate } from './src/utils/bookingDate';
 
 dotenv.config();
 
@@ -120,26 +121,10 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod } = req.body ?? {};
 
-    // Validate a real calendar date and reject dates earlier than today in India.
-    const dateMatch = typeof scheduledDate === 'string'
-      ? scheduledDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-      : null;
-    const validCalendarDate = !!dateMatch && (() => {
-      const year = Number(dateMatch[1]);
-      const month = Number(dateMatch[2]);
-      const day = Number(dateMatch[3]);
-      const parsed = new Date(Date.UTC(year, month - 1, day));
-      return parsed.getUTCFullYear() === year &&
-        parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
-    })();
-    const indiaDateParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(new Date());
-
     if (typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
-        !validCalendarDate || scheduledDate < indiaDateParts ||
+        !isValidBookingDate(scheduledDate) ||
         !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
         !['upi', 'cash'].includes(paymentMethod) ||
         (notes !== undefined && typeof notes !== 'string')) {
