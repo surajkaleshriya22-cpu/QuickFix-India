@@ -514,7 +514,7 @@ class QuickFixViewModel : ViewModel() {
             ?: throw SecurityException("Could not obtain a secure sign-in token.")
 
         val responseBody = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val connection = java.net.URL("https://quickfix-india-1.onrender.com/api/bookings")
+            val connection = java.net.URL("https://quickfix-india.onrender.com/api/bookings")
                 .openConnection() as java.net.HttpURLConnection
             try {
                 connection.requestMethod = "POST"
