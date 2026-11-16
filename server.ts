@@ -322,14 +322,15 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
 
 
-// Manual offline KYC: an Admin records that the original professional credential
-// was physically inspected. No document image or government ID is uploaded/stored.
+// Manual professional-credential verification: an Admin records that the original
+// professional certificate was physically inspected. This is not government identity KYC.
 app.post('/api/admin/partners/:partnerUid/verify-manual-kyc', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
   try {
     const { confirmOriginalInspected, inspectionNote } = req.body ?? {};
     if (confirmOriginalInspected !== true || typeof inspectionNote !== 'string' ||
-        inspectionNote.trim().length < 5 || inspectionNote.trim().length > 300) {
-      return res.status(400).json({ success: false, error: 'Confirm that the original professional certificate was inspected and enter a short inspection note.' });
+        inspectionNote.trim().length < 5 || inspectionNote.trim().length > 300 ||
+        /(?:\b\d{12}\b|\b\d{10}\b|\b[A-Z]{5}\d{4}[A-Z]\b)/i.test(inspectionNote)) {
+      return res.status(400).json({ success: false, error: 'Confirm that the original professional certificate was inspected and enter a short inspection note without personal ID numbers.' });
     }
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Manual verification is temporarily unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
