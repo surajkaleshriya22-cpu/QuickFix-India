@@ -25,3 +25,22 @@ export function validateBookingStart(input: BookingStartValidationInput): Bookin
 
   return { valid: true };
 }
+
+export function getCustomerVisibleStartOtp(input: {
+  bookingCustomerUid: unknown;
+  bookingPartnerUid: unknown;
+  bookingStatus: unknown;
+  privateCustomerUid: unknown;
+  privatePartnerUid: unknown;
+  storedOtp: unknown;
+  customerUid: string;
+}): string {
+  const activeAssignment = ['assigned', 'technician_en_route'].includes(String(input.bookingStatus || ''));
+  const ownershipMatches =
+    input.bookingCustomerUid === input.customerUid &&
+    input.privateCustomerUid === input.customerUid &&
+    Boolean(input.bookingPartnerUid) &&
+    input.privatePartnerUid === input.bookingPartnerUid;
+  const otp = typeof input.storedOtp === 'string' ? input.storedOtp : '';
+  return activeAssignment && ownershipMatches && /^\d{6}$/.test(otp) ? otp : '';
+}
