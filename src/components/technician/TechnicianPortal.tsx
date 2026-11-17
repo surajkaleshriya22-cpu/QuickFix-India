@@ -163,6 +163,9 @@ export const TechnicianPortal: React.FC = () => {
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
+  // Local context is retained only for legacy history/active-job display; dispatch uses the authenticated server feed.
+  const assignedJobs = bookings.filter(b => b.technicianId === currentTechnician.id);
+
   // Requested jobs come only from the authenticated server feed, never local/demo bookings.
   const currentActiveJob = bookings.find(
     b => b.technicianId === currentTechnician.id &&
