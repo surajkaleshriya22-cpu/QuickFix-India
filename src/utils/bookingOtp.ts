@@ -4,6 +4,9 @@ export interface BookingStartValidationInput {
   storedOtp: unknown;
   submittedOtp: unknown;
   partnerUid: string;
+  bookingCustomerUid?: unknown;
+  privateCustomerUid?: unknown;
+  privatePartnerUid?: unknown;
 }
 
 export type BookingStartValidationResult =
