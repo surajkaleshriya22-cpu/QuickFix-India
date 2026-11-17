@@ -7,7 +7,10 @@ const validInput = {
   bookingStatus: 'assigned',
   storedOtp: '004219',
   submittedOtp: '004219',
-  partnerUid: 'partner-123'
+  partnerUid: 'partner-123',
+  bookingCustomerUid: 'customer-1',
+  privateCustomerUid: 'customer-1',
+  privatePartnerUid: 'partner-123'
 };
 
 test('accepts the assigned partner with the matching six-digit OTP', () => {
