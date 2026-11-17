@@ -957,4 +957,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Export the API app so integration tests can exercise routes without starting Vite
+// or binding a production listener. The normal CLI entry point still starts the server.
+export { app };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  void startServer();
+}
