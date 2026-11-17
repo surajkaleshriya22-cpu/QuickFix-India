@@ -13,20 +13,22 @@ This repository now contains safer authentication and booking flows, but it is *
 - Service zones are public read-only; only admins can edit them.
 - Wallet, payout, refund and ledger collections remain closed to client access.
 - Client-side code no longer fabricates payout UTRs, marks refunds as paid, or reports a fake Firestore connection.
+- The draft PR #38 adds server-side partner booking acceptance with private OTP creation, authenticated customer OTP visibility, assigned-partner one-time OTP verification/start, and partner completion. These routes are implemented in source but still require Auth/Firestore Emulator integration testing and staging validation.
+- Private Storage rules for `partner-kyc/{partnerUid}/{fileName}` are present. They permit an owner to create/read their own bounded image/PDF files and an admin-claimed account to read/delete an individual file; directory listing, overwrites and all other paths are denied. **A KYC upload UI and admin document-review flow are not implemented yet.**
 - Debug APK and web TypeScript/Vite build have passed GitHub Actions after the code changes.
 
-## Deploy Firestore rules
+## Deploy Firestore and Storage rules
 
-The rules in `firestore.rules` are not active in Firebase until they are published.
+The rules in `firestore.rules` and `storage.rules` are not active in Firebase until they are published. The root `firebase.json` now declares both files so Firebase CLI can deploy them.
 
-From a PC with Firebase CLI installed and signed in:
+From a trusted PC with Firebase CLI installed and signed in:
 
 ```bash
 firebase login
-firebase deploy --only firestore:rules --project quickfix-india
+firebase deploy --only firestore:rules,storage --project quickfix-india
 ```
 
-The root `firebase.json` points Firebase CLI to `firestore.rules`. Check the Firebase Console after deployment and confirm the published rules match this file.
+Check Firebase Console → Firestore Database → Rules and Storage → Rules after deployment and confirm the published rules match these files. Do not upload real KYC documents until the Storage rules have been deployed and independently checked.
 
 ## Grant the first administrator claim (one-time trusted PC step)
 
@@ -62,18 +64,19 @@ The script refuses users without a verified email in the explicit admin allowlis
 ## Required before production
 
 1. Provision the real administrator account with an Admin SDK custom claim `admin: true`. Never set this claim from the browser or Android client. Keep the service-account key off GitHub and out of the APK.
-2. Implement trusted backend endpoints for technician registration review, job acceptance/assignment, OTP creation/verification, SLA enforcement, and partner status updates.
-3. Implement atomic server-side wallet ledger transactions, deposit reservation, payout approval/reversal, and idempotency protection.
-4. Connect a real payment provider. Verify webhook signatures using the raw request body and a server-only secret; deduplicate provider event IDs. Never mark payment paid/refunded or payout settled from a client.
-5. Add real-time Firestore listeners and role-scoped rules for partner bookings and admin operations as those server workflows are introduced.
-6. Add Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, and denied financial writes.
-7. Configure Firebase Phone Auth SHA-1/SHA-256 fingerprints, authorized domains, reCAPTCHA/Play Integrity and SMS settings in Firebase Console.
+2. Complete staging validation of the trusted booking endpoints in draft PR #38: verify authenticated customer feed scoping, private OTP ownership, atomic partner acceptance, one-time OTP consumption, concurrent start attempts, and completion. The current pure unit tests do not exercise HTTP authentication or Firestore transactions. The isolated test matrix is in `tests/booking-otp-integration-plan.md`.
+3. Implement the private KYC upload UI and admin document-review flow. Do not store Aadhaar/PAN numbers, UPI IDs, or uploaded KYC files in public profile documents.
+4. Implement atomic server-side wallet ledger transactions, deposit reservation, payout approval/reversal, and idempotency protection.
+5. Connect a real payment provider. Verify webhook signatures using the raw request body and a server-only secret; deduplicate provider event IDs. Never mark payment paid/refunded or payout settled from a client.
+6. Add real-time Firestore listeners and role-scoped rules for partner bookings and admin operations as those server workflows are introduced.
+7. Add and execute Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, denied financial writes, and all scenarios in `tests/booking-otp-integration-plan.md`. Do not mark these tests passed until they run against Auth and Firestore emulators.
+8. Configure Firebase Phone Auth SHA-1/SHA-256 fingerprints, authorized domains, reCAPTCHA/Play Integrity and SMS settings in Firebase Console.
 
 ## Important limits
 
 - The current Spark Firebase plan does not provide deployable Cloud Functions. A trusted backend can be hosted separately (for example, on the existing server host), but it must use a server-only service account and verify Firebase ID tokens.
 - The app does not currently send or settle real payouts/refunds. Wallet top-ups and withdrawals are deliberately disabled rather than showing fake success.
-- A successful APK build proves compilation only; it does not prove SMS delivery, Firestore rule deployment, production authentication, or payment-provider operation.
+- A successful APK build proves compilation only; it does not prove SMS delivery, Firestore/Storage rule deployment, production authentication, or payment-provider operation.
 
 ## Secrets
 
