@@ -310,7 +310,7 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
     const bookings = await Promise.all(snapshot.docs.map(async (document) => {
       const booking = document.data();
       const assigned = Boolean(booking.technicianUid) &&
-        ['assigned', 'technician_en_route', 'in_progress', 'completed'].includes(String(booking.status || ''));
+        ['assigned', 'technician_en_route'].includes(String(booking.status || ''));
       const privateSnap = assigned
         ? await db.collection('booking_private').doc(document.id).get()
         : null;
@@ -337,7 +337,9 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
 
 // The assigned partner submits the OTP; the server verifies ownership and changes
 // state atomically. The OTP itself is never returned by a partner endpoint.
-app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, async (req: Request, res: Response) => {
+const partnerOtpStartLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many OTP attempts. Please wait 15 minutes and try again.' } });
+
+app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure job start is temporarily unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
