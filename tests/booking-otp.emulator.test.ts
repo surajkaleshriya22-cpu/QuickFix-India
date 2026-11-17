@@ -130,9 +130,8 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
     assert.equal(auditAfter.size, 1, 'Exactly one start audit event must be written');
 
     const replay = await request(`/api/partners/bookings/${bookingId}/start`, partnerAToken, { otp });
-    assert.equal(replay.status, 409 === replay.status ? 409 : replay.status,
-      'OTP replay must not start an already-started booking');
-    assert.ok([400, 409].includes(replay.status));
+    assert.ok([400, 409].includes(replay.status),
+      `OTP replay must be rejected; received HTTP ${replay.status}`);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await Promise.all([
