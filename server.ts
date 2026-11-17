@@ -372,7 +372,10 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
         bookingStatus: booking.status,
         storedOtp: privateSnap.exists ? privateSnap.data()?.startOtp : '',
         submittedOtp: otp,
-        partnerUid: identity.uid
+        partnerUid: identity.uid,
+        bookingCustomerUid: booking.customerUid,
+        privateCustomerUid: privateSnap.exists ? privateSnap.data()?.customerUid : undefined,
+        privatePartnerUid: privateSnap.exists ? privateSnap.data()?.partnerUid : undefined
       });
       if (!validation.valid) throw new Error(validation.reason);
       // Consume the customer OTP in the same transaction as the status change.
