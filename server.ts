@@ -71,9 +71,14 @@ try {
     firebaseAdminApp = getApps()[0]!;
   } else {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    firebaseAdminApp = initializeApp(serviceAccountJson
-      ? { credential: cert(JSON.parse(serviceAccountJson)) }
-      : { credential: applicationDefault() });
+    const usingFirebaseEmulators = Boolean(
+      process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIRESTORE_EMULATOR_HOST
+    );
+    firebaseAdminApp = initializeApp(usingFirebaseEmulators
+      ? { projectId: process.env.GCLOUD_PROJECT || 'demo-quickfix-india' }
+      : serviceAccountJson
+        ? { credential: cert(JSON.parse(serviceAccountJson)) }
+        : { credential: applicationDefault() });
   }
   console.info('Firebase Admin SDK initialized.');
 } catch (error) {
