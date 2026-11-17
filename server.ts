@@ -313,12 +313,44 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     }
 
     const profile = profileSnap.data()!;
+
+    // Active assignments are fetched independently of online dispatch eligibility:
+    // a partner must still be able to view a job already assigned to them after going offline.
+    const [ownedByUid, ownedByLegacyId] = await Promise.all([
+      db.collection('bookings').where('technicianUid', '==', identity.uid).limit(50).get(),
+      db.collection('bookings').where('technicianId', '==', identity.uid).limit(50).get()
+    ]);
+    const assignedDocs = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    [...ownedByUid.docs, ...ownedByLegacyId.docs].forEach((document) => assignedDocs.set(document.id, document));
+    const assignedBookings = [...assignedDocs.values()]
+      .filter((document) => ['assigned', 'technician_en_route', 'in_progress'].includes(String(document.data().status || '')))
+      .map((document) => {
+        const booking = document.data();
+        return {
+          id: document.id,
+          serviceTitle: String(booking.serviceTitle || ''),
+          category: String(booking.category || ''),
+          customerName: String(booking.customerName || ''),
+          customerPhone: String(booking.customerPhone || ''),
+          customerAddress: String(booking.customerAddress || ''),
+          city: String(booking.city || ''),
+          notes: typeof booking.notes === 'string' ? booking.notes : '',
+          status: String(booking.status || 'assigned'),
+          price: Number(booking.price || 0),
+          totalAmount: Number(booking.totalAmount || 0),
+          technicianPayout: Number(booking.technicianPayout || 0),
+          adminCommission: Number(booking.adminCommission || 0),
+          commissionRate: Number(booking.commissionRate || 0),
+          paymentMethod: String(booking.paymentMethod || ''),
+          serviceDeadline: typeof booking.serviceDeadline === 'string' ? booking.serviceDeadline : '',
+          acceptedAt: typeof booking.acceptedAt === 'string' ? booking.acceptedAt : '',
+          createdAt: typeof booking.createdAt === 'string' ? booking.createdAt : ''
+        };
+      });
+
     const eligible = isPartnerEligibleForDispatch(profile);
     if (!eligible) {
-      return res.status(403).json({
-        success: false,
-        error: 'Job access requires admin approval, verified KYC, online status and the fully funded ₹2,000 reserve.'
-      });
+      return res.json({ success: true, bookings: [], assignedBookings });
     }
 
     const city = typeof profile.city === 'string' ? profile.city.trim() : '';
@@ -388,7 +420,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
         };
       });
 
-    return res.json({ success: true, bookings });
+    return res.json({ success: true, bookings, assignedBookings });
   } catch (error) {
     console.error('Secure Channel Partner job feed failed:', error);
     return res.status(500).json({ success: false, error: 'Available jobs could not be loaded securely. Please retry.' });
