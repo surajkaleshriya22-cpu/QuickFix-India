@@ -58,6 +58,7 @@ export const CustomerHome: React.FC = () => {
   const [showBookingsList, setShowBookingsList] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
   const [serverBookings, setServerBookings] = useState<Booking[]>([]);
+  const [serverBookingsLoaded, setServerBookingsLoaded] = useState(false);
   const [bookingFeedError, setBookingFeedError] = useState('');
 
   // Load the signed-in customer's own bookings and private start OTP from the server.
@@ -67,6 +68,8 @@ export const CustomerHome: React.FC = () => {
       const firebaseUser = auth.currentUser;
       if (!isFirebaseConfigured || !firebaseUser || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
         setServerBookings([]);
+        setServerBookingsLoaded(false);
+        setBookingFeedError('');
         return;
       }
       try {
@@ -97,9 +100,14 @@ export const CustomerHome: React.FC = () => {
           createdAt: String(item.createdAt || '')
         }));
         setServerBookings(mapped);
+        setServerBookingsLoaded(true);
         setBookingFeedError('');
       } catch (error) {
-        if (!cancelled) setBookingFeedError(error instanceof Error ? error.message : 'Bookings could not be loaded.');
+        if (!cancelled) {
+          setServerBookings([]);
+          setServerBookingsLoaded(true);
+          setBookingFeedError(error instanceof Error ? error.message : 'Bookings could not be loaded.');
+        }
       }
     };
     void loadCustomerBookings();
@@ -107,7 +115,7 @@ export const CustomerHome: React.FC = () => {
     return () => { cancelled = true; window.clearInterval(refreshTimer); };
   }, [currentUser?.uid, currentUser?.role, currentCity, bookings.length, activeBookingId]);
 
-  const customerBookings = serverBookings.length ? serverBookings : bookings;
+  const customerBookings = serverBookingsLoaded ? serverBookings : bookings;
   const activeBooking = customerBookings.find(b => b.id === activeBookingId) || customerBookings.find(b => b.status !== 'completed' && b.status !== 'cancelled') || customerBookings[0];
 
   const filteredServices = services.filter(service => {
