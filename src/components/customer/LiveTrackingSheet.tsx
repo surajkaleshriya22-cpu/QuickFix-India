@@ -265,21 +265,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
           </div>
         </div>
 
-        {/* Demo Fast-Forward Controller */}
-        <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
-          <div className="text-xs text-slate-700">
-            <span className="font-bold">Dispatch Simulator:</span>
-            <span className="text-slate-500 block text-[11px]">Advance status to test workflow</span>
-          </div>
-          <button
-            onClick={handleAdvanceSimulation}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5"
-          >
-            <span>Next State</span>
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
         {/* Completed State: Review & Receipt Section */}
         {booking.status === 'completed' && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
