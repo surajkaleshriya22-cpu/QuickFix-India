@@ -17,7 +17,6 @@ import {
   Wrench
 } from 'lucide-react';
 import { Booking, BookingStatus } from '../../types';
-import { useQuickFix } from '../../context/QuickFixContext';
 import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from './NearbyStoresModal';
 
@@ -28,7 +27,6 @@ interface LiveTrackingSheetProps {
 }
 
 export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, onBack, onOpenReview }) => {
-  const { } = useQuickFix();
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
   const [liveRouteInfo, setLiveRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
