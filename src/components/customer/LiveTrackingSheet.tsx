@@ -28,7 +28,7 @@ interface LiveTrackingSheetProps {
 }
 
 export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, onBack, onOpenReview }) => {
-  const { updateBookingStatus } = useQuickFix();
+  const { } = useQuickFix();
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
   const [liveRouteInfo, setLiveRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
@@ -78,18 +78,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
     setTimeout(() => setCopiedOtp(false), 2000);
   };
 
-  const handleAdvanceSimulation = () => {
-    const nextStates: Record<BookingStatus, BookingStatus> = {
-      requested: 'assigned',
-      assigned: 'technician_en_route',
-      technician_en_route: 'in_progress',
-      in_progress: 'completed',
-      completed: 'completed',
-      cancelled: 'requested'
-    };
-    const next = nextStates[booking.status];
-    updateBookingStatus(booking.id, next, booking.startOtp);
-  };
+
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
@@ -156,7 +145,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
         </div>
 
         {/* Safety Start OTP Card */}
-        {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+        {Boolean(booking.startOtp) && booking.status !== 'completed' && booking.status !== 'cancelled' && (
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between shadow-xs">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
