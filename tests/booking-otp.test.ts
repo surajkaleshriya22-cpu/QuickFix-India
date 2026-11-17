@@ -96,6 +96,13 @@ test('does not disclose OTP if the booking ownership no longer matches', () => {
   assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingCustomerUid: 'other-customer' }), '');
 });
 
+test('keeps the customer OTP visible while the assigned technician is en route', () => {
+  assert.equal(
+    getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingStatus: 'technician_en_route' }),
+    '004219'
+  );
+});
+
 test('does not disclose OTP while a booking is still unassigned or requested', () => {
   assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingStatus: 'requested' }), '');
   assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingPartnerUid: '' }), '');
