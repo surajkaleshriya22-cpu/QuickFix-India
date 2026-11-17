@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateBookingStart } from '../src/utils/bookingOtp.ts';
+import { getCustomerVisibleStartOtp, validateBookingStart } from '../src/utils/bookingOtp.ts';
 
 const validInput = {
   assignedPartnerUid: 'partner-123',
@@ -21,6 +21,13 @@ test('rejects a different partner even when the OTP matches', () => {
   assert.deepEqual(
     validateBookingStart({ ...validInput, partnerUid: 'another-partner' }),
     { valid: false, reason: 'NOT_ASSIGNED_PARTNER' }
+  );
+});
+
+test('accepts the assigned partner while the technician is en route', () => {
+  assert.deepEqual(
+    validateBookingStart({ ...validInput, bookingStatus: 'technician_en_route' }),
+    { valid: true }
   );
 });
 
@@ -63,8 +70,6 @@ test('rejects an OTP belonging to a different booking record', () => {
   );
 });
 
-import { getCustomerVisibleStartOtp } from '../src/utils/bookingOtp.ts';
-
 const visibleOtpInput = {
   bookingCustomerUid: 'customer-1',
   bookingPartnerUid: 'partner-1',
@@ -89,6 +94,11 @@ test('does not disclose OTP if the private record belongs to another partner', (
 
 test('does not disclose OTP if the booking ownership no longer matches', () => {
   assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingCustomerUid: 'other-customer' }), '');
+});
+
+test('does not disclose OTP while a booking is still unassigned or requested', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingStatus: 'requested' }), '');
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingPartnerUid: '' }), '');
 });
 
 test('does not disclose OTP after the job starts or the OTP is consumed', () => {
