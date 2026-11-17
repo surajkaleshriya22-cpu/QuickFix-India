@@ -135,3 +135,22 @@ test('rejects start when the private OTP record has no matching customer ownersh
     { valid: false, reason: 'INVALID_START_OTP' }
   );
 });
+
+test('rejects start when booking customer ownership metadata is missing', () => {
+  assert.deepEqual(
+    validateBookingStart({ ...validInput, bookingCustomerUid: undefined }),
+    { valid: false, reason: 'INVALID_START_OTP' }
+  );
+});
+
+test('rejects start when the private OTP record is missing', () => {
+  assert.deepEqual(
+    validateBookingStart({
+      ...validInput,
+      privateCustomerUid: undefined,
+      privatePartnerUid: undefined,
+      storedOtp: ''
+    }),
+    { valid: false, reason: 'INVALID_START_OTP' }
+  );
+});
