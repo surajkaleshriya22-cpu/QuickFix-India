@@ -59,3 +59,40 @@ test('rejects an OTP belonging to a different booking record', () => {
     { valid: false, reason: 'INVALID_START_OTP' }
   );
 });
+
+import { getCustomerVisibleStartOtp } from '../src/utils/bookingOtp.ts';
+
+const visibleOtpInput = {
+  bookingCustomerUid: 'customer-1',
+  bookingPartnerUid: 'partner-1',
+  bookingStatus: 'assigned',
+  privateCustomerUid: 'customer-1',
+  privatePartnerUid: 'partner-1',
+  storedOtp: '004219',
+  customerUid: 'customer-1'
+};
+
+test('shows OTP only to the customer and partner recorded in the private booking record', () => {
+  assert.equal(getCustomerVisibleStartOtp(visibleOtpInput), '004219');
+});
+
+test('does not disclose OTP if the private record belongs to another customer', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, privateCustomerUid: 'other-customer' }), '');
+});
+
+test('does not disclose OTP if the private record belongs to another partner', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, privatePartnerUid: 'other-partner' }), '');
+});
+
+test('does not disclose OTP if the booking ownership no longer matches', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingCustomerUid: 'other-customer' }), '');
+});
+
+test('does not disclose OTP after the job starts or the OTP is consumed', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, bookingStatus: 'in_progress' }), '');
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, storedOtp: '' }), '');
+});
+
+test('does not disclose malformed private OTP values', () => {
+  assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, storedOtp: '12345x' }), '');
+});
