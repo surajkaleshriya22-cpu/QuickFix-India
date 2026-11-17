@@ -96,3 +96,39 @@ test('does not disclose OTP after the job starts or the OTP is consumed', () => 
 test('does not disclose malformed private OTP values', () => {
   assert.equal(getCustomerVisibleStartOtp({ ...visibleOtpInput, storedOtp: '12345x' }), '');
 });
+
+test('rejects start when the private OTP record belongs to a different customer', () => {
+  assert.deepEqual(
+    validateBookingStart({
+      ...validInput,
+      bookingCustomerUid: 'customer-1',
+      privateCustomerUid: 'another-customer',
+      privatePartnerUid: 'partner-123'
+    }),
+    { valid: false, reason: 'INVALID_START_OTP' }
+  );
+});
+
+test('rejects start when the private OTP record belongs to a different partner', () => {
+  assert.deepEqual(
+    validateBookingStart({
+      ...validInput,
+      bookingCustomerUid: 'customer-1',
+      privateCustomerUid: 'customer-1',
+      privatePartnerUid: 'another-partner'
+    }),
+    { valid: false, reason: 'INVALID_START_OTP' }
+  );
+});
+
+test('rejects start when the private OTP record has no matching customer ownership', () => {
+  assert.deepEqual(
+    validateBookingStart({
+      ...validInput,
+      bookingCustomerUid: 'customer-1',
+      privateCustomerUid: undefined,
+      privatePartnerUid: 'partner-123'
+    }),
+    { valid: false, reason: 'INVALID_START_OTP' }
+  );
+});
