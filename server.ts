@@ -345,7 +345,7 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const bookingId = String(req.params.bookingId || '');
     const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !/^\\d{6}$/.test(otp)) {
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !/^\d{6}$/.test(otp)) {
       return res.status(400).json({ success: false, error: 'A valid booking ID and six-digit customer OTP are required.' });
     }
     const db = getFirestore(firebaseAdminApp);
@@ -359,6 +359,8 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
       if (booking.technicianUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
       if (!['assigned', 'technician_en_route'].includes(String(booking.status || ''))) throw new Error('INVALID_START_STATUS');
       if (!privateSnap.exists || privateSnap.data()?.startOtp !== otp) throw new Error('INVALID_START_OTP');
+      // Consume the customer OTP in the same transaction as the status change.
+      transaction.update(privateRef, { startOtp: '', consumedAt: FieldValue.serverTimestamp() });
       transaction.update(bookingRef, { status: 'in_progress', startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       transaction.create(auditRef, { action: 'partner_job_started', bookingId, partnerUid: identity.uid, createdAt: FieldValue.serverTimestamp() });
     });
