@@ -320,7 +320,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       db.collection('bookings').where('technicianUid', '==', identity.uid).limit(50).get(),
       db.collection('bookings').where('technicianId', '==', identity.uid).limit(50).get()
     ]);
-    const assignedDocs = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    const assignedDocs = new Map<string, any>();
     [...ownedByUid.docs, ...ownedByLegacyId.docs].forEach((document) => assignedDocs.set(document.id, document));
     const assignedBookings = [...assignedDocs.values()]
       .filter((document) => ['assigned', 'technician_en_route', 'in_progress'].includes(String(document.data().status || '')))
