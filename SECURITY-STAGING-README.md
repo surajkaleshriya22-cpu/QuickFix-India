@@ -13,6 +13,7 @@ This repository now contains safer authentication and booking flows, but it is *
 - Service zones are public read-only; only admins can edit them.
 - Wallet, payout, refund and ledger collections remain closed to client access.
 - Client-side code no longer fabricates payout UTRs, marks refunds as paid, or reports a fake Firestore connection.
+- The draft PR #38 adds server-side partner booking acceptance with private OTP creation, authenticated customer OTP visibility, assigned-partner one-time OTP verification/start, and partner completion. These routes are implemented in source but still require Auth/Firestore Emulator integration testing and staging validation.
 - Debug APK and web TypeScript/Vite build have passed GitHub Actions after the code changes.
 
 ## Deploy Firestore rules
@@ -62,11 +63,11 @@ The script refuses users without a verified email in the explicit admin allowlis
 ## Required before production
 
 1. Provision the real administrator account with an Admin SDK custom claim `admin: true`. Never set this claim from the browser or Android client. Keep the service-account key off GitHub and out of the APK.
-2. Implement trusted backend endpoints for technician registration review, job acceptance/assignment, OTP creation/verification, SLA enforcement, and partner status updates.
+2. Complete staging validation of the trusted booking endpoints in draft PR #38: verify authenticated customer feed scoping, private OTP ownership, atomic partner acceptance, one-time OTP consumption, concurrent start attempts, and completion. The current pure unit tests do not exercise HTTP authentication or Firestore transactions. The isolated test matrix is in `tests/booking-otp-integration-plan.md`.
 3. Implement atomic server-side wallet ledger transactions, deposit reservation, payout approval/reversal, and idempotency protection.
 4. Connect a real payment provider. Verify webhook signatures using the raw request body and a server-only secret; deduplicate provider event IDs. Never mark payment paid/refunded or payout settled from a client.
 5. Add real-time Firestore listeners and role-scoped rules for partner bookings and admin operations as those server workflows are introduced.
-6. Add Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, and denied financial writes.
+6. Add and execute Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, denied financial writes, and all scenarios in `tests/booking-otp-integration-plan.md`. Do not mark these tests passed until they run against Auth and Firestore emulators.
 7. Configure Firebase Phone Auth SHA-1/SHA-256 fingerprints, authorized domains, reCAPTCHA/Play Integrity and SMS settings in Firebase Console.
 
 ## Important limits
