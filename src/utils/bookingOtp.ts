@@ -22,6 +22,15 @@ export function validateBookingStart(input: BookingStartValidationInput): Bookin
     return { valid: false, reason: 'INVALID_START_STATUS' };
   }
 
+  if (
+    input.bookingCustomerUid !== undefined &&
+    (!input.bookingCustomerUid ||
+      input.privateCustomerUid !== input.bookingCustomerUid ||
+      input.privatePartnerUid !== input.partnerUid)
+  ) {
+    return { valid: false, reason: 'INVALID_START_OTP' };
+  }
+
   if (!/^\d{6}$/.test(String(input.submittedOtp || '')) || input.storedOtp !== input.submittedOtp) {
     return { valid: false, reason: 'INVALID_START_OTP' };
   }
