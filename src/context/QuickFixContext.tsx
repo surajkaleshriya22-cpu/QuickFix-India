@@ -115,7 +115,7 @@ interface QuickFixContextType {
     notes?: string;
     paymentMethod: PaymentMethod;
   }) => Booking;
-  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
+  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; city: string; notes?: string; paymentMethod: PaymentMethod }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
   addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
 
@@ -791,6 +791,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     scheduledDate,
     scheduledTimeSlot,
     address,
+    city,
     notes,
     paymentMethod
   }: {
@@ -798,6 +799,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     scheduledDate: string;
     scheduledTimeSlot: string;
     address: string;
+    city: string;
     notes?: string;
     paymentMethod: PaymentMethod;
   }): Promise<{ success: boolean; bookingId?: string; message?: string }> => {
@@ -824,6 +826,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           scheduledDate,
           scheduledTimeSlot,
           address: address.trim(),
+          city,
           notes: (notes || '').trim().slice(0, 500),
           paymentMethod
         })
