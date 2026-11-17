@@ -15,7 +15,7 @@ import { randomInt } from 'crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
-import { validateBookingStart } from './src/utils/bookingOtp';
+import { getCustomerVisibleStartOtp, validateBookingStart } from './src/utils/bookingOtp';
 
 dotenv.config();
 
@@ -325,7 +325,17 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         customerAddress: String(booking.customerAddress || ''),
         technicianName: String(booking.technicianName || ''),
         serviceDeadline: String(booking.serviceDeadline || ''),
-        startOtp: privateSnap?.exists ? String(privateSnap.data()?.startOtp || '') : '',
+        startOtp: privateSnap?.exists
+          ? getCustomerVisibleStartOtp({
+            bookingCustomerUid: booking.customerUid,
+            bookingPartnerUid: booking.technicianUid,
+            bookingStatus: booking.status,
+            privateCustomerUid: privateSnap.data()?.customerUid,
+            privatePartnerUid: privateSnap.data()?.partnerUid,
+            storedOtp: privateSnap.data()?.startOtp,
+            customerUid: identity.uid
+          })
+          : '',
         createdAt: booking.createdAt?.toDate ? booking.createdAt.toDate().toISOString() : ''
       };
     }));
