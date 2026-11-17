@@ -27,8 +27,11 @@ jobs:
       - name: TypeScript check
         run: npm run lint
 
-      - name: Booking date regression tests
+      - name: Booking date and helper regression tests
         run: npm test
+
+      - name: Booking OTP Firebase Emulator integration tests
+        run: npx --yes firebase-tools@14 emulators:exec --project demo-quickfix-india --only auth,firestore "npx tsx --test tests/booking-otp.emulator.test.ts"
 
       - name: Build
         run: npm run build
