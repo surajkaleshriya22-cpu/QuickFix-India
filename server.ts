@@ -5,7 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
+import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS, INDIAN_CITIES } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -213,7 +213,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea } = req.body ?? {};
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, city } = req.body ?? {};
     const validServiceArea = serviceArea === undefined || (
       serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
@@ -222,7 +222,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
 
-    if (!validServiceArea || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validServiceArea || typeof city !== 'string' || !INDIAN_CITIES.includes(city) || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -268,7 +268,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       notes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '',
       scheduledDate,
       scheduledTimeSlot,
-      city: String(profile.city || '').slice(0, 100),
+      city,
       pincode: String(profile.pincode || '').slice(0, 12),
       ...(validServiceArea && serviceArea ? {
         serviceArea: {
