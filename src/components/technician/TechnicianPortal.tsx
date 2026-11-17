@@ -136,6 +136,8 @@ export const TechnicianPortal: React.FC = () => {
   const [jobsError, setJobsError] = useState('');
   const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
   const [acceptedJobMessage, setAcceptedJobMessage] = useState('');
+  const [jobActionLoading, setJobActionLoading] = useState(false);
+  const [jobActionError, setJobActionError] = useState('');
   const [payoutSuccess, setPayoutSuccess] = useState('');
   const [payoutError, setPayoutError] = useState('');
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
@@ -234,22 +236,33 @@ export const TechnicianPortal: React.FC = () => {
     }
   };
 
-  const handleStartJobWithOtp = (bookingId: string) => {
-    if (!otpInput || otpInput.trim().length !== 4) {
-      setOtpError('Please enter the 4-digit OTP provided by customer');
-      return;
-    }
-    const result = updateBookingStatus(bookingId, 'in_progress', otpInput);
-    if (!result.success) {
-      setOtpError(result.message || 'Invalid OTP');
-    } else {
-      setOtpError('');
-      setOtpInput('');
-    }
+  const handleStartJobWithOtp = async (bookingId: string) => {
+    if (!/^\\d{6}$/.test(otpInput.trim())) { setOtpError('Customer se mila hua 6-digit OTP enter karein.'); return; }
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || currentUser?.uid !== firebaseUser.uid) { setOtpError('Please sign in again with your verified Channel Partner account.'); return; }
+    setJobActionLoading(true); setOtpError(''); setJobActionError('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/partners/bookings/' + encodeURIComponent(bookingId) + '/start', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ otp: otpInput.trim() }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Job could not be started.');
+      setOtpInput(''); await loadAvailableJobs();
+    } catch (error) { setOtpError(error instanceof Error ? error.message : 'OTP verification failed. Please retry.'); }
+    finally { setJobActionLoading(false); }
   };
 
-  const handleCompleteJob = (bookingId: string) => {
-    updateBookingStatus(bookingId, 'completed');
+  const handleCompleteJob = async (bookingId: string) => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || currentUser?.uid !== firebaseUser.uid) { setJobActionError('Please sign in again with your verified Channel Partner account.'); return; }
+    setJobActionLoading(true); setJobActionError('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/partners/bookings/' + encodeURIComponent(bookingId) + '/complete', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: '{}' });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Job could not be completed.');
+      setAcceptedJobMessage('Service marked complete. Payment settlement is still pending and is not confirmed.'); await loadAvailableJobs();
+    } catch (error) { setJobActionError(error instanceof Error ? error.message : 'Job completion failed. Please retry.'); }
+    finally { setJobActionLoading(false); }
   };
 
   const withdrawableAmount = currentTechnician.withdrawableBalance ?? Math.max(0, (currentTechnician.walletBalance ?? 0) - 2000);
@@ -1266,9 +1279,20 @@ export const TechnicianPortal: React.FC = () => {
               />
             )}
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              <strong>Secure job updates:</strong> This assignment is now loaded from the server. Start-work OTP verification and completion/payout actions are not enabled here yet; please do not treat local status changes as confirmed.
-            </div>
+            {currentActiveJob.status === 'assigned' || currentActiveJob.status === 'technician_en_route' ? (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-2">
+                <label className="block text-xs font-bold text-blue-900">Customer Start OTP (6 digits)</label>
+                <div className="flex gap-2">
+                  <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="Enter customer OTP" className="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-mono tracking-widest" />
+                  <button type="button" disabled={jobActionLoading} onClick={() => void handleStartJobWithOtp(currentActiveJob.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{jobActionLoading ? 'Checking…' : 'Verify & Start'}</button>
+                </div>
+                {otpError && <p className="text-xs text-rose-700">{otpError}</p>}
+              </div>
+            ) : currentActiveJob.status === 'in_progress' ? (
+              <button type="button" disabled={jobActionLoading} onClick={() => void handleCompleteJob(currentActiveJob.id)} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{jobActionLoading ? 'Saving…' : 'Mark Service Complete'}</button>
+            ) : null}
+            {jobActionError && <p className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{jobActionError}</p>}
+            <p className="text-[10px] text-slate-500">Job status is verified by QuickFix server. Payment or payout is not marked settled by this action.</p>
 
           </div>
         ) : (
