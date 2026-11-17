@@ -36,6 +36,7 @@ import { INDIAN_CITIES } from '../../data/mockData';
 import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
+import { auth, isFirebaseConfigured } from '../../lib/firebase';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -126,6 +127,14 @@ export const TechnicianPortal: React.FC = () => {
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
   const [acceptError, setAcceptError] = useState('');
+  const [availableJobs, setAvailableJobs] = useState<Array<{
+    id: string; serviceTitle: string; category: string; customerName: string;
+    status: 'requested'; price: number; totalAmount: number;
+  }>>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsError, setJobsError] = useState('');
+  const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
+  const [acceptedJobMessage, setAcceptedJobMessage] = useState('');
   const [payoutSuccess, setPayoutSuccess] = useState('');
   const [payoutError, setPayoutError] = useState('');
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
@@ -154,24 +163,72 @@ export const TechnicianPortal: React.FC = () => {
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
-  // Find active job assigned to this technician
-  const assignedJobs = bookings.filter(
-    b => b.technicianId === currentTechnician.id || b.status === 'requested'
-  );
-  const currentActiveJob = assignedJobs.find(
-    b => b.status === 'assigned' || b.status === 'technician_en_route' || b.status === 'in_progress'
+  // Requested jobs come only from the authenticated server feed, never local/demo bookings.
+  const currentActiveJob = bookings.find(
+    b => b.technicianId === currentTechnician.id &&
+      (b.status === 'assigned' || b.status === 'technician_en_route' || b.status === 'in_progress')
   );
 
-  const handleAcceptJob = (bookingId: string) => {
-    setAcceptError('');
-    const techBal = currentTechnician.walletBalance ?? 0;
-    if (techBal < 1000) {
-      setAcceptError(`Service Acceptance Blocked: Minimum ₹1,000 partner wallet balance is required to accept service notifications. Current balance: ₹${techBal}. Please top up your wallet.`);
+  const loadAvailableJobs = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn) {
+      setAvailableJobs([]);
       return;
     }
-    const result = updateBookingStatus(bookingId, 'technician_en_route');
-    if (!result.success) {
-      setAcceptError(result.message || 'Could not accept booking.');
+    setJobsLoading(true);
+    setJobsError('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/partners/bookings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success || !Array.isArray(result.bookings)) {
+        throw new Error(result.error || 'Available jobs could not be loaded.');
+      }
+      setAvailableJobs(result.bookings);
+    } catch (error) {
+      setJobsError(error instanceof Error ? error.message : 'Available jobs could not be loaded. Please retry.');
+      setAvailableJobs([]);
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAvailableJobs();
+  }, [currentUser?.uid, isTechnicianLoggedIn]);
+
+  const handleAcceptJob = async (bookingId: string) => {
+    setAcceptError('');
+    setAcceptedJobMessage('');
+    const firebaseUser = auth.currentUser;
+    if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn || currentUser?.uid !== firebaseUser.uid) {
+      setAcceptError('Please sign in again with your verified Channel Partner account.');
+      return;
+    }
+    setAcceptingBookingId(bookingId);
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch(`/api/partners/bookings/${encodeURIComponent(bookingId)}/accept`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: '{}'
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Could not accept this job.');
+      }
+      setAvailableJobs(previous => previous.filter(job => job.id !== bookingId));
+      setAcceptedJobMessage(result.message || 'Job assigned successfully. The 1-hour SLA has started.');
+      await loadAvailableJobs();
+    } catch (error) {
+      setAcceptError(error instanceof Error ? error.message : 'Could not accept this job. Please retry.');
+    } finally {
+      setAcceptingBookingId(null);
     }
   };
 
@@ -1094,6 +1151,42 @@ export const TechnicianPortal: React.FC = () => {
               <span className="font-bold">KYC Pending Admin Review:</span> Your trade documentation ({currentTechnician.kycDocType}) is queued for verification by the QuickFix operations team.
             </div>
           </div>
+        )}
+
+        {/* Server-verified available jobs */}
+        {isTechnicianLoggedIn && (
+          <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900">Available Service Requests</h2>
+              <button type="button" onClick={() => void loadAvailableJobs()} disabled={jobsLoading}
+                className="text-xs font-semibold text-blue-700 disabled:text-slate-400">
+                {jobsLoading ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
+            {jobsError && <p className="text-xs text-rose-700">{jobsError}</p>}
+            {acceptedJobMessage && <p className="text-xs text-emerald-700 font-semibold">{acceptedJobMessage}</p>}
+            {acceptError && <p className="text-xs text-rose-700">{acceptError}</p>}
+            {!jobsLoading && availableJobs.length === 0 && !jobsError && (
+              <p className="text-xs text-slate-500">No matching service requests are available right now.</p>
+            )}
+            {availableJobs.map(job => (
+              <div key={job.id} className="rounded-xl border border-slate-200 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">{job.serviceTitle || 'Service request'}</p>
+                    <p className="text-[11px] text-slate-500">Request #{job.id} · {job.category}</p>
+                    <p className="text-[11px] text-slate-600 mt-1">Customer: {job.customerName || 'QuickFix customer'}</p>
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">₹{job.totalAmount || job.price || 0}</span>
+                </div>
+                <button type="button" disabled={acceptingBookingId !== null || jobsLoading}
+                  onClick={() => void handleAcceptJob(job.id)}
+                  className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 text-xs disabled:bg-slate-300">
+                  {acceptingBookingId === job.id ? 'Accepting securely…' : 'Accept Service · Start 1-Hour SLA'}
+                </button>
+              </div>
+            ))}
+          </section>
         )}
 
         {/* Current Active Job Section */}
