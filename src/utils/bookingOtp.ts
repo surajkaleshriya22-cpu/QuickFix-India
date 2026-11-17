@@ -4,7 +4,7 @@ export interface BookingStartValidationInput {
   storedOtp: unknown;
   submittedOtp: unknown;
   partnerUid: string;
-  bookingCustomerUid?: unknown;
+  bookingCustomerUid: unknown;
   privateCustomerUid?: unknown;
   privatePartnerUid?: unknown;
 }
@@ -23,10 +23,9 @@ export function validateBookingStart(input: BookingStartValidationInput): Bookin
   }
 
   if (
-    input.bookingCustomerUid !== undefined &&
-    (!input.bookingCustomerUid ||
-      input.privateCustomerUid !== input.bookingCustomerUid ||
-      input.privatePartnerUid !== input.partnerUid)
+    !input.bookingCustomerUid ||
+    input.privateCustomerUid !== input.bookingCustomerUid ||
+    input.privatePartnerUid !== input.partnerUid
   ) {
     return { valid: false, reason: 'INVALID_START_OTP' };
   }
