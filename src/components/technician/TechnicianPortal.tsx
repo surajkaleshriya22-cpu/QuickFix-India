@@ -131,6 +131,7 @@ export const TechnicianPortal: React.FC = () => {
     id: string; serviceTitle: string; category: string; customerName: string;
     status: 'requested'; price: number; totalAmount: number;
   }>>([]);
+  const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState('');
   const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
@@ -163,19 +164,15 @@ export const TechnicianPortal: React.FC = () => {
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
-  // Local context is retained only for legacy history/active-job display; dispatch uses the authenticated server feed.
-  const assignedJobs = bookings.filter(b => b.technicianId === currentTechnician.id);
-
-  // Requested jobs come only from the authenticated server feed, never local/demo bookings.
-  const currentActiveJob = bookings.find(
-    b => b.technicianId === currentTechnician.id &&
-      (b.status === 'assigned' || b.status === 'technician_en_route' || b.status === 'in_progress')
-  );
+  // Active dispatch is sourced only from the authenticated, ownership-filtered server feed.
+  const assignedJobs = assignedBookings;
+  const currentActiveJob = assignedBookings[0];
 
   const loadAvailableJobs = async () => {
     const firebaseUser = auth.currentUser;
     if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn) {
       setAvailableJobs([]);
+      setAssignedBookings([]);
       return;
     }
     setJobsLoading(true);
@@ -186,13 +183,15 @@ export const TechnicianPortal: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const result = await response.json();
-      if (!response.ok || !result.success || !Array.isArray(result.bookings)) {
+      if (!response.ok || !result.success || !Array.isArray(result.bookings) || !Array.isArray(result.assignedBookings)) {
         throw new Error(result.error || 'Available jobs could not be loaded.');
       }
       setAvailableJobs(result.bookings);
+      setAssignedBookings(result.assignedBookings as Booking[]);
     } catch (error) {
       setJobsError(error instanceof Error ? error.message : 'Available jobs could not be loaded. Please retry.');
       setAvailableJobs([]);
+      setAssignedBookings([]);
     } finally {
       setJobsLoading(false);
     }
@@ -1267,133 +1266,10 @@ export const TechnicianPortal: React.FC = () => {
               />
             )}
 
-            {/* Non-Refundable Commission Auto-Debit Disclosure */}
-            {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-xs text-blue-900 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-blue-950">
-                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Platform Commission Auto-Debited (Non-Refundable)</span>
-                </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
-                  Platform fee of <strong>₹{currentActiveJob.adminCommission}</strong> ({currentTechnician.customCommissionPct !== undefined ? `${currentTechnician.customCommissionPct}% custom rate` : `${currentActiveJob.commissionRate}% standard rate`}) was immediately auto-debited from your wallet upon acceptance and credited to Admin HQ. Service must be delivered within the 1-hour SLA window.
-                </p>
-              </div>
-            )}
-
-            {/* Step Actions for the Technician */}
-            <div className="pt-2 border-t border-slate-100 space-y-2">
-              {currentActiveJob.status === 'assigned' && (
-                <div className="space-y-2">
-                  {/* Minimum ₹1,000 Wallet Gate Warning */}
-                  {(currentTechnician.walletBalance ?? 0) < 1000 ? (
-                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-950 space-y-2">
-                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Cannot Accept Service Notification (Balance &lt; ₹1,000)</span>
-                      </div>
-                      <p className="text-[11px] text-amber-800 leading-relaxed">
-                        A minimum partner wallet balance of <strong>₹1,000</strong> is required to accept booking notifications. Your current balance is <strong>₹{currentTechnician.walletBalance ?? 0}</strong>. Please top up your wallet to activate acceptance.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTopupAmount(1000);
-                          setShowTopupModal(true);
-                        }}
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 shadow-2xs"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5" />
-                        <span>Recharge Wallet (+₹1,000)</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[11px] text-slate-600 space-y-1">
-                      <div className="flex items-center gap-1 text-slate-800 font-bold">
-                        <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>1-Hour Service Delivery SLA & Immediate Commission Rule:</span>
-                      </div>
-                      <p className="text-slate-600 leading-tight">
-                        Upon accepting, platform commission (<strong>₹{currentActiveJob.adminCommission}</strong>) will be auto-debited immediately from your wallet to Admin HQ and is non-refundable whether you visit or not. You must deliver service within 1 hour.
-                      </p>
-                    </div>
-                  )}
-
-                  <button
-                    disabled={(currentTechnician.walletBalance ?? 0) < 1000}
-                    onClick={() => handleAcceptJob(currentActiveJob.id)}
-                    className={`w-full font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
-                      (currentTechnician.walletBalance ?? 0) < 1000
-                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-98'
-                    }`}
-                  >
-                    <Navigation className="w-4 h-4" />
-                    <span>Accept Service Notification (1-Hour SLA)</span>
-                  </button>
-
-                  {acceptError && (
-                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-xs text-rose-800 font-medium flex items-start gap-1.5">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{acceptError}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {currentActiveJob.status === 'technician_en_route' && (
-                <div className="space-y-2">
-                  <div className="text-xs text-slate-600 font-medium">
-                    Ask customer for the 4-digit start OTP to begin repair:
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={otpInput}
-                      onChange={e => setOtpInput(e.target.value)}
-                      placeholder="Enter 4-digit OTP"
-                      className="flex-1 px-3 py-2 text-xs font-mono font-bold tracking-widest border border-slate-300 rounded-xl text-center focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={() => handleStartJobWithOtp(currentActiveJob.id)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Verify & Start</span>
-                    </button>
-                  </div>
-                  {otpError && (
-                    <div className="text-[11px] text-red-600 font-semibold">{otpError}</div>
-                  )}
-                </div>
-              )}
-
-              {currentActiveJob.status === 'in_progress' && (
-                <button
-                  onClick={() => handleCompleteJob(currentActiveJob.id)}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Work Done · Finish Job & Collect Payout</span>
-                </button>
-              )}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              <strong>Secure job updates:</strong> This assignment is now loaded from the server. Start-work OTP verification and completion/payout actions are not enabled here yet; please do not treat local status changes as confirmed.
             </div>
 
-            {/* Commission Transparency Split */}
-            <div className="bg-slate-50 p-2.5 rounded-xl text-[11px] text-slate-600 space-y-1">
-              <div className="flex justify-between">
-                <span>Customer Total: ₹{currentActiveJob.totalAmount}</span>
-                <span>
-                  Platform Fee: ₹{currentActiveJob.adminCommission} {currentTechnician.customCommissionPct !== undefined ? `(${currentTechnician.customCommissionPct}% Custom)` : `(${currentActiveJob.commissionRate}%)`}
-                </span>
-                <span className="font-bold text-emerald-700">Net You Get: ₹{currentActiveJob.technicianPayout}</span>
-              </div>
-              <div className="text-[10px] text-slate-500 italic">
-                {currentActiveJob.paymentMethod === 'cash'
-                  ? '💵 Cash Booking: Customer hands full cash directly to you. Platform commission was debited from your wallet upon acceptance.'
-                  : '💳 Online Booking: Customer paid online to Admin Master Account. Net payout credited upon work completion.'}
-              </div>
-            </div>
           </div>
         ) : (
           <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-2 shadow-xs">
