@@ -103,8 +103,9 @@ export const CustomerHome: React.FC = () => {
       }
     };
     void loadCustomerBookings();
-    return () => { cancelled = true; };
-  }, [currentUser?.uid, currentUser?.role, currentCity, bookings.length]);
+    const refreshTimer = window.setInterval(() => { void loadCustomerBookings(); }, 20000);
+    return () => { cancelled = true; window.clearInterval(refreshTimer); };
+  }, [currentUser?.uid, currentUser?.role, currentCity, bookings.length, activeBookingId]);
 
   const customerBookings = serverBookings.length ? serverBookings : bookings;
   const activeBooking = customerBookings.find(b => b.id === activeBookingId) || customerBookings.find(b => b.status !== 'completed' && b.status !== 'cancelled') || customerBookings[0];
