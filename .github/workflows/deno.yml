@@ -2,7 +2,7 @@ name: QuickFix India Web CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "test/booking-otp-emulator-harness"]
   pull_request:
     branches: ["main"]
 
