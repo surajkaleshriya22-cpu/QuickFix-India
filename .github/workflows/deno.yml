@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main", "test/booking-otp-emulator-harness"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "secure-booking-otp-workflow"]
 
 permissions:
   contents: read
