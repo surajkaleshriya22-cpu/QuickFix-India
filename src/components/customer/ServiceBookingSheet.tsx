@@ -128,6 +128,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         scheduledDate: selectedDate,
         scheduledTimeSlot: selectedSlot,
         address: selectedAddress,
+        city: currentCity,
         notes,
         paymentMethod
       });
