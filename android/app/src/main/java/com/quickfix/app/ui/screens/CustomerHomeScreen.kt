@@ -165,13 +165,13 @@ fun CustomerHomeScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "Instant Electricians & Plumbers at Your Doorstep",
+                            "Home & Local Services at Your Doorstep",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Text(
-                            "Arrives in 45 mins • 30-day warranty • 100% Escrow Protected",
+                            "Electricians • Plumbers • AC • Mechanics • Drivers & more",
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
@@ -233,17 +233,24 @@ fun CustomerHomeScreen(
                 }
             }
 
-            // Category Chips
+            // Marketplace categories available in the Android customer app
             item {
-                Row(
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(
+                    items(listOf(
                         "all" to "All Services",
                         "electrician" to "⚡ Electrician",
-                        "plumber" to "🔧 Plumber"
-                    ).forEach { (id, label) ->
+                        "plumber" to "🔧 Plumber",
+                        "ac_fridge" to "❄️ AC / Fridge",
+                        "welder" to "🧰 Welder",
+                        "mechanic" to "🚗 Mechanic",
+                        "driver" to "🚘 Driver",
+                        "tourist_guide" to "🧭 Tourist Guide",
+                        "contractor" to "🏗️ Contractor",
+                        "bike_rider" to "🏍️ Bike Rider"
+                    )) { (id, label) ->
                         FilterChip(
                             selected = selectedCategory == id,
                             onClick = { selectedCategory = id },
