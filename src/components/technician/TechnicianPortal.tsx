@@ -237,7 +237,7 @@ export const TechnicianPortal: React.FC = () => {
   };
 
   const handleStartJobWithOtp = async (bookingId: string) => {
-    if (!/^\\d{6}$/.test(otpInput.trim())) { setOtpError('Customer se mila hua 6-digit OTP enter karein.'); return; }
+    if (!/^\d{6}$/.test(otpInput.trim())) { setOtpError('Customer se mila hua 6-digit OTP enter karein.'); return; }
     const firebaseUser = auth.currentUser;
     if (!firebaseUser || currentUser?.uid !== firebaseUser.uid) { setOtpError('Please sign in again with your verified Channel Partner account.'); return; }
     setJobActionLoading(true); setOtpError(''); setJobActionError('');
@@ -1283,7 +1283,7 @@ export const TechnicianPortal: React.FC = () => {
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-2">
                 <label className="block text-xs font-bold text-blue-900">Customer Start OTP (6 digits)</label>
                 <div className="flex gap-2">
-                  <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="Enter customer OTP" className="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-mono tracking-widest" />
+                  <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter customer OTP" className="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-mono tracking-widest" />
                   <button type="button" disabled={jobActionLoading} onClick={() => void handleStartJobWithOtp(currentActiveJob.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{jobActionLoading ? 'Checking…' : 'Verify & Start'}</button>
                 </div>
                 {otpError && <p className="text-xs text-rose-700">{otpError}</p>}
