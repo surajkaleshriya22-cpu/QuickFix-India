@@ -15,6 +15,7 @@ import { randomInt } from 'crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { validateBookingStart } from './src/utils/bookingOtp';
 
 dotenv.config();
 
@@ -356,9 +357,14 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
       const [bookingSnap, privateSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(privateRef)]);
       if (!bookingSnap.exists) throw new Error('BOOKING_NOT_FOUND');
       const booking = bookingSnap.data()!;
-      if (booking.technicianUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
-      if (!['assigned', 'technician_en_route'].includes(String(booking.status || ''))) throw new Error('INVALID_START_STATUS');
-      if (!privateSnap.exists || privateSnap.data()?.startOtp !== otp) throw new Error('INVALID_START_OTP');
+      const validation = validateBookingStart({
+        assignedPartnerUid: booking.technicianUid,
+        bookingStatus: booking.status,
+        storedOtp: privateSnap.exists ? privateSnap.data()?.startOtp : '',
+        submittedOtp: otp,
+        partnerUid: identity.uid
+      });
+      if (!validation.valid) throw new Error(validation.reason);
       // Consume the customer OTP in the same transaction as the status change.
       transaction.update(privateRef, { startOtp: '', consumedAt: FieldValue.serverTimestamp() });
       transaction.update(bookingRef, { status: 'in_progress', startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
