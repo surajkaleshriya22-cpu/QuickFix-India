@@ -765,17 +765,7 @@ export const TechnicianPortal: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1.5">
-              {false ? (
-                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>₹2,000 Reserve Maintained</span>
-                </span>
-              ) : (
-                <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-rose-400" />
-                  <span>Reserve Deficit</span>
-                </span>
-              )}
+              <span className="bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Wallet setup pending</span>
             </div>
           </div>
 
@@ -785,7 +775,7 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Live balance</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
-                ₹{currentTechnician.walletBalance ?? 0}
+                Not available
               </div>
             </div>
 
@@ -793,12 +783,12 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-amber-300 uppercase font-semibold flex items-center gap-1">
                 <Lock className="w-2.5 h-2.5 text-amber-400" />
-                <span>Base Reserve</span>
+                <span>Reserve policy</span>
               </span>
               <div className="text-lg font-extrabold font-mono text-amber-300 mt-0.5">
                 ₹2,000
               </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Locked (Non-withdrawable)</span>
+              <span className="text-[9px] text-slate-500 block leading-tight">Required reserve; not collected</span>
             </div>
 
             {/* Net Withdrawable Earnings */}
@@ -848,7 +838,7 @@ export const TechnicianPortal: React.FC = () => {
               }`}
             >
               <IndianRupee className="w-3.5 h-3.5" />
-              <span>Withdraw ₹{withdrawableAmount}</span>
+              <span>Withdrawals unavailable</span>
             </button>
           </div>
 
