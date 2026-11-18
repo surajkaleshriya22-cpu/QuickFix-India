@@ -13,7 +13,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
-import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 
 dotenv.config();
 
@@ -361,17 +361,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
     }
 
-    const categories = new Set<string>();
-    for (const trade of trades) {
-      if (trade === 'technician' || trade === 'ac_fridge') {
-        categories.add('ac_repair');
-        categories.add('fridge_repair');
-      } else if (trade === 'bike_rider') {
-        categories.add('bike_taxi');
-      } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'].includes(trade)) {
-        categories.add(trade);
-      }
-    }
+    const categories = getPartnerServiceCategories(trades);
 
     const normalizeAreaValue = (value: unknown) =>
       typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
@@ -466,17 +456,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      const categories = new Set<string>();
-      for (const trade of trades) {
-        if (trade === 'technician' || trade === 'ac_fridge') {
-          categories.add('ac_repair');
-          categories.add('fridge_repair');
-        } else if (trade === 'bike_rider') {
-          categories.add('bike_taxi');
-        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'].includes(trade)) {
-          categories.add(trade);
-        }
-      }
+      const categories = getPartnerServiceCategories(trades);
       if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
