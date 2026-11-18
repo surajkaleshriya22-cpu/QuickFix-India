@@ -531,60 +531,13 @@ export const TechnicianPortal: React.FC = () => {
           </button>
 
           <button
-            onClick={() => {
-              if (currentTechnician.isOnline) {
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 4500);
-                }
-              } else {
-                if (!currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit' || currentTechnician.approvalStatus === 'rejected') {
-                  setQualificationAlertMsg('Awaiting Trade Qualification Clearance: Your certificate is under audit by QuickFix Admin HQ. Only approved technicians can go online.');
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                if ((currentTechnician.walletBalance ?? 0) < 2000) {
-                  const deficit = 2000 - (currentTechnician.walletBalance ?? 0);
-                  setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${currentTechnician.walletBalance ?? 0}. Please top-up ₹${deficit}.`);
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (!res.success) {
-                  if (res.requiresGeofence) {
-                    setShowGeofenceModal(true);
-                  } else {
-                    setQualificationAlertMsg(res.message || 'Geo-fence verification required to go online.');
-                    setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  }
-                } else if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 5000);
-                }
-              }
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
-              currentTechnician.isOnline
-                ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
-                : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
-                ? 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 cursor-pointer'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 cursor-pointer'
-                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-            }`}
-            title={!currentTechnician.isVerified ? 'Qualification approval required' : (currentTechnician.walletBalance ?? 0) < 2000 ? 'Minimum ₹2,000 security reserve required' : undefined}
+            type="button"
+            disabled
+            title="Partner dispatch is locked until a verified server-side ₹2,000 reserve and live wallet ledger are active."
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 cursor-not-allowed shadow-xs"
           >
             <Power className="w-3.5 h-3.5" />
-            <span>
-              {currentTechnician.isOnline
-                ? 'ONLINE'
-                : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
-                ? 'AUDIT PENDING'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'RESERVE DEFICIT'
-                : 'OFFLINE'}
-            </span>
+            <span>DISPATCH NOT ACTIVE</span>
           </button>
         </div>
       </header>
