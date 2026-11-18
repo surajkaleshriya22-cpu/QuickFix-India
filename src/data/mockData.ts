@@ -344,6 +344,37 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Factory electronic test cycle run'
     ]
   }
+
+  // Additional QuickFix Channel Partner services
+  ...([
+    ['welder','Welding & Fabrication','वेल्डिंग और फैब्रिकेशन','Gate, grill, railing and metal fabrication work',399,90],
+    ['mechanic','Vehicle Mechanic','वाहन मैकेनिक','Two-wheeler and car inspection, puncture and basic repair',249,45],
+    ['driver','Hire a Driver','ड्राइवर बुक करें','Hourly, full-day and outstation driver service',499,60],
+    ['tourist_guide','Tourist Guide','पर्यटक गाइड','Local sightseeing and guided city tours',599,120],
+    ['contractor','Home Contractor','घर के ठेकेदार','Renovation, civil work and project supervision',999,120],
+    ['bike_taxi','QuickFix Bike Taxi Captain','क्विकफिक्स बाइक टैक्सी','Point-to-point local bike ride with verified captain',49,15],
+    ['house_cleaning','House Cleaning','घर की सफाई','Room, kitchen, bathroom and deep cleaning',399,90],
+    ['cook','Home Cook','घर पर खाना बनाने वाला','Daily cooking, meal preparation and small gatherings',499,90],
+    ['laundry','Laundry & Ironing','कपड़े धोना और प्रेस','Wash, dry, fold and ironing pickup service',149,60],
+    ['maid','Domestic Helper','घरेलू सहायक','Daily household help and routine chores',299,120],
+    ['carpenter','Carpenter','बढ़ई','Furniture repair, fitting, shelves and woodwork',299,60],
+    ['painter','Painter','पेंटिंग का काम','Wall painting, touch-up and surface preparation',599,120],
+    ['gardener','Gardener','माली','Garden maintenance, pruning and plant care',249,60],
+    ['pest_control','Pest Control','कीट नियंत्रण','Cockroach, termite and mosquito treatment',499,60],
+    ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120]
+  ] as const).map(([category,title,hindiTitle,description,startingPrice,durationMinutes]) => ({
+    id: 'partner-' + category,
+    category,
+    title,
+    hindiTitle,
+    description,
+    startingPrice,
+    durationMinutes,
+    rating: 4.8,
+    reviewsCount: 0,
+    warrantyDays: 7,
+    included: ['Service scope and price confirmed before work starts', 'Verified partner assignment subject to local availability']
+  })),
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
