@@ -153,7 +153,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-        !Array.isArray(trades) || trades.length < 1 || trades.length > 10 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 11 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
@@ -499,7 +499,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       if (trade === 'ac_fridge') {
         categories.add('ac_repair');
         categories.add('fridge_repair');
-      } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+      } else if (trade === 'ac_repair' || trade === 'fridge_repair' || trade === 'electrician' || trade === 'plumber') {
         categories.add(trade);
       }
     }
