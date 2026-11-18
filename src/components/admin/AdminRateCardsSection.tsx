@@ -20,6 +20,7 @@ const labelClass = 'mb-1 block text-xs font-semibold text-slate-300';
 
 export const AdminRateCardsSection: React.FC = () => {
   const [form, setForm] = useState(blank);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [cards, setCards] = useState<LocationRateCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [authorized, setAuthorized] = useState(false);
@@ -75,13 +76,51 @@ export const AdminRateCardsSection: React.FC = () => {
         sourceCheckedAt: new Date().toISOString(), notes: form.notes.trim(),
         createdBy: user.uid, createdAt: serverTimestamp()
       };
-      await addDoc(collection(db, 'rate_cards'), payload);
-      setMessage('Draft saved. It is NOT customer-publishable until an authorized admin approves it.');
+      if (editingCardId) {
+        await updateDoc(doc(db, 'rate_cards', editingCardId), {
+          ...payload,
+          approvalStatus: 'draft',
+          updatedBy: user.uid,
+          updatedAt: serverTimestamp(),
+          approvedBy: null,
+          approvedAt: null
+        });
+        setMessage('Rate card updated and returned to Draft. Re-approval is required before customers can see the changed rate.');
+        setEditingCardId(null);
+      } else {
+        await addDoc(collection(db, 'rate_cards'), payload);
+        setMessage('Draft saved. It is NOT customer-publishable until an authorized admin approves it.');
+      }
       setForm(blank);
       await loadCards();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Draft could not be saved.');
     }
+  };
+
+  const startEditing = (card: LocationRateCard) => {
+    setEditingCardId(card.id);
+    setForm({
+      state: card.state || '',
+      district: card.district || '',
+      city: card.city || '',
+      tehsil: card.tehsil || '',
+      serviceCategory: card.serviceCategory,
+      serviceId: card.serviceId || '',
+      unit: card.unit,
+      minimumRate: String(card.minimumRate),
+      maximumRate: String(card.maximumRate),
+      minimumCharge: String(card.minimumCharge),
+      baseFee: String(card.baseFee || 0),
+      materialsIncluded: Boolean(card.materialsIncluded),
+      effectiveFrom: card.effectiveFrom,
+      effectiveTo: card.effectiveTo || '',
+      sourceName: card.sourceName || '',
+      sourceUrl: card.sourceUrl || '',
+      notes: card.notes || ''
+    });
+    setMessage('Editing selected rate card. Saving changes will return it to Draft and require re-approval.');
+    setError('');
   };
 
   const changeStatus = async (card: LocationRateCard, status: RateApprovalStatus) => {
@@ -132,7 +171,7 @@ export const AdminRateCardsSection: React.FC = () => {
         <label><span className={labelClass}>Effective to (optional)</span><input type="date" className={inputClass} value={form.effectiveTo} onChange={e => setForm(p => ({ ...p, effectiveTo: e.target.value }))} /></label>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.materialsIncluded} onChange={e => setForm(p => ({ ...p, materialsIncluded: e.target.checked }))} /> Materials included in rate</label>
         <label className="md:col-span-2"><span className={labelClass}>Notes / exclusions / evidence details</span><textarea className={inputClass} rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></label>
-        <div className="md:col-span-2 flex flex-wrap items-center gap-2"><button disabled={loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold disabled:opacity-50">Save as draft</button><button type="button" onClick={() => void loadCards()} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Refresh</button></div>
+        <div className="md:col-span-2 flex flex-wrap items-center gap-2"><button disabled={loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold disabled:opacity-50">{editingCardId ? 'Save changes as Draft' : 'Save as draft'}</button>{editingCardId && <button type="button" onClick={() => { setEditingCardId(null); setForm(blank); }} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Cancel edit</button>}<button type="button" onClick={() => void loadCards()} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Refresh</button></div>
       </form>
 
       {message && <p role="status" className="rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-xs text-emerald-300">{message}</p>}
@@ -144,7 +183,7 @@ export const AdminRateCardsSection: React.FC = () => {
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h5 className="text-sm font-bold">{card.serviceCategory.replaceAll('_', ' ')} · ₹{card.minimumRate}–₹{card.maximumRate}/{card.unit.replaceAll('_', ' ')}</h5><p className="text-xs text-slate-400">{[card.tehsil, card.city, card.district, card.state].filter(Boolean).join(' · ')}</p></div><span className={card.approvalStatus === 'approved' ? 'rounded-full bg-emerald-950 px-2 py-1 text-xs text-emerald-300' : 'rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-300'}>{card.approvalStatus}</span></div>
           <p className="text-xs text-slate-400">Source: {card.sourceName} · Effective {card.effectiveFrom}{card.effectiveTo ? ' to ' + card.effectiveTo : ''}</p>
           <p className="text-xs text-slate-500">{card.notes}</p>
-          <div className="flex flex-wrap gap-2">{card.approvalStatus === 'draft' && <button onClick={() => void changeStatus(card, 'approved')} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold">Approve</button>}{card.approvalStatus !== 'retired' && <button onClick={() => void changeStatus(card, 'retired')} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Retire</button>}</div>
+          <div className="flex flex-wrap gap-2"><button onClick={() => startEditing(card)} className="rounded-lg border border-blue-700 px-3 py-1.5 text-xs text-blue-300">Edit rate</button>{card.approvalStatus === 'draft' && <button onClick={() => void changeStatus(card, 'approved')} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold">Approve</button>}{card.approvalStatus !== 'retired' && <button onClick={() => void changeStatus(card, 'retired')} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Retire</button>}</div>
         </article>)}
       </div>
       <p className="text-[11px] text-amber-300">Important: approval is admin-claim protected, but this release does not yet connect these records to customer checkout or provide server-authoritative quote calculation/audit history. Do not treat research benchmarks as approved tariffs.</p>
