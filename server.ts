@@ -147,7 +147,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'ac_fridge', 'ac_repair', 'fridge_repair', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
+    const allowedTrades = new Set(['electrician', 'technician', 'ac_fridge', 'ac_repair', 'fridge_repair', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
@@ -496,12 +496,12 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
 
     const categories = new Set<string>();
     for (const trade of trades) {
-      if (trade === 'ac_fridge') {
-        categories.add('ac_repair');
-        categories.add('fridge_repair');
-      } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-        categories.add(trade);
-      }
+      if (['technician', 'ac_fridge', 'ac_repair', 'fridge_repair'].includes(trade)) {
+          // New profiles use one Technician trade; legacy profiles remain compatible.
+          categories.add('technician');
+        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+          categories.add(trade);
+        }
     }
 
     const normalizeAreaValue = (value: unknown) =>
@@ -601,10 +601,10 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
         : [];
       const categories = new Set<string>();
       for (const trade of trades) {
-        if (trade === 'ac_fridge') {
-          categories.add('ac_repair');
-          categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+        if (['technician', 'ac_fridge', 'ac_repair', 'fridge_repair'].includes(trade)) {
+          // New profiles use one Technician trade; legacy profiles remain compatible.
+          categories.add('technician');
+        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
           categories.add(trade);
         }
       }
