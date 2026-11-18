@@ -504,27 +504,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                           </button>
                           <button
                             type="button"
-                            onClick={() => toggleTrade('ac_repair')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('ac_repair')
-                                ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
+                            onClick={() => toggleTrade('technician')}
+                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${partnerTrades.includes('technician') ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
                           >
                             <Wind className="w-3.5 h-3.5 text-blue-600" />
-                            <span>AC Repair</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleTrade('fridge_repair')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('fridge_repair')
-                                ? 'bg-indigo-50 text-indigo-900 border-indigo-400 ring-1 ring-indigo-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <Snowflake className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Fridge/Freezer</span>
+                            <span>Technician (AC / Fridge / Appliances)</span>
                           </button>
                           <button
                             type="button"
