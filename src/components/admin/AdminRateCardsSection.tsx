@@ -98,6 +98,41 @@ export const AdminRateCardsSection: React.FC = () => {
     }
   };
 
+  const addIndoreBenchmarkDrafts = async () => {
+    setMessage('');
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in again.');
+      const token = await user.getIdTokenResult(true);
+      if (token.claims.admin !== true) throw new Error('Admin custom claim is required.');
+      const sourceName = 'Loknex Indore indicative published range (checked 2026-11-18)';
+      const rows = [
+        { serviceCategory: 'electrician', unit: 'per_visit' as BillingUnit, sourceUrl: 'https://loknex.com/electrician-in-indore/', note: 'Published indicative Indore market range ₹200–₹600 per visit. Not a verified QuickFix transaction average or guaranteed tariff. Materials and replacement parts excluded unless itemised.' },
+        { serviceCategory: 'plumber', unit: 'per_visit' as BillingUnit, sourceUrl: 'https://loknex.com/plumber-in-indore/', note: 'Published indicative Indore market range ₹200–₹600 per visit. Not a verified QuickFix transaction average or guaranteed tariff. Repair labour, pipes, fittings and replacement parts must be itemised.' }
+      ];
+      const snapshot = await getDocs(query(collection(db, 'rate_cards')));
+      const keys = new Set(snapshot.docs.map(d => { const x=d.data(); return [x.state,x.district,x.city||'',x.serviceCategory,x.unit,x.sourceName].join('|').toLowerCase(); }));
+      let added=0;
+      for (const row of rows) {
+        const key=['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.unit,sourceName].join('|').toLowerCase();
+        if(keys.has(key)) continue;
+        await addDoc(collection(db,'rate_cards'), {
+          state:'Madhya Pradesh', district:'Indore', city:'Indore', tehsil:null,
+          serviceCategory:row.serviceCategory, serviceId:null, unit:row.unit, currency:'INR',
+          minimumRate:200, maximumRate:600, minimumCharge:200, baseFee:0, materialsIncluded:false,
+          approvalStatus:'draft', effectiveFrom:new Date().toISOString().slice(0,10), effectiveTo:null,
+          sourceName, sourceUrl:row.sourceUrl, sourceCheckedAt:new Date().toISOString(),
+          notes:row.note+' Draft only: admin must verify fresh local provider quotations and approve before customer publication.',
+          createdBy:user.uid, createdAt:serverTimestamp()
+        });
+        keys.add(key); added++;
+      }
+      setMessage(added+' Indore draft rate cards added. They remain unpublished until an admin reviews and approves them.');
+      await loadCards();
+    } catch(e) { setError(e instanceof Error ? e.message : 'Could not add Indore draft cards.'); }
+  };
+
   const startEditing = (card: LocationRateCard) => {
     setEditingCardId(card.id);
     setForm({
@@ -154,6 +189,11 @@ export const AdminRateCardsSection: React.FC = () => {
         <h3 className="text-base font-bold">Location-wise Service Rate Cards</h3>
         <p className="mt-1 text-xs text-slate-400">Create drafts, review their source, and approve only rates suitable for publication. Specificity: Tehsil → City → District → State.</p>
         <p className="mt-2 text-xs">Admin claim: <span className={authorized ? 'text-emerald-400' : 'text-amber-300'}>{authorized ? 'verified' : 'not verified yet'}</span></p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800 bg-amber-950/20 p-4">
+        <div><h4 className="text-sm font-bold">Indore indicative benchmark drafts</h4><p className="mt-1 text-xs text-slate-400">Electrician and plumber: ₹200–₹600 per visit from published indicative listings. Draft only; not live customer prices.</p></div>
+        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Add Indore draft rates</button>
       </div>
 
       <form onSubmit={saveDraft} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-2">
