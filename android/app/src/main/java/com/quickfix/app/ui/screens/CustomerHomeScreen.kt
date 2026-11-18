@@ -80,7 +80,7 @@ fun CustomerHomeScreen(
                             )
                         }
                         Text(
-                            "Madhya Pradesh & South Hubs",
+                            "Choose your service city",
                             color = Color(0xFF94A3B8),
                             fontSize = 10.sp
                         )
@@ -155,7 +155,7 @@ fun CustomerHomeScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "VERIFIED TECHS IN $currentCity",
+                                    "QUICKFIX SERVICES IN $currentCity",
                                     color = Color.White,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -165,13 +165,13 @@ fun CustomerHomeScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "Instant Electricians & Plumbers at Your Doorstep",
+                            "Book local service partners",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Text(
-                            "Arrives in 45 mins • 30-day warranty • 100% Escrow Protected",
+                            "Availability, visit time and final price are confirmed before work starts.",
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
@@ -302,12 +302,7 @@ fun CustomerHomeScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                "₹${service.startingPrice}",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp,
-                                color = BrandBlue
-                            )
+                            Text("Rate on confirmation", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
                             Button(
                                 onClick = { navController.navigate("service_booking/${service.id}") },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
