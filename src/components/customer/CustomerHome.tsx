@@ -61,7 +61,7 @@ export const CustomerHome: React.FC = () => {
   const activeBooking = bookings.find(b => b.id === activeBookingId) || bookings[0];
 
   const filteredServices = services.filter(service => {
-    const matchesCat = selectedCategory === 'all' || service.category === selectedCategory;
+    const matchesCat = selectedCategory === 'all' || service.category === selectedCategory || (selectedCategory === 'technician' && (service.category === 'ac_repair' || service.category === 'fridge_repair'));
     const matchesQuery =
       service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -209,8 +209,7 @@ export const CustomerHome: React.FC = () => {
               ['all','All Services','सभी सेवाएं'],
               ['electrician','Electrician','बिजली मिस्त्री'],
               ['plumber','Plumber','प्लंबर'],
-              ['ac_repair','AC Repair','एसी रिपेयर'],
-              ['fridge_repair','Technician','फ्रिज व उपकरण'],
+              ['technician','Technician','AC, फ्रिज व घरेलू उपकरण'],
               ['welder','Welder / Fabricator','वेल्डर'],
               ['mechanic','Mechanic','मैकेनिक'],
               ['driver','Driver','ड्राइवर'],
