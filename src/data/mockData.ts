@@ -190,10 +190,10 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
-  // AC Repair Services (एसी रिपेयर और सर्विस)
+  // Technician services: AC, refrigerator, freezer and household appliance repair
   {
     id: 'ac-jet-clean',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'Split / Window AC Deep Jet Service',
     hindiTitle: 'एसी जेट वाश और केमिकल सर्विस',
     description: 'High-pressure jet pump wash for indoor evaporator coils, outdoor condenser unit cleaning, filter disinfection, and drain tray flush.',
@@ -212,7 +212,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-gas-charge',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'AC Gas Leak Check & Full Charge (R32/R410A)',
     hindiTitle: 'एसी गैस लीकेज चेक व रीफिल',
     description: 'Nitrogen pressure testing, flare nut brazing, vacuumization, and 100% pure virgin refrigerant gas recharge with digital manifold gauge.',
@@ -231,7 +231,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-pcb-repair',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'Inverter AC Motherboard & PCB Circuit Fix',
     hindiTitle: 'इन्वर्टर एसी पीसीबी बोर्ड मरम्मत',
     description: 'Diagnose inverter error codes (E1, E6, F3), burnt capacitors, optical coupler fault, sensor error, and compressor drive IC replacement.',
@@ -250,7 +250,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-install-shift',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'AC Uninstallation & Heavy Bracket Installation',
     hindiTitle: 'एसी फिटिंग और शिफ्टिंग',
     description: 'Pumping down existing refrigerant, wall bracket mounting with laser alignment, core-cut wall sleeve, and copper piping connection.',
@@ -267,10 +267,10 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
-  // Fridge & Freezer Repair Services (फ्रिज व फ्रीजर मरम्मत)
+
   {
     id: 'fridge-cooling-fix',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Refrigerator Not Cooling / Compressor Check',
     hindiTitle: 'फ्रिज कूलिंग व कंप्रेसर जांच',
     description: 'Diagnose warm fridge compartment, continuous humming compressor, relay-overload failure, and capacitor breakdown.',
@@ -289,7 +289,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-gas-charge',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Single/Double Door Refrigerator Gas Charging',
     hindiTitle: 'फ्रिज गैस चार्जिंग (R134a/R600a)',
     description: 'Complete copper capillary tube flush, drier filter replacement, leak detection, and eco-friendly R134a or R600a gas charging.',
@@ -308,7 +308,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-defrost-timer',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Freezer Excessive Ice / Defrost Timer & Bi-metal Fix',
     hindiTitle: 'फ्रीजर बर्फ जमना और डीफ्रॉस्ट हीटर ठीक करना',
     description: 'Fix heavy ice blocks clogging cold airflow to lower fridge, faulty bi-metal thermostat, defrost heater rod, and timer motor.',
@@ -327,7 +327,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-inverter-board',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Inverter Refrigerator PCB Circuit Board Repair',
     hindiTitle: 'इन्वर्टर फ्रिज पीसीबी बोर्ड रिपेयर',
     description: 'Direct repair for multi-door & side-by-side smart inverter refrigerators showing blinking LED error codes or sudden power trip.',
@@ -345,6 +345,112 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
+
+  // Additional Technician services for common household appliances
+  {
+    id: 'tech-washing-machine-repair', category: 'technician',
+    title: 'Washing Machine Repair', hindiTitle: 'वॉशिंग मशीन मरम्मत',
+    description: 'Diagnose top-load and front-load washing machine issues including not starting, not draining, vibration and wash-cycle faults. Parts quoted separately.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Error-code and operating check', 'Drain, inlet and basic electrical inspection', 'Motor, PCB and replacement parts quoted after diagnosis']
+  },
+  {
+    id: 'tech-washing-machine-install', category: 'technician',
+    title: 'Washing Machine Installation & Demo', hindiTitle: 'वॉशिंग मशीन फिटिंग और डेमो',
+    description: 'Install and level a washing machine, connect inlet and drain hoses, and demonstrate basic operation. New plumbing or electrical points extra.',
+    startingPrice: 349, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Installation',
+    included: ['Positioning and leveling', 'Existing tap and drain connection', 'New fittings, stands and electrical work extra']
+  },
+  {
+    id: 'tech-microwave-repair', category: 'technician',
+    title: 'Microwave Oven Repair', hindiTitle: 'माइक्रोवेव ओवन मरम्मत',
+    description: 'Diagnose heating failure, turntable, keypad and door-switch problems. High-voltage components are handled only by qualified technicians.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Safety inspection',
+    included: ['Basic function and door interlock check', 'Fault diagnosis and estimate', 'Magnetron, PCB and parts extra']
+  },
+  {
+    id: 'tech-geyser-repair', category: 'technician',
+    title: 'Geyser / Water Heater Repair', hindiTitle: 'गीजर और वॉटर हीटर मरम्मत',
+    description: 'Check no-heating, thermostat, heating element, leakage and safety cut-off issues in electric water heaters.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Electrical safety check',
+    included: ['Power isolation and initial safety inspection', 'Thermostat and heating-element diagnosis', 'Replacement parts and plumbing changes extra']
+  },
+  {
+    id: 'tech-geyser-install', category: 'technician',
+    title: 'Geyser Installation & Removal', hindiTitle: 'गीजर लगाना और उतारना',
+    description: 'Install or remove a wall-mounted electric water heater using suitable existing connections. New wiring, plumbing and heavy civil work quoted separately.',
+    startingPrice: 499, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site conditions apply',
+    included: ['Mounting and connection inspection', 'Basic installation labour', 'Pipes, valves, wiring and mounting hardware extra']
+  },
+  {
+    id: 'tech-ro-purifier-service', category: 'technician',
+    title: 'RO / Water Purifier Service', hindiTitle: 'आरओ और वाटर प्यूरिफायर सर्विस',
+    description: 'Inspect water flow, leakage, pump, filters and purification performance for domestic RO and UV systems.',
+    startingPrice: 249, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Filter model check',
+    included: ['Leak and flow inspection', 'Pump and purifier operation check', 'Filters, membrane and consumables extra']
+  },
+  {
+    id: 'tech-ro-install', category: 'technician',
+    title: 'RO / Water Purifier Installation', hindiTitle: 'आरओ मशीन फिटिंग',
+    description: 'Mount and connect a domestic water purifier at an existing suitable water and drain point. Extra plumbing and electrical points are separate.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Installation',
+    included: ['Wall mounting and leak check', 'Existing inlet and drain connection', 'Pipes, taps and additional fittings extra']
+  },
+  {
+    id: 'tech-chimney-service', category: 'technician',
+    title: 'Kitchen Chimney Cleaning & Service', hindiTitle: 'किचन चिमनी सफाई और सर्विस',
+    description: 'Clean accessible filters and inspect suction, lights and basic controls. Deep motor repair and replacement parts are extra.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Cleaning service',
+    included: ['Filter and outer-surface cleaning', 'Suction and control check', 'Motor, duct and spare parts extra']
+  },
+  {
+    id: 'tech-dishwasher-repair', category: 'technician',
+    title: 'Dishwasher Repair', hindiTitle: 'डिशवॉशर मरम्मत',
+    description: 'Diagnose water inlet, drainage, heating, door latch and wash-cycle issues in domestic dishwashers.',
+    startingPrice: 349, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Error and wash-cycle check', 'Inlet, drain and basic electrical inspection', 'Pump, heater, PCB and parts extra']
+  },
+  {
+    id: 'tech-tv-repair', category: 'technician',
+    title: 'LED / Smart TV Inspection & Repair', hindiTitle: 'एलईडी और स्मार्ट टीवी जांच',
+    description: 'Inspect no-display, sound, power and connectivity faults. Screen replacement and board-level work require a separate estimate.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Power and connection checks', 'Initial fault diagnosis', 'Display panel, motherboard and parts extra']
+  },
+  {
+    id: 'tech-air-cooler-service', category: 'technician',
+    title: 'Air Cooler Repair & Service', hindiTitle: 'एयर कूलर मरम्मत और सर्विस',
+    description: 'Service domestic air coolers including pump, fan, motor, water leakage and cooling-pad inspection.',
+    startingPrice: 249, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Seasonal service',
+    included: ['Pump, fan and wiring check', 'Water flow and leakage inspection', 'Cooling pads, motor and parts extra']
+  },
+  {
+    id: 'tech-deep-freezer-repair', category: 'technician',
+    title: 'Deep Freezer / Commercial Cooler Repair', hindiTitle: 'डीप फ्रीजर और कमर्शियल कूलर मरम्मत',
+    description: 'Inspect cooling, thermostat, compressor start, door seal and temperature-control issues in deep freezers and display coolers.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Commercial appliance',
+    included: ['Temperature and electrical diagnosis', 'Door seal and control inspection', 'Gas, compressor and replacement parts extra']
+  },
+  {
+    id: 'tech-small-appliance-repair', category: 'technician',
+    title: 'Small Home Appliance Repair', hindiTitle: 'छोटे घरेलू उपकरणों की मरम्मत',
+    description: 'Initial diagnosis for mixer grinder, iron, induction cooktop, electric kettle and similar small household appliances.',
+    startingPrice: 199, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Appliance check',
+    included: ['Basic electrical and function check', 'Repair feasibility and estimate', 'Motor, heating element, PCB and parts extra']
+  },
   // Labour / Helper Services. Prices are illustrative starting rates; final scope and duration are confirmed before booking.
   {
     id: 'labour-general-helper',
@@ -660,7 +766,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
 
   // Expanded practical service menu so every smaller partner trade has at least eight choices.
   {
-    id: 'ac-water-drain-repair', category: 'ac_repair',
+    id: 'ac-water-drain-repair', category: 'technician',
     title: 'AC Water Leakage & Drain Pipe Repair', hindiTitle: 'एसी से पानी टपकना और ड्रेन पाइप मरम्मत',
     description: 'Inspect blocked drain lines, drain tray and indoor-unit water leakage. Insulation and replacement parts are quoted separately.',
     startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -668,7 +774,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Drain pipe and tray inspection', 'Basic blockage clearing where accessible', 'Replacement pipe, insulation and parts extra']
   },
   {
-    id: 'ac-no-cooling-diagnosis', category: 'ac_repair',
+    id: 'ac-no-cooling-diagnosis', category: 'technician',
     title: 'AC Not Cooling Diagnosis', hindiTitle: 'एसी कूलिंग नहीं कर रहा जांच',
     description: 'Check filters, airflow, sensors, electrical supply and operating pressures to identify cooling issues. Repairs are quoted after diagnosis.',
     startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -676,7 +782,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Cooling and airflow checks', 'Basic electrical and sensor inspection', 'Gas, parts and repair work quoted separately']
   },
   {
-    id: 'ac-uninstall-reinstall', category: 'ac_repair',
+    id: 'ac-uninstall-reinstall', category: 'technician',
     title: 'AC Uninstallation & Reinstallation', hindiTitle: 'एसी खोलना और दोबारा लगाना',
     description: 'Careful removal or reinstallation of a split or window AC. Copper piping, brackets, core cutting and additional gas are extra.',
     startingPrice: 899, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -684,7 +790,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Unit removal or installation labour', 'Basic fitting and operation check', 'Stand, piping, transport and civil work extra']
   },
   {
-    id: 'ac-remote-sensor', category: 'ac_repair',
+    id: 'ac-remote-sensor', category: 'technician',
     title: 'AC Remote, Sensor & Thermistor Check', hindiTitle: 'एसी रिमोट और सेंसर जांच',
     description: 'Troubleshoot remote response, receiver board, room sensor and thermistor faults. Replacement devices and boards are extra.',
     startingPrice: 249, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -692,7 +798,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Remote and receiver response check', 'Sensor wiring inspection', 'Replacement remote, sensor and PCB extra']
   },
   {
-    id: 'fridge-defrost-repair', category: 'fridge_repair',
+    id: 'fridge-defrost-repair', category: 'technician',
     title: 'Fridge Defrost & Ice Build-up Repair', hindiTitle: 'फ्रिज में बर्फ जमना और डीफ्रॉस्ट मरम्मत',
     description: 'Inspect defrost heater, timer, thermostat and airflow for excess ice build-up. Replacement components are quoted separately.',
     startingPrice: 349, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -700,7 +806,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Defrost system inspection', 'Airflow and sensor checks', 'Heater, timer and parts extra']
   },
   {
-    id: 'fridge-compressor-check', category: 'fridge_repair',
+    id: 'fridge-compressor-check', category: 'technician',
     title: 'Fridge Compressor & Relay Diagnosis', hindiTitle: 'फ्रिज कंप्रेसर और रिले जांच',
     description: 'Check compressor start relay, overload protector, wiring and running symptoms. Compressor replacement is quoted only after diagnosis.',
     startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -708,7 +814,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Relay and overload inspection', 'Electrical and start-up checks', 'Compressor and replacement parts extra']
   },
   {
-    id: 'fridge-door-gasket', category: 'fridge_repair',
+    id: 'fridge-door-gasket', category: 'technician',
     title: 'Fridge Door Seal & Gasket Replacement', hindiTitle: 'फ्रिज दरवाजे की रबर सील बदलना',
     description: 'Inspect loose or damaged door gasket and alignment causing cooling loss. Correct gasket availability is checked by model.',
     startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
@@ -716,7 +822,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Door seal and alignment inspection', 'Model and gasket size check', 'New gasket and parts extra']
   },
   {
-    id: 'fridge-water-dispenser', category: 'fridge_repair',
+    id: 'fridge-water-dispenser', category: 'technician',
     title: 'Fridge Water Dispenser & Ice Maker Check', hindiTitle: 'फ्रिज वाटर डिस्पेंसर और आइस मेकर जांच',
     description: 'Troubleshoot dispenser flow, inlet valve, water line and ice maker operation where supported by the model.',
     startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
