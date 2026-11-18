@@ -349,7 +349,7 @@ export const CustomerHome: React.FC = () => {
               className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-medium flex items-center justify-center gap-1.5 border border-slate-700 transition-all text-[11px]"
             >
               <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-              <span>Technician Portal</span>
+              <span>Channel Partner Portal</span>
             </button>
           </div>
         </div>
