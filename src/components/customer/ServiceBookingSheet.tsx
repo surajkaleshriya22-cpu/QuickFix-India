@@ -350,7 +350,12 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
           {/* Bill Summary */}
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Price Breakdown</div>\n            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">\n              <div className="font-bold">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel})</div>\n              <div>{billingProfile.note}</div>\n              <div>Shown service amount is an indicative starting figure, not a confirmed local market rate. Final itemised price must be agreed before work starts.</div>\n              {billingProfile.quoteRequired && <div className="font-semibold">Site inspection and customer-approved quotation required.</div>}\n            </div>
+            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Price Breakdown</div>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
+              <div className="font-bold">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel})</div>
+              <div>{billingProfile.note}</div>
+              <div>Shown service amount is an indicative starting figure, not a confirmed local market rate. Final itemised price must be agreed before work starts.</div>\n              {billingProfile.quoteRequired && <div className="font-semibold">Site inspection and customer-approved quotation required.</div>}
+            </div>
             
             <div className="flex justify-between text-xs text-slate-600">
               <span>Indicative starting amount</span>
