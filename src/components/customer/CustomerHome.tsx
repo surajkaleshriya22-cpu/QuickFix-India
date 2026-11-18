@@ -367,6 +367,7 @@ export const CustomerHome: React.FC = () => {
                 <span className="text-xs block leading-tight truncate">Labour / Helper</span>
                 <span className={`text-[9px] block ${selectedCategory === 'labour' ? 'text-blue-100' : 'text-slate-400'}`}>मजदूर / हेल्पर</span>
               </div>
+            </button>
             {([
               ['welder', 'Welder / Fabricator', 'वेल्डर / फैब्रिकेटर'],
               ['mechanic', 'Vehicle Mechanic', 'वाहन मैकेनिक'],
@@ -395,7 +396,6 @@ export const CustomerHome: React.FC = () => {
                 </div>
               </button>
             ))}
-            </button>
           </div>
         </div>
 
