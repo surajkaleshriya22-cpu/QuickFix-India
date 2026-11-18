@@ -395,8 +395,7 @@ export const TechnicianPortal: React.FC = () => {
                   {([
                     ['electrician', 'Electrician'],
                     ['plumber', 'Plumber'],
-                    ['ac_repair', 'AC Technician'],
-                    ['fridge_repair', 'Fridge Technician'],
+                    ['technician', 'Technician (AC / Fridge / Appliances)'],
                     ['welder', 'Welder'],
                     ['mechanic', 'Mechanic'],
                     ['driver', 'Driver'],
