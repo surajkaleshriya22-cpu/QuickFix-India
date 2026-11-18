@@ -222,10 +222,10 @@ export const CustomerHome: React.FC = () => {
               <span>India’s Most Trusted Home Services</span>
             </div>
             <h1 className="text-base font-extrabold tracking-tight leading-snug">
-              Certified Electricians, Plumbers & AC/Fridge Technicians
+              Electricians, Plumbers & Multi-Skill Technicians
             </h1>
             <p className="text-xs text-blue-100 max-w-xs">
-              Transparent upfront rate cards, verified ID checks, 2000 INR technician guarantee & 30-day warranty.
+              Clear starting prices, partner verification and service terms shown before booking.
             </p>
           </div>
         </div>
