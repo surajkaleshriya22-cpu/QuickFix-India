@@ -326,6 +326,21 @@ export const CustomerHome: React.FC = () => {
                 <span className={`text-[9px] block ${selectedCategory === 'technician' ? 'text-blue-100' : 'text-slate-400'}`}>AC, फ्रिज व घरेलू उपकरण</span>
               </div>
             </button>
+            {/* Home & Household daily work */}
+            <button
+              onClick={() => setSelectedCategory('household')}
+              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
+                selectedCategory === 'household' ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
+              }`}
+            >
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'household' ? 'bg-white/20 text-emerald-200' : 'bg-emerald-50 text-emerald-600'}`}>
+                <span className="text-sm">🏠</span>
+              </div>
+              <div className="text-left overflow-hidden">
+                <span className="text-xs block leading-tight truncate">Home & Household</span>
+                <span className={`text-[9px] block ${selectedCategory === 'household' ? 'text-blue-100' : 'text-slate-400'}`}>घरेलू कामकाज</span>
+              </div>
+            </button>
             {/* Labour / Helper */}
             <button
               onClick={() => setSelectedCategory('labour')}
@@ -391,7 +406,7 @@ export const CustomerHome: React.FC = () => {
                         : 'bg-cyan-100 text-cyan-800'
                     }`}>
                       {service.category === 'electrician' ? <Zap className="w-3 h-3 fill-current" /> : <Wrench className="w-3 h-3" />}
-                      <span>{service.category}</span>
+                      <span>{service.category === 'household' ? 'Home & Household' : service.category === 'labour' ? 'Labour / Helper' : service.category.replaceAll('_', ' ')}</span>
                     </span>
                     {service.badge && (
                       <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded">
