@@ -367,6 +367,34 @@ export const CustomerHome: React.FC = () => {
                 <span className="text-xs block leading-tight truncate">Labour / Helper</span>
                 <span className={`text-[9px] block ${selectedCategory === 'labour' ? 'text-blue-100' : 'text-slate-400'}`}>मजदूर / हेल्पर</span>
               </div>
+            {([
+              ['welder', 'Welder / Fabricator', 'वेल्डर / फैब्रिकेटर'],
+              ['mechanic', 'Vehicle Mechanic', 'वाहन मैकेनिक'],
+              ['driver', 'Personal Driver', 'पर्सनल ड्राइवर'],
+              ['tourist_guide', 'Tourist Guide', 'पर्यटक गाइड'],
+              ['contractor', 'Contractor', 'कॉन्ट्रैक्टर'],
+              ['bike_rider', 'Bike Taxi Captain', 'बाइक टैक्सी कैप्टन']
+            ] as Array<[ServiceCategoryType, string, string]>).map(([category, label, hindiLabel]) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
+                  selectedCategory === category
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  selectedCategory === category ? 'bg-white/20 text-blue-100' : 'bg-blue-50 text-blue-600'
+                }`}>
+                  <Wrench className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left overflow-hidden">
+                  <span className="text-xs block leading-tight truncate">{label}</span>
+                  <span className={`text-[9px] block ${selectedCategory === category ? 'text-blue-100' : 'text-slate-400'}`}>{hindiLabel}</span>
+                </div>
+              </button>
+            ))}
             </button>
           </div>
         </div>
