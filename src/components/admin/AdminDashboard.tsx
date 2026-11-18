@@ -62,6 +62,7 @@ import {
 import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
+import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { auth } from '../../lib/firebase';
 
 export const AdminDashboard: React.FC = () => {
@@ -111,7 +112,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase'
+    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates'
   >('overview');
 
   // Search & Filter States
@@ -706,6 +707,14 @@ export const AdminDashboard: React.FC = () => {
           >
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
             <span>Reviews ({reviewedBookings.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('rates'); setSearchQuery(''); }}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === 'rates' ? 'bg-emerald-700 text-white shadow-xs font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+          >
+            <IndianRupee className="w-3.5 h-3.5" />
+            <span>Location Rates</span>
           </button>
 
           <button
