@@ -343,7 +343,9 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Fan motor PWM signal verification',
       'Factory electronic test cycle run'
     ]
-  }
+  },
+
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
