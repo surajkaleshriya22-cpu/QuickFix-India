@@ -733,6 +733,8 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Main Content Viewport */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {activeTab === 'rates' && <AdminRateCardsSection />}
+
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
