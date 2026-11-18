@@ -1113,7 +1113,45 @@ export const INITIAL_BOOKINGS: Booking[] = [
       tags: ['Affordable', 'Fast Service'],
       createdAt: '2026-11-03T17:30:00Z'
     }
-  }
+  },
+
+  // Labour / Helper Services. Prices are illustrative starting rates; final scope and duration are confirmed before booking.
+  {
+    id: 'labour-general-helper',
+    category: 'labour',
+    title: 'General Labour / Helper',
+    hindiTitle: 'सामान्य मजदूर / हेल्पर',
+    description: 'Household shifting help, loading and unloading, lifting and carrying, and basic on-site assistance. Final price depends on work scope and hours.',
+    startingPrice: 299,
+    durationMinutes: 120,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: [
+      'One helper for the initial two-hour booking slot',
+      'Work scope and safety requirements confirmed before acceptance',
+      'Extra time or additional helpers quoted separately'
+    ]
+  },
+  {
+    id: 'labour-cleanup-helper',
+    category: 'labour',
+    title: 'Cleaning & Site Helper',
+    hindiTitle: 'सफाई और साइट हेल्पर',
+    description: 'General cleaning assistance, material movement, and non-specialist site support. Specialist construction or hazardous work is excluded.',
+    startingPrice: 349,
+    durationMinutes: 120,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: [
+      'One helper for the initial two-hour booking slot',
+      'Customer and partner agree the task list before starting',
+      'Tools, materials, and extra hours quoted separately'
+    ]
+  },
 ];
 
 export const INITIAL_COMMISSION_SETTINGS: CommissionSettings = {
