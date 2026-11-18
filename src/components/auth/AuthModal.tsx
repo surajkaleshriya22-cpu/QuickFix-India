@@ -455,13 +455,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-[11px] leading-snug">
                           <strong className="font-bold block text-amber-950">Partner onboarding & verification</strong>
-                          Electricians, Plumbers, AC and Fridge Technicians can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
+                          All 11 Channel Partner trades can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
                         </div>
                       </div>
 
                       <div>
                         <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          Technician Full Name
+                          Channel Partner Full Name
                         </label>
                         <input
                           type="text"
