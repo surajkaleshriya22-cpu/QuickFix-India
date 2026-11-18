@@ -390,23 +390,39 @@ export const TechnicianPortal: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['electrician'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('electrician') ? 'bg-amber-100 text-amber-900 border-amber-400' : 'bg-slate-50'}`}
-                  >
-                    Electrician
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['plumber'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('plumber') ? 'bg-cyan-100 text-cyan-900 border-cyan-400' : 'bg-slate-50'}`}
-                  >
-                    Plumber
-                  </button>
+                <label className="font-bold text-slate-700 block mb-1">Select Partner Services (एक से अधिक चुन सकते हैं)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ['electrician', 'Electrician'],
+                    ['plumber', 'Plumber'],
+                    ['ac_repair', 'AC Technician'],
+                    ['fridge_repair', 'Fridge Technician'],
+                    ['welder', 'Welder'],
+                    ['mechanic', 'Mechanic'],
+                    ['driver', 'Driver'],
+                    ['tourist_guide', 'Tourist Guide'],
+                    ['contractor', 'Contractor'],
+                    ['bike_rider', 'Bike Rider Captain']
+                  ] as Array<[ServiceCategoryType, string]>).map(([trade, label]) => {
+                    const selected = regTrades.includes(trade);
+                    return (
+                      <button
+                        key={trade}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setRegTrades(previous =>
+                          selected
+                            ? previous.filter(item => item !== trade)
+                            : [...previous, trade]
+                        )}
+                        className={`py-2 px-3 rounded-lg border text-left font-semibold ${selected ? 'bg-blue-50 text-blue-800 border-blue-400' : 'bg-slate-50 border-slate-200'}`}
+                      >
+                        {selected ? '✓ ' : '+ '}{label}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">Apne kaam ke hisaab se ek ya kai services select karein.</p>
               </div>
 
               <div>
