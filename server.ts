@@ -499,7 +499,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       if (trade === 'ac_fridge') {
         categories.add('ac_repair');
         categories.add('fridge_repair');
-      } else if (trade === 'ac_repair' || trade === 'fridge_repair' || trade === 'electrician' || trade === 'plumber' || trade === 'labour') {
+      } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
         categories.add(trade);
       }
     }
@@ -604,7 +604,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
         if (trade === 'ac_fridge') {
           categories.add('ac_repair');
           categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'labour'].includes(trade)) {
+        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
           categories.add(trade);
         }
       }
