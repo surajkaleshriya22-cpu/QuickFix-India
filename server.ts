@@ -604,7 +604,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
         if (trade === 'ac_fridge') {
           categories.add('ac_repair');
           categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair'].includes(trade)) {
           categories.add(trade);
         }
       }
