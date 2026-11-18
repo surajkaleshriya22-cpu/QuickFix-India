@@ -186,6 +186,7 @@ export const AdminDashboard: React.FC = () => {
   const totalPlumbers = technicians.filter(t => t.trades.includes('plumber')).length;
   const totalAcTechs = technicians.filter(t => t.trades.includes('ac_repair')).length;
   const totalFridgeTechs = technicians.filter(t => t.trades.includes('fridge_repair')).length;
+  const totalLabourPartners = technicians.filter(t => t.trades.includes('labour')).length;
   const totalBookings = bookings.length;
   const totalRevenueGMV = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
   const totalCommissionCut = bookings.reduce((sum, b) => sum + b.adminCommission, 0);
