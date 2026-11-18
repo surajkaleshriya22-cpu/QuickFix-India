@@ -64,7 +64,7 @@ test('Storage rules keep Channel Partner KYC files private and immutable for cli
     const ownerFile = ref(storage, filePath);
     const bytes = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 55]);
     await uploadBytes(ownerFile, bytes, { contentType: 'application/pdf' });
-    assert.deepEqual(Array.from(await getBytes(ownerFile)), Array.from(bytes),
+    assert.deepEqual(Array.from(new Uint8Array(await getBytes(ownerFile))), Array.from(bytes),
       'The owner must be able to read their uploaded KYC document');
 
     await signOut(clientAuth);
