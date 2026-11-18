@@ -7,7 +7,7 @@ import {
 
 const allCategories = getPartnerDispatchCategories([
   'electrician', 'plumber', 'technician', 'welder', 'mechanic',
-  'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'
+  'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'household'
 ]);
 
 const base = {
@@ -24,7 +24,7 @@ test('maps legacy AC and fridge partner trades to Technician', () => {
   assert.deepEqual([...categories], ['technician']);
 });
 
-test('supports all ten partner categories without cross-category leakage', () => {
+test('supports all eleven partner categories without cross-category leakage', () => {
   for (const category of allCategories) {
     assert.equal(isBookingWithinPartnerScope({ ...base, bookingCategory: category }), true, category);
   }
