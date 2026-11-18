@@ -526,6 +526,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             <Snowflake className="w-3.5 h-3.5 text-indigo-600" />
                             <span>Fridge/Freezer</span>
                           </button>
+                          <button
+                            type="button"
+                            aria-pressed={partnerTrades.includes('labour')}
+                            onClick={() => toggleTrade('labour')}
+                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
+                              partnerTrades.includes('labour')
+                                ? 'bg-orange-50 text-orange-900 border-orange-400 ring-1 ring-orange-300'
+                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            <Wrench className="w-3.5 h-3.5 text-orange-600" />
+                            <span>Labour / Helper</span>
+                          </button>
                         </div>
                       </div>
 
