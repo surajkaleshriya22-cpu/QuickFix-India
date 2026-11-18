@@ -6,7 +6,8 @@ export interface ServiceItem {
   title: string;
   hindiTitle?: string;
   description: string;
-  startingPrice: number;
+  startingPrice: number; // Legacy indicative starting amount; not a location-specific quote
+  billingUnit?: 'per_visit' | 'per_point' | 'per_piece' | 'per_hour' | 'per_day' | 'per_sqft' | 'per_kg' | 'per_km' | 'per_trip' | 'per_job' | 'quote';
   durationMinutes: number;
   rating: number;
   reviewsCount: number;
