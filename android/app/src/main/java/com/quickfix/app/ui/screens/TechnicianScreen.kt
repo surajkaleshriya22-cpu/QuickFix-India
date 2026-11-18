@@ -33,6 +33,8 @@ fun TechnicianScreen(
     val bookings by viewModel.bookings.collectAsState()
     val partnerJobs by viewModel.partnerJobs.collectAsState()
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
+    val acceptingPartnerJobId by viewModel.acceptingPartnerJobId.collectAsState()
+    val partnerJobActionStatus by viewModel.partnerJobActionStatus.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
 
     var enteredOtp by remember { mutableStateOf("") }
@@ -179,13 +181,18 @@ fun TechnicianScreen(
                         TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text("Refresh") }
                     }
                     Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
+                    if (partnerJobActionStatus.isNotBlank()) Text(partnerJobActionStatus, fontSize = 11.sp, color = BrandBlue, fontWeight = FontWeight.SemiBold)
                     partnerJobs.filter { it.status == "requested" }.forEach { job ->
                         Divider(color = Color(0xFFE2E8F0))
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
-                            Text("यह नया अनुरोध है। स्वीकार करने की सुविधा अभी ऐप में उपलब्ध नहीं है.", fontSize = 10.sp, color = TextSecondary)
+                            Text("नया अनुरोध · server आपकी KYC, online स्थिति, ₹2,000 reserve और service area जाँचेगा.", fontSize = 10.sp, color = TextSecondary)
+                            Button(onClick = { viewModel.acceptPartnerJob(job.id) }, enabled = acceptingPartnerJobId == null, modifier = Modifier.fillMaxWidth()) {
+                                if (acceptingPartnerJobId == job.id) { CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White); Spacer(modifier = Modifier.width(8.dp)) }
+                                Text(if (acceptingPartnerJobId == job.id) "काम स्वीकार हो रहा है..." else "काम स्वीकार करें / Accept Job")
+                            }
                         }
                     }
                 }

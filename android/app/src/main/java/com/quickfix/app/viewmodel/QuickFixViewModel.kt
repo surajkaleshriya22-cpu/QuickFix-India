@@ -184,6 +184,11 @@ class QuickFixViewModel : ViewModel() {
     private val _partnerJobsStatus = MutableStateFlow("Available jobs have not been refreshed.")
     val partnerJobsStatus: StateFlow<String> = _partnerJobsStatus.asStateFlow()
 
+    private val _acceptingPartnerJobId = MutableStateFlow<String?>(null)
+    val acceptingPartnerJobId: StateFlow<String?> = _acceptingPartnerJobId.asStateFlow()
+    private val _partnerJobActionStatus = MutableStateFlow("")
+    val partnerJobActionStatus: StateFlow<String> = _partnerJobActionStatus.asStateFlow()
+
     private val _adminPaymentConfig = MutableStateFlow(AdminMasterPaymentConfig())
     val adminPaymentConfig: StateFlow<AdminMasterPaymentConfig> = _adminPaymentConfig.asStateFlow()
 
@@ -493,6 +498,46 @@ class QuickFixViewModel : ViewModel() {
         }
     }
 
+    fun acceptPartnerJob(bookingId: String) {
+        val user = auth.currentUser
+        if (user == null) { _partnerJobActionStatus.value = "काम स्वीकार करने के लिए पहले sign in करें."; return }
+        if (_acceptingPartnerJobId.value != null) return
+        _acceptingPartnerJobId.value = bookingId
+        _partnerJobActionStatus.value = "काम स्वीकार किया जा रहा है..."
+        viewModelScope.launch {
+            try {
+                val token = user.getIdToken(true).await().token ?: throw SecurityException("Secure sign-in token unavailable.")
+                val response = withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings/$encodedId/accept").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Accept", "application/json")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write("{}".toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Job acceptance returned HTTP $status.")
+                        }
+                        body
+                    } finally { connection.disconnect() }
+                }
+                val result = org.json.JSONObject(response)
+                if (!result.optBoolean("success") || result.optString("status") != "assigned") throw IllegalStateException("Server did not confirm job assignment.")
+                _partnerJobActionStatus.value = "काम assign हो गया। 1 घंटे की service deadline शुरू हो गई है."
+                refreshPartnerJobs()
+            } catch (error: Exception) {
+                _partnerJobActionStatus.value = error.localizedMessage ?: "काम स्वीकार नहीं हो सका."
+            } finally { _acceptingPartnerJobId.value = null }
+        }
+    }
     fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
         _firestoreSyncStatus.value = "OTP not verified: secure server-side OTP workflow is not configured. No booking status changed."
         return false
