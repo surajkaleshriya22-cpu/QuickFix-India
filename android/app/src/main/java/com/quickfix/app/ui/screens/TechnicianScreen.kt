@@ -38,7 +38,13 @@ fun TechnicianScreen(
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.refreshPartnerJobs() }
+    // Refresh the authenticated, server-filtered job feed while the partner screen is visible.
+    LaunchedEffect(viewModel) {
+        while (true) {
+            viewModel.refreshPartnerJobs()
+            kotlinx.coroutines.delay(30_000L)
+        }
+    }
 
     val myBookings = bookings
 
