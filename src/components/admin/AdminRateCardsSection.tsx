@@ -98,6 +98,57 @@ export const AdminRateCardsSection: React.FC = () => {
     }
   };
 
+  const addIndoreBenchmarkDrafts = async () => {
+    setMessage('');
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in again.');
+      const token = await user.getIdTokenResult(true);
+      if (token.claims.admin !== true) throw new Error('Admin custom claim is required.');
+      const sourceCheckedAt = new Date().toISOString();
+      const rows = [
+        { serviceCategory: 'electrician', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 299, maximumRate: 599, minimumCharge: 299, sourceName: 'Loknex + Service On Wheel Indore electrician pricing', sourceUrl: 'https://loknex.com/electrician-in-indore/', note: 'QuickFix proposed Indore visit/diagnosis band ₹299–₹599, raised above the low ₹149 entry listing. Local reference: visit ₹200–₹600; listed socket/switchboard work ₹200–₹300 and fan repair ₹300–₹400. Parts and defined repair labour remain itemised; admin must validate provider payout economics before approval.' },
+        { serviceCategory: 'plumber', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 299, maximumRate: 599, minimumCharge: 299, sourceName: 'Loknex + Justdial Indore plumber visit benchmarks', sourceUrl: 'https://loknex.com/plumber-in-indore/', note: 'QuickFix proposed Indore visit/diagnosis band ₹299–₹599, replacing the too-low ₹149–₹360 draft. Local reference: visit ₹200–₹600; leak repair ₹300–₹1,500, drain cleaning ₹500–₹2,000 and pipe installation ₹1,000–₹5,000. Repair labour and materials must be separately itemised; admin must validate provider payout economics before approval.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-jet-clean', unit: 'per_job' as BillingUnit, minimumRate: 499, maximumRate: 810, minimumCharge: 499, sourceName: 'PlumberIndore + GenuineRate Indore AC service listings', sourceUrl: 'https://www.plumberindore.in/appliance/ac-repair', note: 'Indore published foam/jet service listings ₹499 and city benchmark ₹405–₹810 per AC. Confirm split/window type and scope.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-gas-charge', unit: 'per_job' as BillingUnit, minimumRate: 1499, maximumRate: 3150, minimumCharge: 1499, sourceName: 'PlumberIndore + GenuineRate Indore AC gas refill listings', sourceUrl: 'https://www.plumberindore.in/appliance/ac-repair', note: 'Published Indore gas refill offers start ₹1,499; city benchmark ₹2,250–₹3,150 for 1.5 ton R32 with leak check. Refrigerant type, tonnage and leak repair must be confirmed.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-pcb-repair', unit: 'per_job' as BillingUnit, minimumRate: 800, maximumRate: 2500, minimumCharge: 800, sourceName: 'HomeRepairPro Indore published AC repair pricing', sourceUrl: 'https://homerepairpro.in/indore/ac-repair', note: 'Published Indore PCB/compressor repair range ₹800–₹2,500; diagnosis and spare parts must be itemised. Final price after inspection.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-cooling-fix', unit: 'per_job' as BillingUnit, minimumRate: 299, maximumRate: 1350, minimumCharge: 299, sourceName: 'PlumberIndore + GenuineRate Indore refrigerator repair listings', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Published Indore fridge repair starts ₹299; city benchmark for non-gas repair ₹360–₹1,350. Compressor and parts excluded unless itemised.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-gas-charge', unit: 'per_job' as BillingUnit, minimumRate: 1260, maximumRate: 2250, minimumCharge: 1260, sourceName: 'GenuineRate Indore + PlumberIndore refrigerator pricing', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Indore researched benchmark ₹1,260–₹2,250 per fridge; a local listing advertises ₹1,299. Confirm refrigerant, leak repair and filter drier scope.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-defrost-timer', unit: 'per_job' as BillingUnit, minimumRate: 299, maximumRate: 699, minimumCharge: 299, sourceName: 'PlumberIndore Indore refrigerator repair listings', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Published Indore defrost/thermostat repair starts ₹299; advertised package ₹499–₹699. Parts and model-specific work extra.' },
+        { serviceCategory: 'electrician', serviceId: '', unit: 'per_point' as BillingUnit, minimumRate: 180, maximumRate: 350, minimumCharge: 299, sourceName: 'Indore electrician service listings + local labour benchmark', sourceUrl: 'https://www.plumberindore.in/', note: 'Proposed customer labour band for switch/light fitting per point. The Indore listing advertises electrician work from ₹149; local skilled electrician day labour is ₹687–₹923. Parts, concealed wiring and height work are extra; verify provider quotes before approval.' },
+        { serviceCategory: 'carpenter', serviceId: '', unit: 'per_job' as BillingUnit, minimumRate: 300, maximumRate: 800, minimumCharge: 300, sourceName: 'Loknex + PlumberIndore Indore carpenter listings', sourceUrl: 'https://loknex.com/carpenter-in-indore/', note: 'Indore small-repair visit benchmark ₹300–₹800; larger furniture/woodwork quoted after measurement. Hardware and wood are extra.' },
+        { serviceCategory: 'painter', serviceId: '', unit: 'per_sqft' as BillingUnit, minimumRate: 30, maximumRate: 48, minimumCharge: 1000, sourceName: 'Yojo Indore construction labour rate guide', sourceUrl: 'https://yojoapp.com/en/labour-rates/indore/', note: 'Indore indicative painter labour ₹30–₹48 per sq ft. Paint, putty, primer, scaffolding and surface repair excluded unless itemised.' },
+        { serviceCategory: 'driver', serviceId: '', unit: 'per_hour' as BillingUnit, minimumRate: 180, maximumRate: 300, minimumCharge: 720, sourceName: 'Solve24 Indore driver rates 2026', sourceUrl: 'https://solve24.in/faq/driver-in-indore', note: 'Proposed hourly equivalent of published Indore day-driver band ₹720–₹1,350/day. Minimum booking 4 hours; overtime, night allowance, fuel/tolls and outstation stay separate.' },
+        { serviceCategory: 'bike_taxi', serviceId: '', unit: 'per_km' as BillingUnit, minimumRate: 6, maximumRate: 7, minimumCharge: 35, baseFee: 17, sourceName: 'Indore public bike-ride fare benchmark', sourceUrl: 'https://rideshareapp.in/cities/indore', note: 'Market reference: base fare about ₹17, ₹6–₹7/km plus time charge in published Indore ride fare table. QuickFix proposed fare is a draft; confirm driver payout, platform commission, waiting and applicable transport rules before approval. Do not copy competitor branding.' },
+        { serviceCategory: 'pest_control', serviceId: '', unit: 'per_job' as BillingUnit, minimumRate: 899, maximumRate: 2100, minimumCharge: 899, sourceName: 'MM Pest Control Indore published package rates', sourceUrl: 'https://www.antitermite.in/state/Madhya-Pradesh/Indore', note: 'General pest control package rates published ₹899–₹2,100 across 1–5 BHK; cockroach and termite treatments have separate higher packages. Final price depends on BHK and treatment; chemicals and warranty scope must be stated.' },
+        { serviceCategory: 'house_cleaning', serviceId: '', unit: 'per_job' as BillingUnit, minimumRate: 2250, maximumRate: 4500, minimumCharge: 2250, sourceName: 'Solve24 Indore cleaner price guide 2026', sourceUrl: 'https://solve24.in/prices/cleaner-in-indore', note: '2BHK deep-cleaning market band ₹2,250–₹4,500. Bathroom, kitchen, sofa and post-construction cleaning require separate measured/package cards; consumables inclusion must be stated.' },
+        { serviceCategory: 'gardener', serviceId: '', unit: 'per_job' as BillingUnit, minimumRate: 200, maximumRate: 500, minimumCharge: 200, sourceName: 'ServiceOnWheel Indore gardening + local lawn maintenance guide', sourceUrl: 'https://www.serviceonwheel.com/indore/service/gardening.html', note: 'Proposed basic visit band ₹200–₹500; local gardening service indicates ₹200 inspection/visit floor, while monthly lawn maintenance commonly ₹1,500–₹5,000. Garden size and green-waste removal extra; verify before approval.' },
+        { serviceCategory: 'house_shifting', serviceId: '', unit: 'per_trip' as BillingUnit, minimumRate: 3200, maximumRate: 7500, minimumCharge: 3200, sourceName: 'ShiftingApp Indore 2026 rate card', sourceUrl: 'https://shiftingapp.in/packers-and-movers-charges-indore', note: '1BHK local shifting package benchmark ₹3,200–₹7,500. This is a package estimate rather than a literal truck trip rate; require inventory, floor/lift, distance, packing and vehicle quote before approval.' },
+        { serviceCategory: 'welder', serviceId: '', unit: 'per_kg' as BillingUnit, minimumRate: 40, maximumRate: 90, minimumCharge: 500, sourceName: '2026 welding and fabrication market guide', sourceUrl: 'https://solve24.in/blog/welder-salary-and-welding-charges-india-2026', note: 'Labour-only bulk fabrication benchmark ₹40–₹90/kg; small spot weld ₹150–₹600/job. Not an Indore-specific quote; material, design, transport and installation are extra. Require local fabricator quotations before approval.' },
+      ];
+      const snapshot = await getDocs(query(collection(db, 'rate_cards')));
+      const keys = new Set(snapshot.docs.map(d => { const x=d.data(); return [x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase(); }));
+      let added=0;
+      for (const row of rows) {
+        const key=['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
+        if(keys.has(key)) continue;
+        await addDoc(collection(db,'rate_cards'), {
+          state:'Madhya Pradesh', district:'Indore', city:'Indore', tehsil:null,
+          serviceCategory:row.serviceCategory, serviceId:row.serviceId || null, unit:row.unit, currency:'INR',
+          minimumRate:row.minimumRate, maximumRate:row.maximumRate, minimumCharge:row.minimumCharge, baseFee:0, materialsIncluded:false,
+          approvalStatus:'draft', effectiveFrom:new Date().toISOString().slice(0,10), effectiveTo:null,
+          sourceName:row.sourceName, sourceUrl:row.sourceUrl, sourceCheckedAt,
+          notes:row.note+' Draft only: admin must verify fresh local provider quotations and approve before customer publication.',
+          createdBy:user.uid, createdAt:serverTimestamp()
+        });
+        keys.add(key); added++;
+      }
+      setMessage(added+' Indore draft rate cards added. They remain unpublished until an admin reviews and approves them.');
+      await loadCards();
+    } catch(e) { setError(e instanceof Error ? e.message : 'Could not add Indore draft cards.'); }
+  };
+
   const startEditing = (card: LocationRateCard) => {
     setEditingCardId(card.id);
     setForm({
@@ -156,6 +207,11 @@ export const AdminRateCardsSection: React.FC = () => {
         <p className="mt-2 text-xs">Admin claim: <span className={authorized ? 'text-emerald-400' : 'text-amber-300'}>{authorized ? 'verified' : 'not verified yet'}</span></p>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800 bg-amber-950/20 p-4">
+        <div><h4 className="text-sm font-bold">Indore service benchmark drafts</h4><p className="mt-1 text-xs text-slate-400">Indore draft coverage: electrician, plumber, technician, AC, fridge, carpenter, painter, driver, bike taxi, laundry, pest control, deep cleaning, gardening, shifting, welding and tourist guide. Some categories still require measured/local quotations. Draft only; verify and approve before publication.</p></div>
+        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Add researched Indore drafts</button>
+      </div>
+
       <form onSubmit={saveDraft} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-2">
         <h4 className="md:col-span-2 text-sm font-bold">New rate card draft</h4>
         {([
@@ -186,7 +242,7 @@ export const AdminRateCardsSection: React.FC = () => {
           <div className="flex flex-wrap gap-2"><button onClick={() => startEditing(card)} className="rounded-lg border border-blue-700 px-3 py-1.5 text-xs text-blue-300">Edit rate</button>{card.approvalStatus === 'draft' && <button onClick={() => void changeStatus(card, 'approved')} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold">Approve</button>}{card.approvalStatus !== 'retired' && <button onClick={() => void changeStatus(card, 'retired')} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Retire</button>}</div>
         </article>)}
       </div>
-      <p className="text-[11px] text-amber-300">Important: approval is admin-claim protected, but this release does not yet connect these records to customer checkout or provide server-authoritative quote calculation/audit history. Do not treat research benchmarks as approved tariffs.</p>
+      <p className="text-[11px] text-amber-300">Important: only approved location-specific cards can be used by the customer quote API. These research drafts are not live tariffs until an authorized admin verifies and approves them.</p>
     </section>
   );
 };
