@@ -276,7 +276,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea } = req.body ?? {};
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity } = req.body ?? {};
     const validServiceArea = serviceArea === undefined || (
       serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
@@ -285,7 +285,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
 
-    if (!validServiceArea || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validServiceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -311,12 +311,29 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       return res.status(400).json({ success: false, error: 'Selected service is not available.' });
     }
 
-    const price = service.startingPrice;
-    const convenienceFee = INITIAL_COMMISSION_SETTINGS.platformConvenienceFee;
-    const discount = 20;
-    const subtotal = price + convenienceFee - discount;
-    const taxes = Math.round(subtotal * INITIAL_COMMISSION_SETTINGS.gstPct / 100);
-    const totalAmount = subtotal + taxes;
+    const approvedRateSnapshot = await db.collection('rate_cards')
+      .where('approvalStatus', '==', 'approved')
+      .limit(200)
+      .get();
+    const approvedCards = approvedRateSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
+      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN')
+        && card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN')
+        && card.serviceCategory === service.category
+        && card.unit === (service.billingUnit || 'per_visit'));
+    const bookingRateCard = resolveLocationRateCard(
+      approvedCards,
+      { state: serviceArea.state, district: serviceArea.district, city: String(profile.city || ''), tehsil: serviceArea.tehsil },
+      service.category,
+      service.id,
+      (service.billingUnit || 'per_visit') as BillingUnit,
+      scheduledDate
+    );
+    const approvedQuote = bookingRateCard ? calculateRateQuote(bookingRateCard, quantity) : null;
+    // No fallback to legacy mockData.startingPrice: without an approved card,
+    // the request is saved as quote_required with zero payable amount.
+    const price = approvedQuote?.totalMinimum ?? 0;
+    const totalAmount = approvedQuote?.totalMinimum ?? 0;
     const bookingRef = db.collection('bookings').doc();
 
     await bookingRef.create({
@@ -333,24 +350,24 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       scheduledTimeSlot,
       city: String(profile.city || '').slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
-      ...(validServiceArea && serviceArea ? {
-        serviceArea: {
-          state: serviceArea.state.trim(),
-          district: serviceArea.district.trim(),
-          tehsil: serviceArea.tehsil.trim(),
-          ...(serviceArea.stateCode ? { stateCode: serviceArea.stateCode.trim() } : {}),
-          ...(serviceArea.districtCode ? { districtCode: serviceArea.districtCode.trim() } : {}),
-          ...(serviceArea.tehsilCode ? { tehsilCode: serviceArea.tehsilCode.trim() } : {})
-        }
+      serviceArea: {
+        state: serviceArea.state.trim(),
+        district: serviceArea.district.trim(),
+        tehsil: serviceArea.tehsil.trim()
+      },
+      quantity,
+      billingUnit: bookingRateCard?.unit || service.billingUnit || 'per_visit',
+      pricingStatus: approvedQuote ? 'estimated_from_approved_rate_card' : 'quote_required',
+      ...(approvedQuote && bookingRateCard ? {
+        rateCardId: bookingRateCard.id,
+        quoteRange: { minimum: approvedQuote.totalMinimum, maximum: approvedQuote.totalMaximum, materialsIncluded: approvedQuote.materialsIncluded, sourceName: bookingRateCard.sourceName }
       } : {}),
       paymentMethod,
       status: 'requested',
       startOtp: '',
       price,
-      convenienceFee,
-      discount,
-      taxes,
       totalAmount,
+      paymentCollectionEnabled: false,
       paymentStatus: 'pending',
       escrowStatus: 'not_funded',
       createdAt: FieldValue.serverTimestamp()
