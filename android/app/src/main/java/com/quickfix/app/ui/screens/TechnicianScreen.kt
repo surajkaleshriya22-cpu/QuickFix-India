@@ -49,7 +49,7 @@ fun TechnicianScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "QuickFix Partner Portal",
+                                "QuickFix Channel Partner Portal",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 17.sp
@@ -60,7 +60,7 @@ fun TechnicianScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "PARTNER PORTAL",
+                                    "CHANNEL PARTNER",
                                     color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
@@ -123,12 +123,12 @@ fun TechnicianScreen(
                                 color = DeepNavy
                             )
                             Surface(
-                                color = Color(0xFFDCFCE7),
+                                color = Color(0xFFFEE2E2),
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
                                     "NOT VERIFIED",
-                                    color = Color(0xFF166534),
+                                    color = Color(0xFF991B1B),
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
