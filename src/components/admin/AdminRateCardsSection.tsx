@@ -128,23 +128,33 @@ export const AdminRateCardsSection: React.FC = () => {
         { serviceCategory: 'welder', serviceId: '', unit: 'per_kg' as BillingUnit, minimumRate: 40, maximumRate: 90, minimumCharge: 500, sourceName: '2026 welding and fabrication market guide', sourceUrl: 'https://solve24.in/blog/welder-salary-and-welding-charges-india-2026', note: 'Labour-only bulk fabrication benchmark ₹40–₹90/kg; small spot weld ₹150–₹600/job. Not an Indore-specific quote; material, design, transport and installation are extra. Require local fabricator quotations before approval.' },
       ];
       const snapshot = await getDocs(query(collection(db, 'rate_cards')));
-      const keys = new Set(snapshot.docs.map(d => { const x=d.data(); return [x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase(); }));
-      let added=0;
+      const existing = new Map(snapshot.docs.map(d => {
+        const x = d.data();
+        return [[x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase(), { id: d.id, ...x }];
+      }));
+      let published = 0;
+      let unchanged = 0;
       for (const row of rows) {
-        const key=['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
-        if(keys.has(key)) continue;
-        await addDoc(collection(db,'rate_cards'), {
-          state:'Madhya Pradesh', district:'Indore', city:'Indore', tehsil:null,
-          serviceCategory:row.serviceCategory, serviceId:row.serviceId || null, unit:row.unit, currency:'INR',
-          minimumRate:row.minimumRate, maximumRate:row.maximumRate, minimumCharge:row.minimumCharge, baseFee:0, materialsIncluded:false,
-          approvalStatus:'draft', effectiveFrom:new Date().toISOString().slice(0,10), effectiveTo:null,
-          sourceName:row.sourceName, sourceUrl:row.sourceUrl, sourceCheckedAt,
-          notes:row.note+' Draft only: admin must verify fresh local provider quotations and approve before customer publication.',
-          createdBy:user.uid, createdAt:serverTimestamp()
-        });
-        keys.add(key); added++;
+        const key = ['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
+        const prior = existing.get(key);
+        if (prior?.approvalStatus === 'approved' || prior?.approvalStatus === 'retired') { unchanged++; continue; }
+        const payload = {
+          state: 'Madhya Pradesh', district: 'Indore', city: 'Indore', tehsil: null,
+          serviceCategory: row.serviceCategory, serviceId: row.serviceId || null, unit: row.unit, currency: 'INR',
+          minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: 0, materialsIncluded: false,
+          approvalStatus: 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
+          sourceName: row.sourceName, sourceUrl: row.sourceUrl, sourceCheckedAt,
+          notes: row.note + ' Active Indore market-based QuickFix default. Parts, materials and out-of-scope work are extra and must be itemised before customer confirmation.',
+          approvedBy: user.uid, approvedAt: new Date().toISOString(), updatedBy: user.uid, updatedAt: serverTimestamp()
+        };
+        if (prior) {
+          await updateDoc(doc(db, 'rate_cards', prior.id), payload);
+        } else {
+          await addDoc(collection(db, 'rate_cards'), { ...payload, createdBy: user.uid, createdAt: serverTimestamp() });
+        }
+        published++;
       }
-      setMessage(added+' Indore draft rate cards added. They remain unpublished until an admin reviews and approves them.');
+      setMessage(published + ' Indore market rate cards published as active customer quote defaults. ' + unchanged + ' existing approved/retired cards were left unchanged. Admin can edit or retire rates anytime; edited rates return to Draft until re-approved.');
       await loadCards();
     } catch(e) { setError(e instanceof Error ? e.message : 'Could not add Indore draft cards.'); }
   };
