@@ -5,11 +5,15 @@ on:
   pull_request:
     branches:
       - main
+      - secure-booking-otp-workflow
     paths:
       - "android/**"
       - ".github/workflows/android.yml"
       - ".github/workflows/webpack.yml"
-      - "src/lib/firebase.ts"
+      - "src/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
       - "firebase.json"
       - "firestore.rules"
   push:
@@ -19,7 +23,10 @@ on:
       - "android/**"
       - ".github/workflows/android.yml"
       - ".github/workflows/webpack.yml"
-      - "src/lib/firebase.ts"
+      - "src/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
       - "firebase.json"
       - "firestore.rules"
 
