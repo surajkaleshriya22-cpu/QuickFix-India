@@ -45,11 +45,21 @@ test('maps Technician to both AC and fridge bookings', () => {
   );
 });
 
-test('maps every new Channel Partner trade to its matching service category', () => {
+test('maps Kaamkaaj Partner to one consolidated domestic-work category', () => {
+  assert.deepEqual([...getPartnerServiceCategories(['kaamkaaj_partner'])], ['kaamkaaj_partner']);
+});
+
+test('maps legacy domestic-work registrations to Kaamkaaj Partner', () => {
+  assert.deepEqual(
+    [...getPartnerServiceCategories(['house_cleaning', 'cook', 'laundry', 'maid'])],
+    ['kaamkaaj_partner']
+  );
+});
+
+test('maps all other Channel Partner trades to their matching service categories', () => {
   const trades = [
     'electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide',
-    'contractor', 'bike_taxi', 'house_cleaning', 'cook', 'laundry', 'maid',
-    'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
+    'contractor', 'bike_taxi', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
   ];
   assert.deepEqual([...getPartnerServiceCategories(trades)].sort(), [...trades].sort());
 });
