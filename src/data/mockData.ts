@@ -780,7 +780,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     included: ['Route and timing discussion', 'Licence and identity verification', 'Vehicle, fuel and recurring terms separate']
   },
   {
-    id: 'driver-outstation', category: 'driver',
+    id: 'driver-outstation-trip-driver', category: 'driver',
     title: 'Outstation Trip Driver', hindiTitle: 'आउटस्टेशन यात्रा के लिए ड्राइवर',
     description: 'Driver request for an outstation journey using the customer vehicle. Multi-day duty, rest, route and return terms are confirmed first.',
     startingPrice: 999, durationMinutes: 360, rating: 0, reviewsCount: 0, warrantyDays: 0,
