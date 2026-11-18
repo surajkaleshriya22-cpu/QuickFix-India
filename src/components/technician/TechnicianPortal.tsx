@@ -695,7 +695,7 @@ export const TechnicianPortal: React.FC = () => {
                 Awaiting QuickFix HQ Qualification Clearance
               </h4>
               <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                As per QuickFix India safety policy, only verified and qualified <strong className="font-bold">Electricians</strong>, <strong className="font-bold">Plumbers</strong>, and <strong className="font-bold">Appliance Technicians</strong> can go online or accept bookings.
+                As per QuickFix India safety policy, every partner category can go online and accept only matching service requests after identity, trade and service-area approval.
               </p>
             </div>
 
