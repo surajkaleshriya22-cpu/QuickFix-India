@@ -354,7 +354,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
               <div className="font-bold">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel})</div>
               <div>{billingProfile.note}</div>
-              <div>Shown service amount is an indicative starting figure, not a confirmed local market rate. Final itemised price must be agreed before work starts.</div>\n              {billingProfile.quoteRequired && <div className="font-semibold">Site inspection and customer-approved quotation required.</div>}
+              <div>Shown service amount is an indicative starting figure, not a confirmed local market rate. Final itemised price must be agreed before work starts.</div>
+              {billingProfile.quoteRequired && <div className="font-semibold">Site inspection and customer-approved quotation required.</div>}
             </div>
             
             <div className="flex justify-between text-xs text-slate-600">
