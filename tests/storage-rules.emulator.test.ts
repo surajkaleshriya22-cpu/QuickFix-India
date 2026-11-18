@@ -3,10 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { getApps as getAdminApps } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import {
-  deleteApp,
-  initializeApp,
-} from 'firebase/app';
+import { deleteApp, initializeApp } from 'firebase/app';
 import {
   connectAuthEmulator,
   getAuth,
@@ -50,9 +47,8 @@ test('Storage rules keep Channel Partner KYC files private and immutable for cli
   }, `storage-rules-${suffix}`);
   const clientAuth = getAuth(app);
   const storage = getStorage(app);
-  const [authHost] = authEmulator.split(':');
-  const [storageHost, storagePortText] = storageEmulator.split(':');
-  connectAuthEmulator(clientAuth, `http://${authEmulator}`, { disableWarnings: true });
+  const [storageHost, storagePortText] = storageEmulator!.split(':');
+  connectAuthEmulator(clientAuth, `http://${authEmulator!}`, { disableWarnings: true });
   connectStorageEmulator(storage, storageHost, Number(storagePortText || 9199));
 
   const signInAs = async (uid: string, phoneNumber: string) => {
@@ -71,19 +67,12 @@ test('Storage rules keep Channel Partner KYC files private and immutable for cli
       'The owner must be able to read their uploaded KYC document');
 
     await signOut(clientAuth);
-    const customToken = await adminAuth.createCustomToken(otherUid);
-    await adminAuth.createUser({ uid: otherUid, phoneNumber: `+1556${suffix.slice(0, 7)}` });
-    createdUids.push(otherUid);
-    await signInWithCustomToken(clientAuth, customToken);
+    await signInAs(otherUid, `+1556${suffix.slice(0, 7)}`);
 
-    await assert.rejects(() => getBytes(ref(storage, filePath)),
-      'A different partner must not read another partner KYC file');
-    await assert.rejects(() => listAll(ref(storage, `partner-kyc/${ownerUid}`)),
-      'Clients must not list KYC documents');
-    await assert.rejects(() => uploadBytes(ref(storage, filePath), bytes, { contentType: 'application/pdf' }),
-      'A client must not overwrite an existing KYC file');
-    await assert.rejects(() => deleteObject(ref(storage, filePath)),
-      'A client must not delete a KYC file');
+    await assert.rejects(() => getBytes(ref(storage, filePath)));
+    await assert.rejects(() => listAll(ref(storage, `partner-kyc/${ownerUid}`)));
+    await assert.rejects(() => uploadBytes(ref(storage, filePath), bytes, { contentType: 'application/pdf' }));
+    await assert.rejects(() => deleteObject(ref(storage, filePath)));
   } finally {
     await signOut(clientAuth).catch(() => undefined);
     await deleteApp(app).catch(() => undefined);
