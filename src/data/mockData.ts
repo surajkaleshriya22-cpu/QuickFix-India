@@ -345,8 +345,6 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
-,
-
   // Labour / Helper Services. Prices are illustrative starting rates; final scope and duration are confirmed before booking.
   {
     id: 'labour-general-helper',
