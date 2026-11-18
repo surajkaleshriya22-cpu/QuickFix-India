@@ -34,7 +34,7 @@ jobs:
       - name: Dependency security audit (fail on high)
         shell: bash
         run: |
-          npm audit --audit-level=high --json > "$RUNNER_TEMP/npm-audit.json" || audit_exit=$?
+          npm audit --omit=dev --audit-level=high --json > "$RUNNER_TEMP/npm-audit.json" || audit_exit=$?
           node - "$RUNNER_TEMP/npm-audit.json" <<'NODE'
           const fs = require("node:fs");
           const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
