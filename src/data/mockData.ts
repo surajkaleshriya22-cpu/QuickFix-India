@@ -381,7 +381,111 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Customer and partner agree the task list before starting',
       'Tools, materials, and extra hours quoted separately'
     ]
+  },,
+
+  // Welder / Fabricator services — starting estimates; final scope and material costs are confirmed before booking.
+  {
+    id: 'welder-gate-grill-repair', category: 'welder',
+    title: 'Gate, Grill & Railing Welding', hindiTitle: 'गेट, ग्रिल और रेलिंग वेल्डिंग',
+    description: 'Repair and fabrication of household gates, grills, railings and metal frames. Material and site measurements are quoted separately.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site estimate may apply',
+    included: ['On-site inspection and work-scope confirmation', 'Basic welding labour estimate', 'Metal, paint and consumables charged after approval']
   },
+  {
+    id: 'welder-furniture-repair', category: 'welder',
+    title: 'Metal Furniture Welding', hindiTitle: 'लोहे के फर्नीचर की वेल्डिंग',
+    description: 'Repair of metal chairs, tables, racks, beds and similar household items. Heavy or structural work requires a separate site assessment.',
+    startingPrice: 399, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: ['Inspection of the damaged joint', 'Repair labour estimate', 'Parts and finishing quoted separately']
+  },
+  // Mechanic services
+  {
+    id: 'mechanic-two-wheeler', category: 'mechanic',
+    title: 'Two-Wheeler Inspection & Repair', hindiTitle: 'बाइक / स्कूटर जांच और मरम्मत',
+    description: 'Basic two-wheeler diagnosis, battery, brake, chain and starting issue checks. Spare parts and major repairs are quoted separately.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Initial vehicle inspection', 'Fault explanation before repair', 'Parts and additional labour require customer approval']
+  },
+  {
+    id: 'mechanic-car-breakdown', category: 'mechanic',
+    title: 'Car Breakdown Assistance', hindiTitle: 'कार खराब होने पर सहायता',
+    description: 'Basic roadside diagnosis for starting, battery and minor mechanical issues. Towing and major repairs are not included.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['On-site initial diagnosis', 'Repair feasibility and estimate', 'Towing, parts and major work quoted separately']
+  },
+  // Driver services
+  {
+    id: 'driver-hourly', category: 'driver',
+    title: 'Hourly Personal Driver', hindiTitle: 'घंटे के हिसाब से ड्राइवर',
+    description: 'Book a verified driver for your own vehicle. Trip duration, route, waiting and overtime charges are confirmed before the trip.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Trip details confirmed',
+    included: ['Driver for the initial two-hour slot', 'Valid driving licence and identity checks', 'Fuel, tolls, parking and extra hours excluded']
+  },
+  {
+    id: 'driver-outstation', category: 'driver',
+    title: 'Outstation Driver Booking', hindiTitle: 'आउटस्टेशन यात्रा के लिए ड्राइवर',
+    description: 'Driver booking for an outstation journey in the customer vehicle. Route, dates, night halt and return plan must be agreed first.',
+    startingPrice: 999, durationMinutes: 480, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom trip quote',
+    included: ['Driver availability confirmation', 'Route and schedule agreed before acceptance', 'Stay, meals, tolls and extra days quoted separately']
+  },
+  // Tourist guide services
+  {
+    id: 'tour-guide-city', category: 'tourist_guide',
+    title: 'Local City Sightseeing Guide', hindiTitle: 'शहर घूमने के लिए स्थानीय गाइड',
+    description: 'Local guide for popular attractions, local history and a planned city visit. Entry tickets, transport and meals are separate.',
+    startingPrice: 799, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Itinerary confirmed first',
+    included: ['Guide for the initial three-hour slot', 'Route and language preference agreed in advance', 'Tickets and transport excluded']
+  },
+  {
+    id: 'tour-guide-custom', category: 'tourist_guide',
+    title: 'Custom Local Tour Guide', hindiTitle: 'अपनी पसंद का लोकल टूर गाइड',
+    description: 'A guide for a customer-planned local visit, food walk or heritage route. The itinerary and guide credentials are confirmed before booking.',
+    startingPrice: 999, durationMinutes: 240, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom itinerary',
+    included: ['Initial four-hour guide slot', 'Stops and language agreed before booking', 'Tickets, food and transport excluded']
+  },
+  // Contractor services
+  {
+    id: 'contractor-site-visit', category: 'contractor',
+    title: 'Home Renovation Site Visit', hindiTitle: 'घर के रिनोवेशन के लिए साइट विजिट',
+    description: 'Contractor visit for renovation planning, measurements and a preliminary work estimate. Final quotation follows site inspection.',
+    startingPrice: 499, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Visit fee estimate',
+    included: ['Initial site inspection', 'Work scope and material discussion', 'Detailed BOQ and execution quoted separately']
+  },
+  {
+    id: 'contractor-civil-work', category: 'contractor',
+    title: 'Civil Work Consultation', hindiTitle: 'सिविल वर्क सलाह',
+    description: 'Consultation for masonry, plaster, tiling and small civil works. Structural changes require qualified assessment and applicable approvals.',
+    startingPrice: 599, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site estimate may apply',
+    included: ['Initial work assessment', 'Material and labour scope discussion', 'Execution, materials and permissions quoted separately']
+  },
+  // Bike Taxi Captain services
+  {
+    id: 'bike-rider-local-ride', category: 'bike_rider',
+    title: 'QuickFix Bike Taxi Ride', hindiTitle: 'क्विकफिक्स बाइक टैक्सी राइड',
+    description: 'Local point-to-point bike ride with a verified captain. Fare and route are shown for confirmation before the ride is accepted.',
+    startingPrice: 49, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Fare confirmed before ride',
+    included: ['One local point-to-point ride request', 'Captain and vehicle details before pickup', 'Applicable safety, helmet and local transport rules must be followed']
+  },
+  {
+    id: 'bike-rider-parcel', category: 'bike_rider',
+    title: 'Local Bike Pickup & Drop', hindiTitle: 'लोकल बाइक पिकअप और ड्रॉप',
+    description: 'Local small-item pickup and drop by bike. Restricted, hazardous, illegal or prohibited items are not accepted.',
+    startingPrice: 79, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Distance-based quote',
+    included: ['One local pickup and drop request', 'Item and delivery details confirmed before acceptance', 'Distance and waiting charges shown before confirmation']
+  },
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
