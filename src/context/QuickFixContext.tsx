@@ -8,6 +8,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   ServiceCategoryType,
+  PartnerTradeType,
   ServiceItem,
   Technician,
   ActiveRole,
@@ -61,7 +62,7 @@ interface QuickFixContextType {
     role: UserRole;
     address?: string;
     city: string;
-    trades?: ServiceCategoryType[];
+    trades?: PartnerTradeType[];
     rememberMe: boolean;
   }) => { success: boolean; message?: string };
   authenticateVerifiedAdmin: (params: {
@@ -74,7 +75,7 @@ interface QuickFixContextType {
     displayName: string;
     phoneNumber: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
     address?: string;
@@ -128,7 +129,7 @@ interface QuickFixContextType {
     name: string;
     phone: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
   }) => Promise<{ success: boolean; message?: string }>;
@@ -373,7 +374,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     role: UserRole;
     address?: string;
     city: string;
-    trades?: ServiceCategoryType[];
+    trades?: PartnerTradeType[];
     rememberMe: boolean;
   }): { success: boolean; message?: string } => ({
     success: false,
@@ -544,7 +545,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     name: string;
     phone: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
   }): Promise<{ success: boolean; message?: string }> => {
