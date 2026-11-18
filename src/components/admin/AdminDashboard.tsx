@@ -1036,7 +1036,13 @@ export const AdminDashboard: React.FC = () => {
                   Plumbers ({totalPlumbers})
                 </button>
                 <button
-                  onClick={() => setTechFilterTrade('technician')}
+                  onClick={() => setTechFilterTrade('household')}
+                  className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${techFilterTrade === 'household' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Home & Household ({technicians.filter(t => t.trades.includes('household')).length})
+                </button>
+                <button
+                  onClick={() => setTechFilterTrade('technician')
                   className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${techFilterTrade === 'technician' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
                 >
                   Technician (AC / Fridge / Appliances) ({totalTechnicians})
