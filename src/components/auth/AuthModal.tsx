@@ -22,7 +22,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { ServiceCategoryType, UserRole, isAuthorizedAdminEmail } from '../../types';
+import { PartnerTradeType, UserRole, isAuthorizedAdminEmail } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
 
 interface AuthModalProps {
@@ -54,7 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [rememberMe, setRememberMe] = useState(true);
 
   // Partner Specific Fields
-  const [partnerTrades, setPartnerTrades] = useState<ServiceCategoryType[]>(['electrician']);
+  const [partnerTrades, setPartnerTrades] = useState<PartnerTradeType[]>(['electrician']);
   const [partnerState, setPartnerState] = useState('');
   const [partnerDistrict, setPartnerDistrict] = useState('');
   const [partnerTehsil, setPartnerTehsil] = useState('');
@@ -82,7 +82,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     };
   }, []);
 
-  const toggleTrade = (trade: ServiceCategoryType) => {
+  const toggleTrade = (trade: PartnerTradeType) => {
     if (partnerTrades.includes(trade)) {
       if (partnerTrades.length > 1) {
         setPartnerTrades(partnerTrades.filter(t => t !== trade));
@@ -539,6 +539,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             <Wrench className="w-3.5 h-3.5 text-orange-600" />
                             <span>Labour / Helper</span>
                           </button>
+                          {([
+                            ['welder', 'Welder'],
+                            ['mechanic', 'Mechanic'],
+                            ['driver', 'Driver'],
+                            ['tourist_guide', 'Tourist Guide'],
+                            ['contractor', 'Contractor'],
+                            ['bike_rider', 'Bike Rider Captain']
+                          ] as Array<[PartnerTradeType, string]>).map(([trade, label]) => (
+                            <button
+                              key={trade}
+                              type="button"
+                              aria-pressed={partnerTrades.includes(trade)}
+                              onClick={() => toggleTrade(trade)}
+                              className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
+                                partnerTrades.includes(trade)
+                                  ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                              <span>{label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
 
