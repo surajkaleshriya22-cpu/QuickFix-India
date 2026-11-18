@@ -14,6 +14,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
+import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 
 dotenv.config();
 
@@ -115,6 +117,69 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
+
+// Customer rate quote lookup. Prices are resolved only from approved, effective
+// Firestore rate cards; the client cannot submit or override a price.
+app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure rate lookup is temporarily unavailable.' });
+    }
+    const params = req.query;
+    const read = (key: string) => typeof params[key] === 'string' ? String(params[key]).trim() : '';
+    const state = read('state');
+    const district = read('district');
+    const city = read('city');
+    const tehsil = read('tehsil');
+    const serviceCategory = read('serviceCategory');
+    const serviceId = read('serviceId');
+    const unit = read('unit') as BillingUnit;
+    const date = read('date');
+    const quantity = Number(read('quantity'));
+    const validUnits: BillingUnit[] = ['per_visit', 'per_point', 'per_piece', 'per_hour', 'per_day', 'per_sqft', 'per_kg', 'per_km', 'per_trip', 'per_job', 'quote'];
+    if (!state || state.length > 100 || !district || district.length > 100 ||
+        city.length > 100 || tehsil.length > 100 ||
+        !serviceCategory || serviceCategory.length > 80 ||
+        serviceId.length > 120 || !validUnits.includes(unit) ||
+        !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) {
+      return res.status(400).json({ success: false, error: 'Rate quote inputs are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('rate_cards')
+      .where('approvalStatus', '==', 'approved')
+      .limit(200)
+      .get();
+    const cards = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
+      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === state.toLocaleLowerCase('en-IN')
+        && card.district.trim().toLocaleLowerCase('en-IN') === district.toLocaleLowerCase('en-IN')
+        && card.serviceCategory === serviceCategory
+        && card.unit === unit);
+    const card = resolveLocationRateCard(cards, { state, district, city, tehsil }, serviceCategory, serviceId, unit, date);
+    if (!card) {
+      return res.status(404).json({ success: false, error: 'No approved rate card is available for this service and location.', quoteAvailable: false });
+    }
+    const quote = calculateRateQuote(card, quantity);
+    return res.json({
+      success: true,
+      quoteAvailable: true,
+      currency: 'INR',
+      location: { state: card.state, district: card.district, city: card.city || null, tehsil: card.tehsil || null },
+      serviceCategory: card.serviceCategory,
+      serviceId: card.serviceId || null,
+      source: { name: card.sourceName, checkedAt: card.sourceCheckedAt },
+      approvalStatus: card.approvalStatus,
+      effectiveFrom: card.effectiveFrom,
+      effectiveTo: card.effectiveTo || null,
+      quote
+    });
+  } catch (error) {
+    console.error('Secure location rate quote failed:', error);
+    return res.status(500).json({ success: false, error: 'A secure rate quote could not be calculated.' });
+  }
+});
+
 // Secure Channel Partner registration. Only basic profile data is accepted here;
 // government IDs, certificates, UPI details and deposits remain out of scope until
 // a compliant restricted KYC workflow and verified payment provider are deployed.
@@ -211,7 +276,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea } = req.body ?? {};
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity } = req.body ?? {};
     const validServiceArea = serviceArea === undefined || (
       serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
@@ -220,7 +285,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
 
-    if (!validServiceArea || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validServiceArea || !serviceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -246,12 +311,29 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       return res.status(400).json({ success: false, error: 'Selected service is not available.' });
     }
 
-    const price = service.startingPrice;
-    const convenienceFee = INITIAL_COMMISSION_SETTINGS.platformConvenienceFee;
-    const discount = 20;
-    const subtotal = price + convenienceFee - discount;
-    const taxes = Math.round(subtotal * INITIAL_COMMISSION_SETTINGS.gstPct / 100);
-    const totalAmount = subtotal + taxes;
+    const approvedRateSnapshot = await db.collection('rate_cards')
+      .where('approvalStatus', '==', 'approved')
+      .limit(200)
+      .get();
+    const approvedCards = approvedRateSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
+      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN')
+        && card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN')
+        && card.serviceCategory === service.category
+        && card.unit === getBillingProfile(service).unit);
+    const bookingRateCard = resolveLocationRateCard(
+      approvedCards,
+      { state: serviceArea.state, district: serviceArea.district, city: String(profile.city || ''), tehsil: serviceArea.tehsil },
+      service.category,
+      service.id,
+      getBillingProfile(service).unit,
+      scheduledDate
+    );
+    const approvedQuote = bookingRateCard ? calculateRateQuote(bookingRateCard, quantity) : null;
+    // No fallback to legacy mockData.startingPrice: without an approved card,
+    // the request is saved as quote_required with zero payable amount.
+    const price = approvedQuote?.totalMinimum ?? 0;
+    const totalAmount = approvedQuote?.totalMinimum ?? 0;
     const bookingRef = db.collection('bookings').doc();
 
     await bookingRef.create({
@@ -268,24 +350,24 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       scheduledTimeSlot,
       city: String(profile.city || '').slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
-      ...(validServiceArea && serviceArea ? {
-        serviceArea: {
-          state: serviceArea.state.trim(),
-          district: serviceArea.district.trim(),
-          tehsil: serviceArea.tehsil.trim(),
-          ...(serviceArea.stateCode ? { stateCode: serviceArea.stateCode.trim() } : {}),
-          ...(serviceArea.districtCode ? { districtCode: serviceArea.districtCode.trim() } : {}),
-          ...(serviceArea.tehsilCode ? { tehsilCode: serviceArea.tehsilCode.trim() } : {})
-        }
+      serviceArea: {
+        state: serviceArea.state.trim(),
+        district: serviceArea.district.trim(),
+        tehsil: serviceArea.tehsil.trim()
+      },
+      quantity,
+      billingUnit: bookingRateCard?.unit || getBillingProfile(service).unit,
+      pricingStatus: approvedQuote ? 'estimated_from_approved_rate_card' : 'quote_required',
+      ...(approvedQuote && bookingRateCard ? {
+        rateCardId: bookingRateCard.id,
+        quoteRange: { minimum: approvedQuote.totalMinimum, maximum: approvedQuote.totalMaximum, materialsIncluded: approvedQuote.materialsIncluded, sourceName: bookingRateCard.sourceName }
       } : {}),
       paymentMethod,
       status: 'requested',
       startOtp: '',
       price,
-      convenienceFee,
-      discount,
-      taxes,
       totalAmount,
+      paymentCollectionEnabled: false,
       paymentStatus: 'pending',
       escrowStatus: 'not_funded',
       createdAt: FieldValue.serverTimestamp()

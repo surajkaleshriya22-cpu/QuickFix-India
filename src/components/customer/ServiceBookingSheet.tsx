@@ -16,6 +16,13 @@ interface ServiceBookingSheetProps {
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
   const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stateName, setStateName] = useState('');
+  const [districtName, setDistrictName] = useState('');
+  const [tehsilName, setTehsilName] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [rateQuote, setRateQuote] = useState<any>(null);
+  const [quoteMessage, setQuoteMessage] = useState('');
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   const dateOptions = [
     { label: 'Today', value: getIndiaBookingDate(0) },
@@ -106,12 +113,9 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   // The legacy amount is only an indicative starting figure until a verified local rate card is connected.
   const billingProfile = getBillingProfile(service);
-  const basePrice = service.startingPrice;
-  const visitFee = commissionSettings.platformConvenienceFee;
-  const discount = 20; // First-time discount
-  const taxable = basePrice + visitFee - discount;
-  const taxes = Math.round((taxable * commissionSettings.gstPct) / 100);
-  const totalAmount = taxable + taxes;
+  const basePrice = rateQuote?.quote?.totalMinimum ?? null;
+  const quoteMaximum = rateQuote?.quote?.totalMaximum ?? null;
+  const totalAmount = basePrice === null ? null : basePrice;
 
   const slotOptions = [
     'Express (Within 45 Mins)',
@@ -121,8 +125,52 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     '06:00 PM - 09:00 PM'
   ];
 
+
+  const fetchRateQuote = async () => {
+    const qty = Number(quantity);
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || !Number.isFinite(qty) || qty <= 0) {
+      setQuoteMessage('Rate dekhne ke liye State, District, Tehsil aur sahi quantity bharein.');
+      return;
+    }
+    const user = auth.currentUser;
+    if (!user) {
+      setQuoteMessage('Rate dekhne ke liye customer account se sign in karein.');
+      return;
+    }
+    setIsLoadingQuote(true);
+    setRateQuote(null);
+    setQuoteMessage('');
+    try {
+      const token = await user.getIdToken();
+      const params = new URLSearchParams({
+        state: stateName.trim(), district: districtName.trim(), city: currentCity,
+        tehsil: tehsilName.trim(), serviceCategory: service.category,
+        serviceId: service.id, unit: billingProfile.unit, date: selectedDate,
+        quantity: String(qty)
+      });
+      const response = await fetch(`/api/rates/quote?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setQuoteMessage(data.error || 'Is location ke liye approved rate abhi uplabdh nahi hai.');
+        return;
+      }
+      setRateQuote(data);
+      setQuoteMessage('Yeh approved local rate card ke hisaab se estimate hai. Final amount kaam shuru hone se pehle confirm hoga.');
+    } catch {
+      setQuoteMessage('Rate service abhi available nahi hai. Aap inspection/quotation booking bhej sakte hain.');
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  };
+
   const handleConfirm = async () => {
     if (isSubmitting) return;
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || Number(quantity) <= 0) {
+      window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await submitCustomerBooking({
@@ -131,7 +179,9 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         scheduledTimeSlot: selectedSlot,
         address: selectedAddress,
         notes,
-        paymentMethod
+        paymentMethod,
+        serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
+        quantity: Number(quantity)
       });
       if (!result.success || !result.bookingId) {
         window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
@@ -256,6 +306,28 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             )}
           </div>
 
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="text-xs font-semibold text-slate-700">State
+              <input value={stateName} onChange={e => { setStateName(e.target.value); setRateQuote(null); }} placeholder="e.g. Madhya Pradesh" className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-slate-700">District
+              <input value={districtName} onChange={e => { setDistrictName(e.target.value); setRateQuote(null); }} placeholder="e.g. Indore" className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-slate-700">Tehsil
+              <input value={tehsilName} onChange={e => { setTehsilName(e.target.value); setRateQuote(null); }} placeholder="e.g. Rau" className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+            </label>
+          </div>
+          <div className="rounded-xl border border-slate-200 p-3 space-y-2">
+            <label className="block text-xs font-semibold text-slate-700">{billingProfile.quantityPrompt} / {billingProfile.hindiQuantityPrompt}
+              <input type="number" min="0.01" step="0.01" value={quantity} onChange={e => { setQuantity(e.target.value); setRateQuote(null); }} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+            </label>
+            <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+              {isLoadingQuote ? 'Checking approved rate...' : 'Check approved local rate'}
+            </button>
+            {quoteMessage && <p className="text-xs text-slate-600">{quoteMessage}</p>}
+          </div>
+
           {/* Problem Notes with Gemini 3.5 Transcribe Voice Input */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -348,37 +420,20 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             </div>
           </div>
 
-          {/* Bill Summary */}
+          {/* Server-approved local quote; no mock starting price is presented as payable. */}
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Price Breakdown</div>
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 space-y-1">
-              <div className="font-bold">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel})</div>
-              <div>{billingProfile.note}</div>
-              <div>Shown service amount is an indicative starting figure, not a confirmed local market rate. Final itemised price must be agreed before work starts.</div>
-              {billingProfile.quoteRequired && <div className="font-semibold">Site inspection and customer-approved quotation required.</div>}
-            </div>
-            
-            <div className="flex justify-between text-xs text-slate-600">
-              <span>Indicative starting amount</span>
-              <span className="font-mono">₹{basePrice}</span>
-            </div>
-            <div className="flex justify-between text-xs text-slate-600">
-              <span>QuickFix Visiting Fee</span>
-              <span className="font-mono">₹{visitFee}</span>
-            </div>
-            <div className="flex justify-between text-xs text-emerald-600 font-medium">
-              <span>Welcome Discount</span>
-              <span className="font-mono">-₹{discount}</span>
-            </div>
-            <div className="flex justify-between text-xs text-slate-600">
-              <span>GST ({commissionSettings.gstPct}%)</span>
-              <span className="font-mono">₹{taxes}</span>
-            </div>
-            
-            <div className="pt-2 border-t border-slate-200 flex justify-between text-sm font-bold text-slate-900">
-              <span>Total Payable</span>
-              <span className="font-mono text-blue-700 text-base">₹{totalAmount}</span>
-            </div>
+            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Local Price Estimate</div>
+            <div className="text-[11px] text-slate-600">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel}) · {billingProfile.note}</div>
+            {rateQuote ? (
+              <>
+                <div className="flex justify-between text-sm"><span>Approved rate range</span><strong>₹{rateQuote.quote.totalMinimum} – ₹{rateQuote.quote.totalMaximum}</strong></div>
+                <div className="text-[10px] text-slate-500">Source: {rateQuote.source.name}. Materials {rateQuote.quote.materialsIncluded ? 'included' : 'extra'}. Estimate only; customer approval is required before work starts.</div>
+              </>
+            ) : (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                Is location/service ke liye approved rate card nahi mila to booking inspection/quotation request ke roop mein jayegi. Abhi koi final price ya payment collect nahi hogi.
+              </div>
+            )}
           </div>
         </div>
 
@@ -386,7 +441,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between gap-4">
           <div>
             <span className="text-[11px] text-slate-500 block">Total Amount</span>
-            <span className="text-lg font-extrabold text-blue-700 font-mono">₹{totalAmount}</span>
+            <span className="text-lg font-extrabold text-blue-700 font-mono">{totalAmount === null ? 'Quote after inspection' : `₹${totalAmount}${quoteMaximum !== basePrice ? ` – ₹${quoteMaximum}` : ''}`}</span>
           </div>
 
           <button

@@ -115,7 +115,7 @@ interface QuickFixContextType {
     notes?: string;
     paymentMethod: PaymentMethod;
   }) => Booking;
-  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
+  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod; serviceArea: { state: string; district: string; tehsil: string }; quantity: number }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
   addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
 
@@ -792,7 +792,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     scheduledTimeSlot,
     address,
     notes,
-    paymentMethod
+    paymentMethod,
+    serviceArea,
+    quantity
   }: {
     serviceId: string;
     scheduledDate: string;
@@ -800,6 +802,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     address: string;
     notes?: string;
     paymentMethod: PaymentMethod;
+    serviceArea: { state: string; district: string; tehsil: string };
+    quantity: number;
   }): Promise<{ success: boolean; bookingId?: string; message?: string }> => {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser || !isAuthenticated || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
@@ -825,7 +829,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           scheduledTimeSlot,
           address: address.trim(),
           notes: (notes || '').trim().slice(0, 500),
-          paymentMethod
+          paymentMethod,
+          serviceArea,
+          quantity
         })
       });
       const result = await response.json();
