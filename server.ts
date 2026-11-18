@@ -497,16 +497,12 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
 
     const categories = getPartnerDispatchCategories(trades);
 
-    const normalizeAreaValue = (value: unknown) =>
-      typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
     const partnerArea = profile.serviceArea && typeof profile.serviceArea === 'object'
       ? profile.serviceArea as Record<string, unknown>
       : null;
-    const partnerHasArea = Boolean(partnerArea &&
-      ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(partnerArea[key])));
 
-    // Query only the partner's city. Structured area matching is then applied
-    // before returning requests; legacy records without complete area data use city.
+    // Query only the partner's approved city; canonical category and area checks
+    // are shared with the booking-acceptance transaction below.
     const snapshot = await db.collection('bookings')
       .where('status', '==', 'requested')
       .where('city', '==', city)
