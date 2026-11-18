@@ -468,10 +468,12 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
         : [];
       const categories = new Set<string>();
       for (const trade of trades) {
-        if (trade === 'ac_fridge') {
+        if (trade === 'technician' || trade === 'ac_fridge') {
           categories.add('ac_repair');
           categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
+        } else if (trade === 'bike_rider') {
+          categories.add('bike_taxi');
+        } else if (['electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'].includes(trade)) {
           categories.add(trade);
         }
       }
