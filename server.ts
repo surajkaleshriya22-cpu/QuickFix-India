@@ -15,6 +15,7 @@ import { randomInt } from 'crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { isBookingWithinPartnerScope, getPartnerDispatchCategories } from './src/utils/partnerCategories';
 import { getCustomerVisibleStartOtp, validateBookingStart } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -494,15 +495,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
     }
 
-    const categories = new Set<string>();
-    for (const trade of trades) {
-      if (['technician', 'ac_fridge', 'ac_repair', 'fridge_repair'].includes(trade)) {
-          // New profiles use one Technician trade; legacy profiles remain compatible.
-          categories.add('technician');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-          categories.add(trade);
-        }
-    }
+    const categories = getPartnerDispatchCategories(trades);
 
     const normalizeAreaValue = (value: unknown) =>
       typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
@@ -523,20 +516,14 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const bookings = snapshot.docs
       .filter((document) => {
         const booking = document.data();
-        if (!categories.has(String(booking.category || ''))) return false;
-        const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
-          ? booking.serviceArea as Record<string, unknown>
-          : null;
-        const bookingHasArea = Boolean(bookingArea &&
-          ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(bookingArea[key])));
-        if (partnerHasArea && bookingHasArea) {
-          return ['state', 'district', 'tehsil'].every((key) =>
-            normalizeAreaValue(partnerArea![key]) === normalizeAreaValue(bookingArea![key])
-          );
-        }
-        // Backward compatibility for older customer/partner profiles without
-        // complete structured area details. City is already Firestore-filtered.
-        return true;
+        return isBookingWithinPartnerScope({
+          partnerCity: city,
+          bookingCity: booking.city,
+          partnerCategories: categories,
+          bookingCategory: booking.category,
+          partnerArea,
+          bookingArea: booking.serviceArea
+        });
       })
       .map((document) => {
         const booking = document.data();
@@ -599,30 +586,17 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      const categories = new Set<string>();
-      for (const trade of trades) {
-        if (['technician', 'ac_fridge', 'ac_repair', 'fridge_repair'].includes(trade)) {
-          // New profiles use one Technician trade; legacy profiles remain compatible.
-          categories.add('technician');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-          categories.add(trade);
-        }
-      }
-      if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
-        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
-      }
-
-      const normalizeArea = (value: unknown) =>
-        typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
+      const categories = getPartnerDispatchCategories(trades);
       const partnerArea = partner.serviceArea && typeof partner.serviceArea === 'object'
         ? partner.serviceArea as Record<string, unknown> : null;
-      const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
-        ? booking.serviceArea as Record<string, unknown> : null;
-      const hasCompleteArea = (area: Record<string, unknown> | null) =>
-        Boolean(area && ['state', 'district', 'tehsil'].every((key) => normalizeArea(area[key])));
-      if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
-          !['state', 'district', 'tehsil'].every((key) =>
-            normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+      if (!isBookingWithinPartnerScope({
+        partnerCity: city,
+        bookingCity: booking.city,
+        partnerCategories: categories,
+        bookingCategory: booking.category,
+        partnerArea,
+        bookingArea: booking.serviceArea
+      })) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
 
