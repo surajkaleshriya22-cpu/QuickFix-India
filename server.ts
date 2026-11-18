@@ -148,13 +148,14 @@ app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: 
     const db = getFirestore(firebaseAdminApp);
     const snapshot = await db.collection('rate_cards')
       .where('approvalStatus', '==', 'approved')
-      .where('state', '==', state)
-      .where('district', '==', district)
-      .where('serviceCategory', '==', serviceCategory)
-      .where('unit', '==', unit)
-      .limit(100)
+      .limit(200)
       .get();
-    const cards = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as LocationRateCard));
+    const cards = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
+      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === state.toLocaleLowerCase('en-IN')
+        && card.district.trim().toLocaleLowerCase('en-IN') === district.toLocaleLowerCase('en-IN')
+        && card.serviceCategory === serviceCategory
+        && card.unit === unit);
     const card = resolveLocationRateCard(cards, { state, district, city, tehsil }, serviceCategory, serviceId, unit, date);
     if (!card) {
       return res.status(404).json({ success: false, error: 'No approved rate card is available for this service and location.', quoteAvailable: false });
