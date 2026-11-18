@@ -14,6 +14,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
+import type { BillingUnit } from './src/data/pricing';
 
 dotenv.config();
 
@@ -114,6 +116,68 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
 
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
+
+
+// Customer rate quote lookup. Prices are resolved only from approved, effective
+// Firestore rate cards; the client cannot submit or override a price.
+app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure rate lookup is temporarily unavailable.' });
+    }
+    const params = req.query;
+    const read = (key: string) => typeof params[key] === 'string' ? String(params[key]).trim() : '';
+    const state = read('state');
+    const district = read('district');
+    const city = read('city');
+    const tehsil = read('tehsil');
+    const serviceCategory = read('serviceCategory');
+    const serviceId = read('serviceId');
+    const unit = read('unit') as BillingUnit;
+    const date = read('date');
+    const quantity = Number(read('quantity'));
+    const validUnits: BillingUnit[] = ['per_visit', 'per_point', 'per_piece', 'per_hour', 'per_day', 'per_sqft', 'per_kg', 'per_km', 'per_trip', 'per_job', 'quote'];
+    if (!state || state.length > 100 || !district || district.length > 100 ||
+        city.length > 100 || tehsil.length > 100 ||
+        !serviceCategory || serviceCategory.length > 80 ||
+        serviceId.length > 120 || !validUnits.includes(unit) ||
+        !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) {
+      return res.status(400).json({ success: false, error: 'Rate quote inputs are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('rate_cards')
+      .where('approvalStatus', '==', 'approved')
+      .where('state', '==', state)
+      .where('district', '==', district)
+      .where('serviceCategory', '==', serviceCategory)
+      .where('unit', '==', unit)
+      .limit(100)
+      .get();
+    const cards = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as LocationRateCard));
+    const card = resolveLocationRateCard(cards, { state, district, city, tehsil }, serviceCategory, serviceId, unit, date);
+    if (!card) {
+      return res.status(404).json({ success: false, error: 'No approved rate card is available for this service and location.', quoteAvailable: false });
+    }
+    const quote = calculateRateQuote(card, quantity);
+    return res.json({
+      success: true,
+      quoteAvailable: true,
+      currency: 'INR',
+      location: { state: card.state, district: card.district, city: card.city || null, tehsil: card.tehsil || null },
+      serviceCategory: card.serviceCategory,
+      serviceId: card.serviceId || null,
+      source: { name: card.sourceName, checkedAt: card.sourceCheckedAt },
+      approvalStatus: card.approvalStatus,
+      effectiveFrom: card.effectiveFrom,
+      effectiveTo: card.effectiveTo || null,
+      quote
+    });
+  } catch (error) {
+    console.error('Secure location rate quote failed:', error);
+    return res.status(500).json({ success: false, error: 'A secure rate quote could not be calculated.' });
+  }
+});
 
 // Secure Channel Partner registration. Only basic profile data is accepted here;
 // government IDs, certificates, UPI details and deposits remain out of scope until
