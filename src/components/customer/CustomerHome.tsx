@@ -316,39 +316,14 @@ export const CustomerHome: React.FC = () => {
               </div>
             </button>
 
-            {/* AC Repair */}
-            <button
-              onClick={() => setSelectedCategory('ac_repair')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'ac_repair'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'ac_repair' ? 'bg-white/20 text-sky-200' : 'bg-sky-50 text-sky-600'}`}>
+            {/* One Technician category for AC, fridge, freezer and appliances */}
+            <button onClick={() => setSelectedCategory('technician')} className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${selectedCategory === 'technician' ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'}`}>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'technician' ? 'bg-white/20 text-sky-200' : 'bg-sky-50 text-sky-600'}`}>
                 <Wind className="w-3.5 h-3.5" />
               </div>
               <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">AC Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'ac_repair' ? 'text-blue-100' : 'text-slate-400'}`}>एसी सर्विस</span>
-              </div>
-            </button>
-
-            {/* Fridge & Freezer */}
-            <button
-              onClick={() => setSelectedCategory('fridge_repair')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'fridge_repair'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'fridge_repair' ? 'bg-white/20 text-teal-200' : 'bg-teal-50 text-teal-600'}`}>
-                <Snowflake className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">Fridge Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'fridge_repair' ? 'text-blue-100' : 'text-slate-400'}`}>फ्रिज व फ्रीजर</span>
+                <span className="text-xs block leading-tight truncate">Technician</span>
+                <span className={`text-[9px] block ${selectedCategory === 'technician' ? 'text-blue-100' : 'text-slate-400'}`}>AC, फ्रिज व घरेलू उपकरण</span>
               </div>
             </button>
             {/* Labour / Helper */}
