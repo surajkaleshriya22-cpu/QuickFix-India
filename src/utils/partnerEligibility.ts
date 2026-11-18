@@ -23,8 +23,8 @@ export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): b
 
 const DISPATCHABLE_PARTNER_TRADES = new Set([
   'electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic',
-  'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'house_cleaning', 'cook',
-  'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
+  'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'kaamkaaj_partner',
+  'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
 ]);
 
 /** Convert registered partner trades into the service categories they can receive. */
