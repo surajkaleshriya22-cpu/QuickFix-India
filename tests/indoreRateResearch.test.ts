@@ -30,3 +30,13 @@ test('city-wide research includes the major QuickFix service families', () => {
     assert.ok(categories.has(category), `missing category: ${category}`);
   }
 });
+
+import { INDORE_MARKET_AREAS } from '../src/data/indoreMarketAreas';
+
+test('Indore market coverage includes multiple city localities without claiming local quote verification', () => {
+  assert.ok(INDORE_MARKET_AREAS.length >= 15);
+  assert.ok(INDORE_MARKET_AREAS.some(area => area.locality === 'Vijay Nagar'));
+  assert.ok(INDORE_MARKET_AREAS.some(area => area.locality === 'Rau'));
+  assert.ok(INDORE_MARKET_AREAS.every(area => area.localitySpecificQuotesVerified === false));
+  assert.ok(INDORE_MARKET_AREAS.every(area => area.sourceUrls.length > 0));
+});
