@@ -49,7 +49,7 @@ fun TechnicianScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "QuickFix Partner Portal",
+                                "QuickFix Channel Partner Portal",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 17.sp
@@ -60,7 +60,7 @@ fun TechnicianScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "PARTNER PORTAL",
+                                    "CHANNEL PARTNER",
                                     color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
@@ -123,12 +123,12 @@ fun TechnicianScreen(
                                 color = DeepNavy
                             )
                             Surface(
-                                color = Color(0xFFDCFCE7),
+                                color = Color(0xFFFEE2E2),
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
                                     "NOT VERIFIED",
-                                    color = Color(0xFF166534),
+                                    color = Color(0xFF991B1B),
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -179,20 +179,39 @@ fun TechnicianScreen(
                         TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text("Refresh") }
                     }
                     Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
-                    partnerJobs.forEach { job ->
+                    partnerJobs.filter { it.status == "requested" }.forEach { job ->
                         Divider(color = Color(0xFFE2E8F0))
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
-                            Text("काम स्वीकार करने की सुविधा सुरक्षित server workflow जुड़ने के बाद उपलब्ध होगी.", fontSize = 10.sp, color = TextSecondary)
+                            Text("यह नया अनुरोध है। स्वीकार करने की सुविधा अभी ऐप में उपलब्ध नहीं है.", fontSize = 10.sp, color = TextSecondary)
                         }
                     }
                 }
             }
 
-            // Assigned Jobs Section
-            Text("Assigned Customer Bookings", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            // The server feed returns assignedBookings separately from new requests.
+            val serverAssignedJobs = partnerJobs.filter { it.status != "requested" }
+            Text("Assigned Customer Bookings / आपको मिले काम", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            if (serverAssignedJobs.isEmpty() && myBookings.isEmpty()) {
+                Text("अभी कोई booking आपको assign नहीं हुई है.", fontSize = 12.sp, color = TextSecondary)
+            }
+            serverAssignedJobs.forEach { job ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CardBg),
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(job.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
+                        Text(job.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
+                        Text("Status: ${job.status.replace("_", " ").uppercase()}", fontSize = 11.sp, color = TextSecondary)
+                    }
+                }
+            }
 
             myBookings.forEach { booking ->
                 Card(

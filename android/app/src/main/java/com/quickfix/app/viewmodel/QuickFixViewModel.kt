@@ -27,7 +27,8 @@ data class PartnerJob(
     val category: String,
     val customerName: String,
     val price: Int,
-    val totalAmount: Int
+    val totalAmount: Int,
+    val status: String = "requested"
 )
 
 data class AdminMetrics(
@@ -450,6 +451,7 @@ class QuickFixViewModel : ViewModel() {
                 val json = org.json.JSONObject(body)
                 if (!json.optBoolean("success")) throw IllegalStateException("Server did not confirm the job feed.")
                 val items = json.optJSONArray("bookings")
+                val assignedItems = json.optJSONArray("assignedBookings")
                 val jobs = buildList {
                     if (items != null) for (index in 0 until items.length()) {
                         val item = items.optJSONObject(index) ?: continue
@@ -461,12 +463,29 @@ class QuickFixViewModel : ViewModel() {
                             category = item.optString("category", ""),
                             customerName = item.optString("customerName", "Customer"),
                             price = item.optInt("price", 0),
-                            totalAmount = item.optInt("totalAmount", 0)
+                            totalAmount = item.optInt("totalAmount", 0),
+                            status = "requested"
+                        ))
+                    }
+                    if (assignedItems != null) for (index in 0 until assignedItems.length()) {
+                        val item = assignedItems.optJSONObject(index) ?: continue
+                        val id = item.optString("id")
+                        if (id.isBlank()) continue
+                        add(PartnerJob(
+                            id = id,
+                            serviceTitle = item.optString("serviceTitle", "Service request"),
+                            category = item.optString("category", ""),
+                            customerName = item.optString("customerName", "Customer"),
+                            price = item.optInt("price", 0),
+                            totalAmount = item.optInt("totalAmount", 0),
+                            status = item.optString("status", "assigned")
                         ))
                     }
                 }
                 _partnerJobs.value = jobs
-                _partnerJobsStatus.value = if (jobs.isEmpty()) "अभी आपके शहर और काम के अनुसार कोई नया काम उपलब्ध नहीं है." else "${jobs.size} उपलब्ध काम मिले हैं."
+                val availableCount = jobs.count { it.status == "requested" }
+                val assignedCount = jobs.size - availableCount
+                _partnerJobsStatus.value = "$availableCount नए काम · $assignedCount पहले से assigned काम."
             } catch (error: Exception) {
                 _partnerJobs.value = emptyList()
                 _partnerJobsStatus.value = error.localizedMessage ?: "Available jobs लोड नहीं हो सके."
