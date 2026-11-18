@@ -451,6 +451,71 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     badge: 'Appliance check',
     included: ['Basic electrical and function check', 'Repair feasibility and estimate', 'Motor, heating element, PCB and parts extra']
   },
+  // Home & Household Services — booking scope, hours and supplies are confirmed before acceptance.
+  {
+    id: 'home-sweep-mop', category: 'household',
+    title: 'Daily Sweeping & Mopping', hindiTitle: 'रोज़ाना झाड़ू-पोंछा',
+    description: 'Daily floor sweeping and mopping for homes. Number of rooms, floor type and visit frequency are confirmed before booking.',
+    startingPrice: 249, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Daily home help',
+    included: ['Sweeping of agreed rooms', 'Wet mopping of accessible floors', 'Room count and cleaning supplies confirmed before work']
+  },
+  {
+    id: 'home-utensil-washing', category: 'household',
+    title: 'Utensil & Kitchen Washing', hindiTitle: 'बर्तन और रसोई के बर्तन साफ़ करना',
+    description: 'Wash everyday utensils, cookware and kitchen counter surfaces. Quantity and heavy cookware are agreed before booking.',
+    startingPrice: 199, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Kitchen help',
+    included: ['Wash and rinse agreed utensils', 'Keep washed utensils in the agreed place', 'Cleaning liquid and quantity confirmed before work']
+  },
+  {
+    id: 'home-cooking', category: 'household',
+    title: 'Home Cooking / Meal Preparation', hindiTitle: 'घर का खाना बनाना',
+    description: 'Prepare everyday home meals such as roti, sabzi, dal, rice and breakfast according to the customer instructions.',
+    startingPrice: 299, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Home cook',
+    included: ['Menu and number of people confirmed first', 'Meal preparation in the customer kitchen', 'Groceries, special diet and extra dishes agreed separately']
+  },
+  {
+    id: 'home-laundry-wash', category: 'household',
+    title: 'Laundry & Clothes Washing', hindiTitle: 'कपड़े धोने का काम',
+    description: 'Hand-wash or machine-wash everyday clothes and help with drying. Delicates and special fabrics are handled only by prior agreement.',
+    startingPrice: 199, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Laundry help',
+    included: ['Sort clothes as instructed', 'Hand wash or operate customer washing machine', 'Detergent, load size and drying arrangement confirmed first']
+  },
+  {
+    id: 'home-ironing', category: 'household',
+    title: 'Clothes Ironing & Folding', hindiTitle: 'कपड़ों की इस्त्री और तह करना',
+    description: 'Iron and fold everyday clothes using the customer iron and ironing board.',
+    startingPrice: 149, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Clothes care',
+    included: ['Iron agreed everyday garments', 'Fold and arrange clothes', 'Delicate garments and per-piece quantity confirmed first']
+  },
+  {
+    id: 'home-bathroom-clean', category: 'household',
+    title: 'Bathroom & Toilet Cleaning', hindiTitle: 'बाथरूम और टॉयलेट की सफाई',
+    description: 'Clean bathroom floors, washbasin, toilet and accessible fittings using agreed cleaning products.',
+    startingPrice: 249, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Bathroom cleaning',
+    included: ['Clean agreed bathroom fixtures and floor', 'Rinse and leave the area tidy', 'Number of bathrooms and cleaning chemicals confirmed first']
+  },
+  {
+    id: 'home-deep-clean', category: 'household',
+    title: 'Full Home / Deep Cleaning', hindiTitle: 'पूरे घर की गहरी सफाई',
+    description: 'Detailed dusting and cleaning of agreed rooms, shelves and reachable surfaces. High-risk or high-level work is excluded.',
+    startingPrice: 699, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Deep cleaning',
+    included: ['Dust reachable surfaces and agreed furniture', 'Clean floors and common touch points', 'Home size, scope and supplies confirmed before booking']
+  },
+  {
+    id: 'home-helper-errands', category: 'household',
+    title: 'Everyday Household Helper', hindiTitle: 'घर के रोज़मर्रा के कामों में मदद',
+    description: 'Flexible help with making beds, organizing rooms, watering plants and other agreed non-specialist daily household tasks.',
+    startingPrice: 199, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Flexible home help',
+    included: ['Task list agreed before booking', 'One helper for the selected time slot', 'Childcare, medical care and hazardous work are not included']
+  },
   // Labour / Helper Services. Prices are illustrative starting rates; final scope and duration are confirmed before booking.
   {
     id: 'labour-general-helper',
