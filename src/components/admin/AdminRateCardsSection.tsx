@@ -106,23 +106,29 @@ export const AdminRateCardsSection: React.FC = () => {
       if (!user) throw new Error('Please sign in again.');
       const token = await user.getIdTokenResult(true);
       if (token.claims.admin !== true) throw new Error('Admin custom claim is required.');
-      const sourceName = 'Loknex Indore indicative published range (checked 2026-11-18)';
+      const sourceCheckedAt = new Date().toISOString();
       const rows = [
-        { serviceCategory: 'electrician', unit: 'per_visit' as BillingUnit, sourceUrl: 'https://loknex.com/electrician-in-indore/', note: 'Published indicative Indore market range ₹200–₹600 per visit. Not a verified QuickFix transaction average or guaranteed tariff. Materials and replacement parts excluded unless itemised.' },
-        { serviceCategory: 'plumber', unit: 'per_visit' as BillingUnit, sourceUrl: 'https://loknex.com/plumber-in-indore/', note: 'Published indicative Indore market range ₹200–₹600 per visit. Not a verified QuickFix transaction average or guaranteed tariff. Repair labour, pipes, fittings and replacement parts must be itemised.' }
+        { serviceCategory: 'electrician', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 149, maximumRate: 360, minimumCharge: 149, sourceName: 'HamaraService + GenuineRate Indore indicative visit benchmarks', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Published Indore electrician visit fee starts at ₹149; researched appliance/trade inspection benchmark ₹179–₹360 per visit. This is a market reference, not a verified QuickFix transaction average.' },
+        { serviceCategory: 'plumber', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 149, maximumRate: 360, minimumCharge: 149, sourceName: 'HamaraService + GenuineRate Indore indicative visit benchmarks', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Published Indore plumber visit fee starts at ₹149; use ₹179–₹360 as an indicative inspection comparison. Repair labour, pipes, fittings and replacement parts must be separately itemised.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-jet-clean', unit: 'per_job' as BillingUnit, minimumRate: 499, maximumRate: 810, minimumCharge: 499, sourceName: 'PlumberIndore + GenuineRate Indore AC service listings', sourceUrl: 'https://www.plumberindore.in/appliance/ac-repair', note: 'Indore published foam/jet service listings ₹499 and city benchmark ₹405–₹810 per AC. Confirm split/window type and scope.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-gas-charge', unit: 'per_job' as BillingUnit, minimumRate: 1499, maximumRate: 3150, minimumCharge: 1499, sourceName: 'PlumberIndore + GenuineRate Indore AC gas refill listings', sourceUrl: 'https://www.plumberindore.in/appliance/ac-repair', note: 'Published Indore gas refill offers start ₹1,499; city benchmark ₹2,250–₹3,150 for 1.5 ton R32 with leak check. Refrigerant type, tonnage and leak repair must be confirmed.' },
+        { serviceCategory: 'ac_repair', serviceId: 'ac-pcb-repair', unit: 'per_job' as BillingUnit, minimumRate: 800, maximumRate: 2500, minimumCharge: 800, sourceName: 'HomeRepairPro Indore published AC repair pricing', sourceUrl: 'https://homerepairpro.in/indore/ac-repair', note: 'Published Indore PCB/compressor repair range ₹800–₹2,500; diagnosis and spare parts must be itemised. Final price after inspection.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-cooling-fix', unit: 'per_job' as BillingUnit, minimumRate: 299, maximumRate: 1350, minimumCharge: 299, sourceName: 'PlumberIndore + GenuineRate Indore refrigerator repair listings', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Published Indore fridge repair starts ₹299; city benchmark for non-gas repair ₹360–₹1,350. Compressor and parts excluded unless itemised.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-gas-charge', unit: 'per_job' as BillingUnit, minimumRate: 1260, maximumRate: 2250, minimumCharge: 1260, sourceName: 'GenuineRate Indore + PlumberIndore refrigerator pricing', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Indore researched benchmark ₹1,260–₹2,250 per fridge; a local listing advertises ₹1,299. Confirm refrigerant, leak repair and filter drier scope.' },
+        { serviceCategory: 'fridge_repair', serviceId: 'fridge-defrost-timer', unit: 'per_job' as BillingUnit, minimumRate: 299, maximumRate: 699, minimumCharge: 299, sourceName: 'PlumberIndore Indore refrigerator repair listings', sourceUrl: 'https://www.plumberindore.in/appliance/refrigerator', note: 'Published Indore defrost/thermostat repair starts ₹299; advertised package ₹499–₹699. Parts and model-specific work extra.' }
       ];
       const snapshot = await getDocs(query(collection(db, 'rate_cards')));
-      const keys = new Set(snapshot.docs.map(d => { const x=d.data(); return [x.state,x.district,x.city||'',x.serviceCategory,x.unit,x.sourceName].join('|').toLowerCase(); }));
+      const keys = new Set(snapshot.docs.map(d => { const x=d.data(); return [x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase(); }));
       let added=0;
       for (const row of rows) {
-        const key=['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.unit,sourceName].join('|').toLowerCase();
+        const key=['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
         if(keys.has(key)) continue;
         await addDoc(collection(db,'rate_cards'), {
           state:'Madhya Pradesh', district:'Indore', city:'Indore', tehsil:null,
-          serviceCategory:row.serviceCategory, serviceId:null, unit:row.unit, currency:'INR',
-          minimumRate:200, maximumRate:600, minimumCharge:200, baseFee:0, materialsIncluded:false,
+          serviceCategory:row.serviceCategory, serviceId:row.serviceId || null, unit:row.unit, currency:'INR',
+          minimumRate:row.minimumRate, maximumRate:row.maximumRate, minimumCharge:row.minimumCharge, baseFee:0, materialsIncluded:false,
           approvalStatus:'draft', effectiveFrom:new Date().toISOString().slice(0,10), effectiveTo:null,
-          sourceName, sourceUrl:row.sourceUrl, sourceCheckedAt:new Date().toISOString(),
+          sourceName:row.sourceName, sourceUrl:row.sourceUrl, sourceCheckedAt,
           notes:row.note+' Draft only: admin must verify fresh local provider quotations and approve before customer publication.',
           createdBy:user.uid, createdAt:serverTimestamp()
         });
@@ -192,8 +198,8 @@ export const AdminRateCardsSection: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800 bg-amber-950/20 p-4">
-        <div><h4 className="text-sm font-bold">Indore indicative benchmark drafts</h4><p className="mt-1 text-xs text-slate-400">Electrician and plumber: ₹200–₹600 per visit from published indicative listings. Draft only; not live customer prices.</p></div>
-        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Add Indore draft rates</button>
+        <div><h4 className="text-sm font-bold">Indore service benchmark drafts</h4><p className="mt-1 text-xs text-slate-400">Electrician, plumber, AC and fridge service benchmarks. Draft only; verify and approve each rate before publication.</p></div>
+        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Add researched Indore drafts</button>
       </div>
 
       <form onSubmit={saveDraft} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-2">
