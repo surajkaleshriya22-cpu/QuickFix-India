@@ -38,6 +38,8 @@ export function getPartnerServiceCategories(trades: unknown): Set<string> {
       categories.add('fridge_repair');
     } else if (trade === 'bike_rider') {
       categories.add('bike_taxi');
+    } else if (typeof trade === 'string' && ['house_cleaning', 'cook', 'laundry', 'maid'].includes(trade)) {
+      categories.add('kaamkaaj_partner');
     } else if (typeof trade === 'string' && DISPATCHABLE_PARTNER_TRADES.has(trade)) {
       categories.add(trade);
     }
