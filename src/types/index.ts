@@ -1,4 +1,4 @@
-export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair';
+export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair' | 'technician' | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_taxi' | 'house_cleaning' | 'cook' | 'laundry' | 'maid' | 'carpenter' | 'painter' | 'gardener' | 'pest_control' | 'house_shifting';
 
 export interface ServiceItem {
   id: string;

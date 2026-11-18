@@ -13,7 +13,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
-import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 
 dotenv.config();
 
@@ -140,13 +140,13 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
+    const allowedTrades = new Set(['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'ac_fridge', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'bike_rider', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-        !Array.isArray(trades) || trades.length < 1 || trades.length > 9 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 22 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
@@ -361,15 +361,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
     }
 
-    const categories = new Set<string>();
-    for (const trade of trades) {
-      if (trade === 'ac_fridge') {
-        categories.add('ac_repair');
-        categories.add('fridge_repair');
-      } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-        categories.add(trade);
-      }
-    }
+    const categories = getPartnerServiceCategories(trades);
 
     const normalizeAreaValue = (value: unknown) =>
       typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
@@ -464,15 +456,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      const categories = new Set<string>();
-      for (const trade of trades) {
-        if (trade === 'ac_fridge') {
-          categories.add('ac_repair');
-          categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-          categories.add(trade);
-        }
-      }
+      const categories = getPartnerServiceCategories(trades);
       if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }

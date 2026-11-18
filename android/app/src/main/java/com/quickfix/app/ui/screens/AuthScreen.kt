@@ -298,15 +298,24 @@ fun AuthScreen(
                                 Text("Select Channel Partner Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 val partnerTrades = listOf(
                                     "electrician" to "Electrician",
-                                    "ac_fridge" to "AC / Fridge",
                                     "plumber" to "Plumber",
-                                    "welder" to "Welder",
+                                    "technician" to "Technician (AC / Fridge)",
+                                    "welder" to "Welder / Fabricator",
                                     "mechanic" to "Mechanic",
                                     "driver" to "Driver",
                                     "tourist_guide" to "Tourist Guide",
                                     "contractor" to "Contractor",
-                                    "bike_rider" to "Bike Rider Captain",
-                                    "labour" to "Labour"
+                                    "bike_taxi" to "QuickFix Bike Taxi Captain",
+                                    "house_cleaning" to "House Cleaning",
+                                    "cook" to "Cook",
+                                    "laundry" to "Laundry / Ironing",
+                                    "maid" to "Domestic Helper",
+                                    "carpenter" to "Carpenter",
+                                    "painter" to "Painter",
+                                    "gardener" to "Gardener",
+                                    "pest_control" to "Pest Control",
+                                    "house_shifting" to "House Shifting"
+
                                 )
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     partnerTrades.chunked(2).forEach { rowTrades ->

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
+import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
 
 const eligible = {
   role: 'CHANNEL_PARTNER',
@@ -36,4 +36,32 @@ test('blocks unapproved, unverified, offline, unpaid and non-partner profiles', 
   ]) {
     assert.equal(isPartnerEligibleForDispatch({ ...eligible, ...patch }), false);
   }
+});
+
+test('maps Technician to both AC and fridge bookings', () => {
+  assert.deepEqual(
+    [...getPartnerServiceCategories(['technician'])].sort(),
+    ['ac_repair', 'fridge_repair']
+  );
+});
+
+test('maps every new Channel Partner trade to its matching service category', () => {
+  const trades = [
+    'electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide',
+    'contractor', 'bike_taxi', 'house_cleaning', 'cook', 'laundry', 'maid',
+    'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
+  ];
+  assert.deepEqual([...getPartnerServiceCategories(trades)].sort(), [...trades].sort());
+});
+
+test('keeps legacy AC/fridge and bike rider profiles dispatch-compatible', () => {
+  assert.deepEqual(
+    [...getPartnerServiceCategories(['ac_fridge', 'bike_rider'])].sort(),
+    ['ac_repair', 'bike_taxi', 'fridge_repair']
+  );
+});
+
+test('ignores malformed and unknown partner trades', () => {
+  assert.deepEqual([...getPartnerServiceCategories(null)], []);
+  assert.deepEqual([...getPartnerServiceCategories(['unknown', 12, null])], []);
 });
