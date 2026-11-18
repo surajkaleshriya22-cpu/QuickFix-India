@@ -31,7 +31,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { Booking, BookingStatus, ServiceCategoryType, WalletTransaction } from '../../types';
+import { Booking, BookingStatus, PartnerTradeType, WalletTransaction } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
 import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
@@ -153,7 +153,7 @@ export const TechnicianPortal: React.FC = () => {
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regTrades, setRegTrades] = useState<ServiceCategoryType[]>(['electrician']);
+  const [regTrades, setRegTrades] = useState<PartnerTradeType[]>(['electrician']);
   const [regExp, setRegExp] = useState(5);
   const [regCity, setRegCity] = useState('Bengaluru');
   const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
@@ -404,7 +404,7 @@ export const TechnicianPortal: React.FC = () => {
                     ['contractor', 'Contractor'],
                     ['bike_rider', 'Bike Rider Captain'],
                     ['labour', 'Labour / Helper']
-                  ] as Array<[ServiceCategoryType, string]>).map(([trade, label]) => {
+                  ] as Array<[PartnerTradeType, string]>).map(([trade, label]) => {
                     const selected = regTrades.includes(trade);
                     return (
                       <button
