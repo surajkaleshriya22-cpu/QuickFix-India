@@ -1,6 +1,6 @@
-export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair' | 'labour';
+export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair' | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider' | 'labour';
 
-export type PartnerTradeType = ServiceCategoryType | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider';
+export type PartnerTradeType = ServiceCategoryType;
 
 export interface ServiceItem {
   id: string;
