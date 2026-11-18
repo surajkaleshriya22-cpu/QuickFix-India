@@ -140,7 +140,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'ac_fridge', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'bike_rider', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'labour']);
+    const allowedTrades = new Set(['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'ac_fridge', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'bike_rider', 'kaamkaaj_partner', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
