@@ -28,10 +28,12 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
     customerB: `customer-b-${suffix}`,
     partnerA: `partner-${suffix}`,
     partnerB: `partner-b-${suffix}`,
+    revokedUser: `revoked-${suffix}`,
   };
   const bookingId = `booking-${suffix}`;
   const otp = '482619';
   const createdUids: string[] = [];
+  let revokedUserToken = '';
   const server = app.listen(0, '127.0.0.1');
   await new Promise<void>((resolve, reject) => {
     server.once('listening', resolve);
@@ -66,12 +68,14 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
   });
 
   try {
-    const [customerAToken, customerBToken, partnerAToken, partnerBToken] = await Promise.all([
+    const [customerAToken, customerBToken, partnerAToken, partnerBToken, revokedUserTokenValue] = await Promise.all([
       createToken(ids.customerA, `+1555${suffix.slice(0, 7)}`),
       createToken(ids.customerB, `+1556${suffix.slice(0, 7)}`),
       createToken(ids.partnerA, `+1557${suffix.slice(0, 7)}`),
       createToken(ids.partnerB, `+1558${suffix.slice(0, 7)}`),
+      createToken(ids.revokedUser, `+1559${suffix.slice(0, 7)}`),
     ]);
+    revokedUserToken = revokedUserTokenValue;
 
     await db.collection('bookings').doc(bookingId).set({
       id: bookingId,
@@ -95,7 +99,26 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
 
     const unauthenticated = await request('/api/customer/bookings');
     assert.equal(unauthenticated.status, 401, 'Customer feed must reject missing bearer token');
+    const invalidToken = await request('/api/customer/bookings', 'not-a-valid-firebase-token');
+    assert.equal(invalidToken.status, 401, 'Customer feed must reject an invalid bearer token');
 
+    await auth.revokeRefreshTokens(ids.revokedUser);
+    const revokedToken = await request('/api/customer/bookings', revokedUserToken);
+    assert.equal(revokedToken.status, 401, 'Customer feed must reject a revoked Firebase ID token');
+
+    await db.collection('booking_private').doc(bookingId).update({ customerUid: ids.customerB });
+    const mismatchedCustomerFeed = await request('/api/customer/bookings', customerAToken);
+    const mismatchedCustomerPayload = await mismatchedCustomerFeed.json() as { bookings: Array<{ id: string; startOtp: string }> };
+    assert.equal(mismatchedCustomerPayload.bookings.find((booking) => booking.id === bookingId)?.startOtp, '',
+      'The customer feed must hide OTP when private customer ownership does not match');
+
+    await db.collection('booking_private').doc(bookingId).update({ customerUid: ids.customerA, partnerUid: ids.partnerB });
+    const mismatchedPartnerFeed = await request('/api/customer/bookings', customerAToken);
+    const mismatchedPartnerPayload = await mismatchedPartnerFeed.json() as { bookings: Array<{ id: string; startOtp: string }> };
+    assert.equal(mismatchedPartnerPayload.bookings.find((booking) => booking.id === bookingId)?.startOtp, '',
+      'The customer feed must hide OTP when private partner ownership does not match');
+
+    await db.collection('booking_private').doc(bookingId).update({ partnerUid: ids.partnerA });
     const ownFeed = await request('/api/customer/bookings', customerAToken);
     assert.equal(ownFeed.status, 200);
     const ownPayload = await ownFeed.json() as { bookings: Array<{ id: string; startOtp: string }> };
@@ -109,6 +132,17 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
 
     const wrongPartner = await request(`/api/partners/bookings/${bookingId}/start`, partnerBToken, { otp });
     assert.equal(wrongPartner.status, 403, 'An unrelated partner must not start the booking');
+
+    await db.collection('booking_private').doc(bookingId).update({ customerUid: ids.customerB });
+    const wrongPrivateCustomer = await request(`/api/partners/bookings/${bookingId}/start`, partnerAToken, { otp });
+    assert.equal(wrongPrivateCustomer.status, 400,
+      'Partner start must reject a private OTP record owned by another customer');
+
+    await db.collection('booking_private').doc(bookingId).update({ customerUid: ids.customerA, partnerUid: ids.partnerB });
+    const wrongPrivatePartner = await request(`/api/partners/bookings/${bookingId}/start`, partnerAToken, { otp });
+    assert.equal(wrongPrivatePartner.status, 400,
+      'Partner start must reject a private OTP record assigned to another partner');
+    await db.collection('booking_private').doc(bookingId).update({ partnerUid: ids.partnerA });
 
     const [firstStart, secondStart] = await Promise.all([
       request(`/api/partners/bookings/${bookingId}/start`, partnerAToken, { otp }),
@@ -132,6 +166,26 @@ test('booking OTP API enforces identity, customer isolation and one-time transac
     const replay = await request(`/api/partners/bookings/${bookingId}/start`, partnerAToken, { otp });
     assert.ok([400, 409].includes(replay.status),
       `OTP replay must be rejected; received HTTP ${replay.status}`);
+
+    const wrongCompleter = await request(`/api/partners/bookings/${bookingId}/complete`, partnerBToken, {});
+    assert.equal(wrongCompleter.status, 403, 'An unrelated partner must not complete the booking');
+
+    const completion = await request(`/api/partners/bookings/${bookingId}/complete`, partnerAToken, {});
+    assert.equal(completion.status, 200, 'The assigned partner may complete an in-progress booking');
+    const completionPayload = await completion.json() as { status: string; paymentSettled: boolean };
+    assert.equal(completionPayload.status, 'completed');
+    assert.equal(completionPayload.paymentSettled, false,
+      'Completing a service must not claim that payment or payout was settled');
+
+    const duplicateCompletion = await request(`/api/partners/bookings/${bookingId}/complete`, partnerAToken, {});
+    assert.equal(duplicateCompletion.status, 409, 'A completed booking must not be completed again');
+
+    const [completedBooking, finalAudit] = await Promise.all([
+      db.collection('bookings').doc(bookingId).get(),
+      db.collection('partner_job_audit_logs').where('bookingId', '==', bookingId).get(),
+    ]);
+    assert.equal(completedBooking.data()?.status, 'completed');
+    assert.equal(finalAudit.size, 2, 'Exactly one start and one completion audit event must exist');
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await Promise.all([
