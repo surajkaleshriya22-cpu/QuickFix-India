@@ -1279,7 +1279,7 @@ export const INITIAL_TECHNICIANS: Technician[] = [
     name: 'Vikas Chordia (AC & Fridge Specialist)',
     phone: '+91 98263 99011',
     email: 'vikas.hvac@quickfix.in',
-    trades: ['ac_repair', 'fridge_repair'],
+    trades: ['technician'],
     experienceYears: 8,
     city: 'Indore',
     rating: 4.94,
