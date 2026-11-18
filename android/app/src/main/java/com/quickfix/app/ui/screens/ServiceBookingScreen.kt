@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -34,7 +36,6 @@ fun ServiceBookingScreen(
 ) {
     val services by viewModel.services.collectAsState()
     val currentCity by viewModel.currentCity.collectAsState()
-    val commissionSettings by viewModel.commissionSettings.collectAsState()
 
     val service = services.find { it.id == serviceId } ?: services.first()
 
@@ -45,17 +46,15 @@ fun ServiceBookingScreen(
     var district by remember { mutableStateOf("") }
     var tehsil by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("1") }
+    val quantityValue = quantity.trim().replace(',', '.').toDoubleOrNull()
+    val isValidQuantity = quantityValue != null && quantityValue.isFinite() && quantityValue > 0.0 && quantityValue <= 100000.0
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val basePrice = service.startingPrice
-    val visitFee = commissionSettings.convenienceFee
-    val discount = 20
-    val taxes = (basePrice * commissionSettings.gstPct) / 100
-    val totalAmount = basePrice + visitFee + taxes - discount
     val isValidBookingDate = remember(scheduledDate) {
         runCatching {
             val parsedDate = java.time.LocalDate.parse(scheduledDate)
@@ -96,11 +95,11 @@ fun ServiceBookingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Total Amount", fontSize = 11.sp, color = TextSecondary)
+                        Text("Final price", fontSize = 11.sp, color = TextSecondary)
                         Text(
-                            "₹$totalAmount",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
+                            "After confirmation",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
                             color = BrandBlue
                         )
                     }
@@ -108,6 +107,8 @@ fun ServiceBookingScreen(
                         onClick = {
                             if (!isValidBookingDate) {
                                 bookingError = "Please choose a valid date today or later."
+                            } else if (!isValidQuantity) {
+                                bookingError = "Please enter a valid quantity greater than zero."
                             } else if (address.isBlank()) {
                                 bookingError = "Please enter your complete service address."
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
@@ -127,7 +128,8 @@ fun ServiceBookingScreen(
                                             state = state,
                                             district = district,
                                             tehsil = tehsil,
-                                            notes = notes
+                                            notes = notes,
+                                            quantity = quantityValue!!
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
                                             popUpTo("customer_home")
@@ -141,7 +143,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -251,6 +253,27 @@ fun ServiceBookingScreen(
                 }
             }
 
+            // Quantity is sent to the trusted server; no client-side price is calculated.
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("काम की मात्रा / Quantity", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Quantity (points / hours / kg / km)") },
+                        supportingText = { Text("विजिट या कोटेशन वाले काम के लिए 1 रखें") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        isError = quantity.isNotBlank() && !isValidQuantity
+                    )
+                }
+            }
             // Issue Notes
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
@@ -316,39 +339,21 @@ fun ServiceBookingScreen(
                 }
             }
 
-            // Bill Breakdown
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CardBg),
-                shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            // Truthful pricing notice: server uses approved local rates only.
+            Surface(
+                color = Color(0xFFEFF6FF),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Price Summary", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Standard Service Fee", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$basePrice", fontSize = 12.sp, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Platform Visiting Fee", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$visitFee", fontSize = 12.sp, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Welcome Discount", fontSize = 12.sp, color = Color(0xFF16A34A))
-                        Text("-₹$discount", fontSize = 12.sp, color = Color(0xFF16A34A))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("GST (${commissionSettings.gstPct}%)", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$taxes", fontSize = 12.sp, color = TextPrimary)
-                    }
-
-                    Divider(color = Color(0xFFE2E8F0))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total Payable", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                        Text("₹$totalAmount", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = BrandBlue)
-                    }
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("कीमत की जानकारी / Price confirmation", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(
+                        "No estimated total is charged on this screen. QuickFix will use an approved local rate card where available; otherwise the partner must confirm a quotation before work starts. No payment is collected now.",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        lineHeight = 17.sp
+                    )
                 }
             }
         }
