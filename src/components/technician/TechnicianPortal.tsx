@@ -657,7 +657,7 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>Security Reserve Deficit (Balance: ₹{currentTechnician.walletBalance ?? 0})</span>
+                <span>Security Reserve Deficit (Balance: Not available)</span>
               </span>
               <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
                 Need ₹{2000 - (currentTechnician.walletBalance ?? 0)}
@@ -759,13 +759,13 @@ export const TechnicianPortal: React.FC = () => {
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
-                <span className="text-[10px] text-slate-400">Ledger and payment integration not active</span>
+                <span className="text-xs font-bold text-white block">Partner Wallet (setup pending)</span>
+                <span className="text-[10px] text-slate-400">Live balance is not connected; figures below are not account funds</span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5">
-              {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
+              {false ? (
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" />
                   <span>₹2,000 Reserve Maintained</span>
@@ -783,7 +783,7 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
             {/* Total Balance */}
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Wallet</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Live balance</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
                 ₹{currentTechnician.walletBalance ?? 0}
               </div>
@@ -805,7 +805,7 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-emerald-400 uppercase font-semibold block">Withdrawable</span>
               <div className="text-lg font-extrabold font-mono text-emerald-400 mt-0.5">
-                ₹{withdrawableAmount}
+                Not available
               </div>
               <span className="text-[9px] text-slate-500 block leading-tight">Amount over ₹2,000</span>
             </div>
@@ -815,17 +815,19 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Handed by Customers</span>
-              <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
+              <span className="font-bold text-white font-mono">Not available</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Commission Debited</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
+              <span className="font-bold text-rose-400 font-mono">Not available</span>
             </div>
           </div>
 
           {/* Wallet Actions */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
+              disabled
+              title="Wallet top-up is not connected yet"
               onClick={() => {
                 setTopupAmount(1000);
                 setShowTopupModal(true);
@@ -838,7 +840,7 @@ export const TechnicianPortal: React.FC = () => {
 
             <button
               onClick={handleWithdrawPayout}
-              disabled={withdrawableAmount <= 0}
+              disabled
               className={`font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors ${
                 withdrawableAmount > 0
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-98'
@@ -855,13 +857,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Cash commission deduction is not active yet. No commission has been debited from this wallet.
+                Cash commission deduction is not active yet. No commission has been debited from this wallet.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Secure payouts are not active yet. No withdrawal is reserved, sent, or marked settled until the server ledger and verified payment-provider integration are deployed.
+                Secure payouts are not active yet. No withdrawal is reserved, sent, or marked settled until the server ledger and verified payment-provider integration are deployed.
               </span>
             </div>
           </div>
@@ -1202,7 +1204,7 @@ export const TechnicianPortal: React.FC = () => {
             <h3 className="text-sm font-bold text-slate-800">Ready for Orders</h3>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
               {currentTechnician.isOnline
-                ? `You are online in ${currentTechnician.city || 'your area'}. Incoming electrician/plumber requests will ring here instantly.`
+                ? `You are online in ${currentTechnician.city || 'your area'}. Incoming requests for your registered partner services will appear here when dispatch is enabled.`
                 : 'Turn your status ONLINE above to receive nearby customer bookings.'}
             </p>
           </div>
