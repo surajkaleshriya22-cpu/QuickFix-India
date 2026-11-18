@@ -695,7 +695,7 @@ export const TechnicianPortal: React.FC = () => {
                 Awaiting QuickFix HQ Qualification Clearance
               </h4>
               <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                As per QuickFix India safety policy, every partner category can go online and accept only matching service requests after identity, trade and service-area approval.
+                Every partner category can accept only matching service requests after identity, trade and service-area approval plus a server-verified ₹2,000 reserve. Wallet deposits and the server ledger are not active yet, so live partner dispatch remains unavailable until that payment flow is deployed.
               </p>
             </div>
 
