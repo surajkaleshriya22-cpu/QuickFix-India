@@ -1,4 +1,6 @@
-export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair' | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider' | 'labour';
+export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair';
+
+export type PartnerTradeType = ServiceCategoryType | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider' | 'labour';
 
 export interface ServiceItem {
   id: string;
@@ -96,7 +98,7 @@ export interface Technician {
   name: string;
   phone: string;
   email: string;
-  trades: ServiceCategoryType[];
+  trades: PartnerTradeType[];
   experienceYears: number;
   city: string;
   rating: number;
