@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import android.content.Intent
+import android.net.Uri
 import com.quickfix.app.viewmodel.QuickFixViewModel
 
 private val BrandBlue = Color(0xFF2563EB)
@@ -33,6 +36,7 @@ fun LiveTrackingScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsState()
     val booking = bookings.find { it.id == bookingId } ?: bookings.firstOrNull()
 
@@ -187,9 +191,9 @@ fun LiveTrackingScreen(
                         val steps = listOf(
                             "Booking Request Saved" to true,
                             "Partner Assigned" to (booking.technicianName != null),
-                            "Technician En Route" to (booking.status == "technician_en_route" || booking.status == "in_progress" || booking.status == "completed"),
-                            "Service in Progress (OTP Verified)" to (booking.status == "in_progress" || booking.status == "completed"),
-                            "Job Completed & Escrow Cleared" to (booking.status == "completed")
+                            "Partner en route" to (booking.status == "technician_en_route"),
+                            "Service in progress" to (booking.status == "in_progress" || booking.status == "completed"),
+                            "Service marked completed" to (booking.status == "completed")
                         )
 
                         steps.forEachIndexed { index, (stepText, isDone) ->
@@ -232,8 +236,25 @@ fun LiveTrackingScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Service Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = BrandBlue)
-                        Text("Address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
-                        Text(if (booking.paymentStatus == "paid") "Payment confirmed: ₹${booking.totalAmount}" else "Estimated total: ₹${booking.totalAmount} • Payment pending (no payment collected)", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF16A34A))
+                        Text("Service address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
+                        OutlinedButton(
+                            onClick = {
+                                val mapUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(booking.customerAddress))
+                                context.startActivity(Intent(Intent.ACTION_VIEW, mapUri))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Map, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("View service address on map")
+                        }
+                        Text(
+                            if (booking.paymentStatus == "paid") "Payment confirmed: ₹${booking.totalAmount}"
+                            else "Payment is not collected in this tracking screen. Final amount must be confirmed before service.",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary
+                        )
                     }
                 }
 
