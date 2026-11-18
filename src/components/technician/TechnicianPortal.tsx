@@ -402,7 +402,8 @@ export const TechnicianPortal: React.FC = () => {
                     ['driver', 'Driver'],
                     ['tourist_guide', 'Tourist Guide'],
                     ['contractor', 'Contractor'],
-                    ['bike_rider', 'Bike Rider Captain']
+                    ['bike_rider', 'Bike Rider Captain'],
+                    ['labour', 'Labour / Helper']
                   ] as Array<[ServiceCategoryType, string]>).map(([trade, label]) => {
                     const selected = regTrades.includes(trade);
                     return (
