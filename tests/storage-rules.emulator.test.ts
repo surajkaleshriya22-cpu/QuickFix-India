@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { getApps as getAdminApps } from 'firebase-admin/app';
+import { getApps as getAdminApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { deleteApp, initializeApp } from 'firebase/app';
 import {
@@ -31,10 +31,9 @@ test('Storage rules keep Channel Partner KYC files private and immutable for cli
   const projectId = process.env.GCLOUD_PROJECT || 'demo-quickfix-india';
   process.env.GCLOUD_PROJECT = projectId;
 
-  const adminApp = getAdminApps()[0];
-  assert.ok(adminApp, 'Firebase Admin app must be initialized by the emulator test environment');
-  const adminAuth = getAdminAuth(adminApp);
   const suffix = randomUUID().replaceAll('-', '').slice(0, 18);
+  const adminApp = getAdminApps()[0] || initializeAdminApp({ projectId }, `admin-storage-rules-${suffix}`);
+  const adminAuth = getAdminAuth(adminApp);
   const ownerUid = `kyc-owner-${suffix}`;
   const otherUid = `kyc-other-${suffix}`;
   const filePath = `partner-kyc/${ownerUid}/${suffix}.pdf`;
@@ -47,9 +46,11 @@ test('Storage rules keep Channel Partner KYC files private and immutable for cli
   }, `storage-rules-${suffix}`);
   const clientAuth = getAuth(app);
   const storage = getStorage(app);
-  const [storageHost, storagePortText] = storageEmulator!.split(':');
+  const storageParts = storageEmulator!.split(':');
+  const storageHost = storageParts[0]!;
+  const storagePort = Number(storageParts[1] || 9199);
   connectAuthEmulator(clientAuth, `http://${authEmulator!}`, { disableWarnings: true });
-  connectStorageEmulator(storage, storageHost, Number(storagePortText || 9199));
+  connectStorageEmulator(storage, storageHost, storagePort);
 
   const signInAs = async (uid: string, phoneNumber: string) => {
     await adminAuth.createUser({ uid, phoneNumber });
