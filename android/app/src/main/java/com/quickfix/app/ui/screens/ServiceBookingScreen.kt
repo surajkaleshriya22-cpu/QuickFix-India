@@ -45,17 +45,15 @@ fun ServiceBookingScreen(
     var district by remember { mutableStateOf("") }
     var tehsil by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var quantityText by remember { mutableStateOf("1") }
+    val quantity = quantityText.toDoubleOrNull()
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val basePrice = service.startingPrice
-    val visitFee = commissionSettings.convenienceFee
-    val discount = 20
-    val taxes = (basePrice * commissionSettings.gstPct) / 100
-    val totalAmount = basePrice + visitFee + taxes - discount
+    val isValidQuantity = quantity != null && quantity.isFinite() && quantity > 0.0 && quantity <= 100000.0
     val isValidBookingDate = remember(scheduledDate) {
         runCatching {
             val parsedDate = java.time.LocalDate.parse(scheduledDate)
@@ -96,11 +94,11 @@ fun ServiceBookingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Total Amount", fontSize = 11.sp, color = TextSecondary)
+                        Text("Estimated price", fontSize = 11.sp, color = TextSecondary)
                         Text(
-                            "₹$totalAmount",
+                            "Inspection / quote",
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
+                            fontSize = 15.sp,
                             color = BrandBlue
                         )
                     }
@@ -127,6 +125,7 @@ fun ServiceBookingScreen(
                                             state = state,
                                             district = district,
                                             tehsil = tehsil,
+                                            quantity = quantity ?: 1.0,
                                             notes = notes
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
@@ -141,7 +140,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && scheduledTimeSlot.isNotBlank() && isValidQuantity,
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -251,6 +250,26 @@ fun ServiceBookingScreen(
                 }
             }
 
+            // Work quantity
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Work Quantity", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    OutlinedTextField(
+                        value = quantityText,
+                        onValueChange = { quantityText = it.filter { ch -> ch.isDigit() || ch == '.' }.take(12) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Quantity (default 1)") },
+                        supportingText = { Text("Rate and billing unit will be confirmed from an approved local rate card or after inspection.") },
+                        singleLine = true
+                    )
+                }
+            }
+
             // Issue Notes
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
@@ -316,39 +335,21 @@ fun ServiceBookingScreen(
                 }
             }
 
-            // Bill Breakdown
+            // Pricing transparency: never show legacy catalogue prices as payable amounts.
             Card(
-                colors = CardDefaults.cardColors(containerColor = CardBg),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
                 shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Price Summary", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Standard Service Fee", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$basePrice", fontSize = 12.sp, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Platform Visiting Fee", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$visitFee", fontSize = 12.sp, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Welcome Discount", fontSize = 12.sp, color = Color(0xFF16A34A))
-                        Text("-₹$discount", fontSize = 12.sp, color = Color(0xFF16A34A))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("GST (${commissionSettings.gstPct}%)", fontSize = 12.sp, color = TextSecondary)
-                        Text("₹$taxes", fontSize = 12.sp, color = TextPrimary)
-                    }
-
-                    Divider(color = Color(0xFFE2E8F0))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total Payable", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                        Text("₹$totalAmount", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = BrandBlue)
-                    }
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Price confirmation", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(
+                        "No fixed amount is being charged now. QuickFix will use an approved rate for your location when available; otherwise the partner must inspect the work and confirm the final quotation with you before starting.",
+                        fontSize = 12.sp,
+                        color = Color(0xFF1E40AF),
+                        lineHeight = 17.sp
+                    )
                 }
             }
         }
