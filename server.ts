@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
-import type { BillingUnit } from './src/data/pricing';
+import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 
 dotenv.config();
 
@@ -285,7 +285,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
 
-    if (!validServiceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validServiceArea || !serviceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -320,13 +320,13 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN')
         && card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN')
         && card.serviceCategory === service.category
-        && card.unit === (service.billingUnit || 'per_visit'));
+        && card.unit === getBillingProfile(service).unit);
     const bookingRateCard = resolveLocationRateCard(
       approvedCards,
       { state: serviceArea.state, district: serviceArea.district, city: String(profile.city || ''), tehsil: serviceArea.tehsil },
       service.category,
       service.id,
-      (service.billingUnit || 'per_visit') as BillingUnit,
+      getBillingProfile(service).unit,
       scheduledDate
     );
     const approvedQuote = bookingRateCard ? calculateRateQuote(bookingRateCard, quantity) : null;
@@ -356,7 +356,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
         tehsil: serviceArea.tehsil.trim()
       },
       quantity,
-      billingUnit: bookingRateCard?.unit || service.billingUnit || 'per_visit',
+      billingUnit: bookingRateCard?.unit || getBillingProfile(service).unit,
       pricingStatus: approvedQuote ? 'estimated_from_approved_rate_card' : 'quote_required',
       ...(approvedQuote && bookingRateCard ? {
         rateCardId: bookingRateCard.id,
