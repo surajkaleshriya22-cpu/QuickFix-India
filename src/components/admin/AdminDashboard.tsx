@@ -184,8 +184,7 @@ export const AdminDashboard: React.FC = () => {
   const totalCustomers = customers.length;
   const totalElectricians = technicians.filter(t => t.trades.includes('electrician')).length;
   const totalPlumbers = technicians.filter(t => t.trades.includes('plumber')).length;
-  const totalAcTechs = technicians.filter(t => t.trades.includes('ac_repair')).length;
-  const totalFridgeTechs = technicians.filter(t => t.trades.includes('fridge_repair')).length;
+  const totalTechnicians = technicians.filter(t => t.trades.some(trade => ['technician', 'ac_repair', 'fridge_repair', 'ac_fridge'].includes(trade))).length;
   const totalLabourPartners = technicians.filter(t => t.trades.includes('labour')).length;
   const totalBookings = bookings.length;
   const totalRevenueGMV = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
@@ -556,7 +555,7 @@ export const AdminDashboard: React.FC = () => {
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.phone.includes(searchQuery) ||
       t.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTrade = techFilterTrade === 'all' || t.trades.includes(techFilterTrade);
+    const matchesTrade = techFilterTrade === 'all' || (techFilterTrade === 'technician' ? t.trades.some(trade => ['technician', 'ac_repair', 'fridge_repair', 'ac_fridge'].includes(trade)) : t.trades.includes(techFilterTrade));
     return matchesSearch && matchesTrade;
   });
 
@@ -1037,20 +1036,10 @@ export const AdminDashboard: React.FC = () => {
                   Plumbers ({totalPlumbers})
                 </button>
                 <button
-                  onClick={() => setTechFilterTrade('ac_repair')}
-                  className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                    techFilterTrade === 'ac_repair' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-                  }`}
+                  onClick={() => setTechFilterTrade('technician')}
+                  className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${techFilterTrade === 'technician' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
                 >
-                  AC Repair ({totalAcTechs})
-                </button>
-                <button
-                  onClick={() => setTechFilterTrade('fridge_repair')}
-                  className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                    techFilterTrade === 'fridge_repair' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Fridge Repair ({totalFridgeTechs})
+                  Technician (AC / Fridge / Appliances) ({totalTechnicians})
                 </button>
               </div>
 
@@ -1160,7 +1149,7 @@ export const AdminDashboard: React.FC = () => {
                                 ? 'bg-amber-950 text-amber-300 border border-amber-800'
                                 : tr === 'plumber'
                                 ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
-                                : tr === 'ac_repair'
+                                : ['technician', 'ac_repair', 'fridge_repair', 'ac_fridge'].includes(tr)
                                 ? 'bg-blue-950 text-blue-300 border border-blue-800'
                                 : 'bg-indigo-950 text-indigo-300 border border-indigo-800'
                             }`}
@@ -1169,7 +1158,7 @@ export const AdminDashboard: React.FC = () => {
                               <Zap className="w-2.5 h-2.5" />
                             ) : tr === 'plumber' ? (
                               <Wrench className="w-2.5 h-2.5" />
-                            ) : tr === 'ac_repair' ? (
+                            ) : ['technician', 'ac_repair', 'fridge_repair', 'ac_fridge'].includes(tr) ? (
                               <Wind className="w-2.5 h-2.5" />
                             ) : (
                               <Snowflake className="w-2.5 h-2.5" />
@@ -1208,7 +1197,7 @@ export const AdminDashboard: React.FC = () => {
                       ? commissionSettings.electricianCommissionPct
                       : tech.trades.includes('plumber')
                       ? commissionSettings.plumberCommissionPct
-                      : tech.trades.includes('ac_repair')
+                      : tech.trades.some(trade => ['technician', 'ac_repair', 'fridge_repair', 'ac_fridge'].includes(trade))
                       ? (commissionSettings.acCommissionPct || 15)
                       : (commissionSettings.fridgeCommissionPct || 15);
 
