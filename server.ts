@@ -148,13 +148,13 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'technician', 'ac_fridge', 'ac_repair', 'fridge_repair', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
+    const allowedTrades = new Set(['electrician', 'technician', 'ac_fridge', 'ac_repair', 'fridge_repair', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'household']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-        !Array.isArray(trades) || trades.length < 1 || trades.length > 11 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 12 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
