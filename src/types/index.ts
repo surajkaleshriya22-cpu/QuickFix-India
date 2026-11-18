@@ -249,7 +249,7 @@ export interface AppUser {
   city: string;
   pincode?: string;
   // Partner specific fields
-  trades?: ServiceCategoryType[];
+  trades?: PartnerTradeType[];
   experienceYears?: number;
   kycDocType?: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
   kycDocNumber?: string;
