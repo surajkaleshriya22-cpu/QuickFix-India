@@ -351,6 +351,23 @@ export const CustomerHome: React.FC = () => {
                 <span className={`text-[9px] block ${selectedCategory === 'fridge_repair' ? 'text-blue-100' : 'text-slate-400'}`}>फ्रिज व फ्रीजर</span>
               </div>
             </button>
+            {/* Labour / Helper */}
+            <button
+              onClick={() => setSelectedCategory('labour')}
+              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
+                selectedCategory === 'labour'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
+              }`}
+            >
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'labour' ? 'bg-white/20 text-orange-200' : 'bg-orange-50 text-orange-600'}`}>
+                <Wrench className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left overflow-hidden">
+                <span className="text-xs block leading-tight truncate">Labour / Helper</span>
+                <span className={`text-[9px] block ${selectedCategory === 'labour' ? 'text-blue-100' : 'text-slate-400'}`}>मजदूर / हेल्पर</span>
+              </div>
+            </button>
           </div>
         </div>
 
