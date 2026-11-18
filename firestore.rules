@@ -102,6 +102,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Location rate cards are accessible only to users with a server-issued
+    // Firebase admin custom claim. Customer quote consumption stays disabled
+    // until a trusted server-side quote endpoint is deployed.
+    match /rate_cards/{rateCardId} {
+      allow get, list, create, update, delete: if isAdmin();
+    }
+
     // Bookings, technician verification/status, wallets, ledgers, payouts,
     // refunds, payment configuration and all other collections are server-owned.
     // Keep them closed until authenticated callable functions and atomic
