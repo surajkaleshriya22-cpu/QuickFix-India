@@ -499,7 +499,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       if (trade === 'ac_fridge') {
         categories.add('ac_repair');
         categories.add('fridge_repair');
-      } else if (trade === 'ac_repair' || trade === 'fridge_repair' || trade === 'electrician' || trade === 'plumber') {
+      } else if (trade === 'ac_repair' || trade === 'fridge_repair' || trade === 'electrician' || trade === 'plumber' || trade === 'labour') {
         categories.add(trade);
       }
     }
