@@ -699,9 +699,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     scheduledTimeSlot,
     address,
     notes,
-    paymentMethod,
-    serviceArea,
-    quantity
+    paymentMethod
   }: {
     serviceId: string;
     scheduledDate: string;
@@ -709,8 +707,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     address: string;
     notes?: string;
     paymentMethod: PaymentMethod;
-    serviceArea: { state: string; district: string; tehsil: string };
-    quantity: number;
   }): Booking => {
     const service = services.find(s => s.id === serviceId) || services[0];
     
@@ -796,7 +792,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     scheduledTimeSlot,
     address,
     notes,
-    paymentMethod
+    paymentMethod,
+    serviceArea,
+    quantity
   }: {
     serviceId: string;
     scheduledDate: string;
@@ -804,6 +802,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     address: string;
     notes?: string;
     paymentMethod: PaymentMethod;
+    serviceArea: { state: string; district: string; tehsil: string };
+    quantity: number;
   }): Promise<{ success: boolean; bookingId?: string; message?: string }> => {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser || !isAuthenticated || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
