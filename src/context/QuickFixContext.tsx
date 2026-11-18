@@ -722,10 +722,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ? commissionSettings.electricianCommissionPct
         : service.category === 'plumber'
         ? commissionSettings.plumberCommissionPct
-        : service.category === 'ac_repair'
+        : service.category === 'technician'
         ? (commissionSettings.acCommissionPct || 15)
-        : service.category === 'fridge_repair'
-        ? (commissionSettings.fridgeCommissionPct || 15)
         : 15;
 
     // Partner-specific commission overrides are applied by the trusted backend
