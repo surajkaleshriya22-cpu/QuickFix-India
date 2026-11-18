@@ -378,21 +378,25 @@ export const TechnicianPortal: React.FC = () => {
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['electrician'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('electrician') ? 'bg-amber-100 text-amber-900 border-amber-400' : 'bg-slate-50'}`}
-                  >
-                    Electrician
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['plumber'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('plumber') ? 'bg-cyan-100 text-cyan-900 border-cyan-400' : 'bg-slate-50'}`}
-                  >
-                    Plumber
-                  </button>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ['electrician','Electrician'],['plumber','Plumber'],['ac_repair','AC / Appliance Technician'],
+                    ['fridge_repair','Fridge Technician'],['welder','Welder / Fabricator'],['mechanic','Mechanic'],
+                    ['driver','Driver'],['tourist_guide','Tourist Guide'],['contractor','Contractor'],
+                    ['bike_taxi','QuickFix Bike Taxi Captain'],['house_cleaning','House Cleaning'],
+                    ['cook','Cook'],['laundry','Laundry'],['maid','Domestic Helper'],
+                    ['carpenter','Carpenter'],['painter','Painter'],['gardener','Gardener'],
+                    ['pest_control','Pest Control'],['house_shifting','House Shifting']
+                  ] as const).map(([id,label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setRegTrades([id])}
+                      className={`py-2 px-2 rounded-lg border text-left text-xs font-semibold ${regTrades.includes(id) ? 'bg-blue-100 text-blue-900 border-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
