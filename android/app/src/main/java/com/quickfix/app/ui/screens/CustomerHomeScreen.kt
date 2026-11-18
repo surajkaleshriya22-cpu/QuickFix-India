@@ -242,7 +242,8 @@ fun CustomerHomeScreen(
                     listOf(
                         "all" to "All Services",
                         "electrician" to "⚡ Electrician",
-                        "plumber" to "🔧 Plumber"
+                        "plumber" to "🔧 Plumber",
+                        "household" to "🏠 घरेलू काम"
                     ).forEach { (id, label) ->
                         FilterChip(
                             selected = selectedCategory == id,
