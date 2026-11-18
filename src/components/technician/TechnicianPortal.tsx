@@ -760,7 +760,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
-                <span className="text-[10px] text-slate-400">Escrow Protected · Real-Time Settled</span>
+                <span className="text-[10px] text-slate-400">Ledger and payment integration not active</span>
               </div>
             </div>
 
@@ -855,13 +855,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Platform Cash Commission Rule:</strong> When customers pay in cash, QuickFix commission is auto-deducted from your wallet. The ₹2,000 security reserve remains locked to guarantee platform settlements.
+                <strong>Cash commission deduction is not active yet. No commission has been debited from this wallet.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Safe Payout Protocol:</strong> Withdrawals reserve funds from your wallet and are reviewed by Admin HQ. Approved payouts are dispatched via payment gateway and marked settled only upon verified webhook confirmation.
+                <strong>Secure payouts are not active yet. No withdrawal is reserved, sent, or marked settled until the server ledger and verified payment-provider integration are deployed.
               </span>
             </div>
           </div>
