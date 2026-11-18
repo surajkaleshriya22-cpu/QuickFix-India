@@ -10,7 +10,8 @@ const VALID_PARTNER_CATEGORIES = new Set([
   'tourist_guide',
   'contractor',
   'bike_rider',
-  'labour'
+  'labour',
+  'household'
 ]);
 
 /** Convert partner trades and legacy AC/fridge trades to the canonical service categories. */
