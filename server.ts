@@ -15,6 +15,7 @@ import { randomInt } from 'crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { isBookingWithinPartnerScope, getPartnerDispatchCategories } from './src/utils/partnerCategories';
 import { getCustomerVisibleStartOtp, validateBookingStart } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -71,9 +72,14 @@ try {
     firebaseAdminApp = getApps()[0]!;
   } else {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    firebaseAdminApp = initializeApp(serviceAccountJson
-      ? { credential: cert(JSON.parse(serviceAccountJson)) }
-      : { credential: applicationDefault() });
+    const usingFirebaseEmulators = Boolean(
+      process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIRESTORE_EMULATOR_HOST
+    );
+    firebaseAdminApp = initializeApp(usingFirebaseEmulators
+      ? { projectId: process.env.GCLOUD_PROJECT || 'demo-quickfix-india' }
+      : serviceAccountJson
+        ? { credential: cert(JSON.parse(serviceAccountJson)) }
+        : { credential: applicationDefault() });
   }
   console.info('Firebase Admin SDK initialized.');
 } catch (error) {
@@ -142,13 +148,13 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'ac_fridge', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour']);
+    const allowedTrades = new Set(['electrician', 'technician', 'ac_fridge', 'ac_repair', 'fridge_repair', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour', 'household']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-        !Array.isArray(trades) || trades.length < 1 || trades.length > 9 ||
+        !Array.isArray(trades) || trades.length < 1 || trades.length > 12 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
         !Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60 ||
@@ -489,26 +495,14 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
     }
 
-    const categories = new Set<string>();
-    for (const trade of trades) {
-      if (trade === 'ac_fridge') {
-        categories.add('ac_repair');
-        categories.add('fridge_repair');
-      } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-        categories.add(trade);
-      }
-    }
+    const categories = getPartnerDispatchCategories(trades);
 
-    const normalizeAreaValue = (value: unknown) =>
-      typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
     const partnerArea = profile.serviceArea && typeof profile.serviceArea === 'object'
       ? profile.serviceArea as Record<string, unknown>
       : null;
-    const partnerHasArea = Boolean(partnerArea &&
-      ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(partnerArea[key])));
 
-    // Query only the partner's city. Structured area matching is then applied
-    // before returning requests; legacy records without complete area data use city.
+    // Query only the partner's approved city; canonical category and area checks
+    // are shared with the booking-acceptance transaction below.
     const snapshot = await db.collection('bookings')
       .where('status', '==', 'requested')
       .where('city', '==', city)
@@ -518,20 +512,14 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const bookings = snapshot.docs
       .filter((document) => {
         const booking = document.data();
-        if (!categories.has(String(booking.category || ''))) return false;
-        const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
-          ? booking.serviceArea as Record<string, unknown>
-          : null;
-        const bookingHasArea = Boolean(bookingArea &&
-          ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(bookingArea[key])));
-        if (partnerHasArea && bookingHasArea) {
-          return ['state', 'district', 'tehsil'].every((key) =>
-            normalizeAreaValue(partnerArea![key]) === normalizeAreaValue(bookingArea![key])
-          );
-        }
-        // Backward compatibility for older customer/partner profiles without
-        // complete structured area details. City is already Firestore-filtered.
-        return true;
+        return isBookingWithinPartnerScope({
+          partnerCity: city,
+          bookingCity: booking.city,
+          partnerCategories: categories,
+          bookingCategory: booking.category,
+          partnerArea,
+          bookingArea: booking.serviceArea
+        });
       })
       .map((document) => {
         const booking = document.data();
@@ -594,30 +582,17 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      const categories = new Set<string>();
-      for (const trade of trades) {
-        if (trade === 'ac_fridge') {
-          categories.add('ac_repair');
-          categories.add('fridge_repair');
-        } else if (['electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_rider', 'labour'].includes(trade)) {
-          categories.add(trade);
-        }
-      }
-      if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
-        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
-      }
-
-      const normalizeArea = (value: unknown) =>
-        typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
+      const categories = getPartnerDispatchCategories(trades);
       const partnerArea = partner.serviceArea && typeof partner.serviceArea === 'object'
         ? partner.serviceArea as Record<string, unknown> : null;
-      const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
-        ? booking.serviceArea as Record<string, unknown> : null;
-      const hasCompleteArea = (area: Record<string, unknown> | null) =>
-        Boolean(area && ['state', 'district', 'tehsil'].every((key) => normalizeArea(area[key])));
-      if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
-          !['state', 'district', 'tehsil'].every((key) =>
-            normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+      if (!isBookingWithinPartnerScope({
+        partnerCity: city,
+        bookingCity: booking.city,
+        partnerCategories: categories,
+        bookingCategory: booking.category,
+        partnerArea,
+        bookingArea: booking.serviceArea
+      })) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
 
@@ -957,4 +932,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Export the API app so integration tests can exercise routes without starting Vite
+// or binding a production listener. The normal CLI entry point still starts the server.
+export { app };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  void startServer();
+}

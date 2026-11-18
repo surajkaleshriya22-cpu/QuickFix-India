@@ -22,7 +22,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { ServiceCategoryType, UserRole, isAuthorizedAdminEmail } from '../../types';
+import { PartnerTradeType, UserRole, isAuthorizedAdminEmail } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
 
 interface AuthModalProps {
@@ -54,7 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const [rememberMe, setRememberMe] = useState(true);
 
   // Partner Specific Fields
-  const [partnerTrades, setPartnerTrades] = useState<ServiceCategoryType[]>(['electrician']);
+  const [partnerTrades, setPartnerTrades] = useState<PartnerTradeType[]>(['electrician']);
   const [partnerState, setPartnerState] = useState('');
   const [partnerDistrict, setPartnerDistrict] = useState('');
   const [partnerTehsil, setPartnerTehsil] = useState('');
@@ -82,7 +82,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     };
   }, []);
 
-  const toggleTrade = (trade: ServiceCategoryType) => {
+  const toggleTrade = (trade: PartnerTradeType) => {
     if (partnerTrades.includes(trade)) {
       if (partnerTrades.length > 1) {
         setPartnerTrades(partnerTrades.filter(t => t !== trade));
@@ -455,13 +455,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                         <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-[11px] leading-snug">
                           <strong className="font-bold block text-amber-950">Partner onboarding & verification</strong>
-                          Electricians, Plumbers, AC and Fridge Technicians can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
+                          All 11 Channel Partner trades can submit a basic profile for review. Admin approval and any future KYC or payment steps will be handled separately after the secure process is ready.
                         </div>
                       </div>
 
                       <div>
                         <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          Technician Full Name
+                          Channel Partner Full Name
                         </label>
                         <input
                           type="text"
@@ -504,28 +504,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                           </button>
                           <button
                             type="button"
-                            onClick={() => toggleTrade('ac_repair')}
-                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('ac_repair')
-                                ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
+                            onClick={() => toggleTrade('technician')}
+                            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${partnerTrades.includes('technician') ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
                           >
                             <Wind className="w-3.5 h-3.5 text-blue-600" />
-                            <span>AC Repair</span>
+                            <span>Technician (AC / Fridge / Appliances)</span>
                           </button>
                           <button
                             type="button"
-                            onClick={() => toggleTrade('fridge_repair')}
+                            aria-pressed={partnerTrades.includes('labour')}
+                            onClick={() => toggleTrade('labour')}
                             className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
-                              partnerTrades.includes('fridge_repair')
-                                ? 'bg-indigo-50 text-indigo-900 border-indigo-400 ring-1 ring-indigo-300'
+                              partnerTrades.includes('labour')
+                                ? 'bg-orange-50 text-orange-900 border-orange-400 ring-1 ring-orange-300'
                                 : 'bg-slate-50 text-slate-600 border-slate-200'
                             }`}
                           >
-                            <Snowflake className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Fridge/Freezer</span>
+                            <Wrench className="w-3.5 h-3.5 text-orange-600" />
+                            <span>Labour / Helper</span>
                           </button>
+                          {([
+                            ['welder', 'Welder'],
+                            ['mechanic', 'Mechanic'],
+                            ['driver', 'Driver'],
+                            ['tourist_guide', 'Tourist Guide'],
+                            ['contractor', 'Contractor'],
+                            ['bike_rider', 'QuickFix Bike Taxi Captain']
+                          ] as Array<[PartnerTradeType, string]>).map(([trade, label]) => (
+                            <button
+                              key={trade}
+                              type="button"
+                              aria-pressed={partnerTrades.includes(trade)}
+                              onClick={() => toggleTrade(trade)}
+                              className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs ${
+                                partnerTrades.includes(trade)
+                                  ? 'bg-blue-50 text-blue-900 border-blue-400 ring-1 ring-blue-300'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                              <span>{label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
 

@@ -190,10 +190,10 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
-  // AC Repair Services (एसी रिपेयर और सर्विस)
+  // Technician services: AC, refrigerator, freezer and household appliance repair
   {
     id: 'ac-jet-clean',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'Split / Window AC Deep Jet Service',
     hindiTitle: 'एसी जेट वाश और केमिकल सर्विस',
     description: 'High-pressure jet pump wash for indoor evaporator coils, outdoor condenser unit cleaning, filter disinfection, and drain tray flush.',
@@ -212,7 +212,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-gas-charge',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'AC Gas Leak Check & Full Charge (R32/R410A)',
     hindiTitle: 'एसी गैस लीकेज चेक व रीफिल',
     description: 'Nitrogen pressure testing, flare nut brazing, vacuumization, and 100% pure virgin refrigerant gas recharge with digital manifold gauge.',
@@ -231,7 +231,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-pcb-repair',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'Inverter AC Motherboard & PCB Circuit Fix',
     hindiTitle: 'इन्वर्टर एसी पीसीबी बोर्ड मरम्मत',
     description: 'Diagnose inverter error codes (E1, E6, F3), burnt capacitors, optical coupler fault, sensor error, and compressor drive IC replacement.',
@@ -250,7 +250,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'ac-install-shift',
-    category: 'ac_repair',
+    category: 'technician',
     title: 'AC Uninstallation & Heavy Bracket Installation',
     hindiTitle: 'एसी फिटिंग और शिफ्टिंग',
     description: 'Pumping down existing refrigerant, wall bracket mounting with laser alignment, core-cut wall sleeve, and copper piping connection.',
@@ -267,10 +267,10 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
-  // Fridge & Freezer Repair Services (फ्रिज व फ्रीजर मरम्मत)
+
   {
     id: 'fridge-cooling-fix',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Refrigerator Not Cooling / Compressor Check',
     hindiTitle: 'फ्रिज कूलिंग व कंप्रेसर जांच',
     description: 'Diagnose warm fridge compartment, continuous humming compressor, relay-overload failure, and capacitor breakdown.',
@@ -289,7 +289,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-gas-charge',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Single/Double Door Refrigerator Gas Charging',
     hindiTitle: 'फ्रिज गैस चार्जिंग (R134a/R600a)',
     description: 'Complete copper capillary tube flush, drier filter replacement, leak detection, and eco-friendly R134a or R600a gas charging.',
@@ -308,7 +308,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-defrost-timer',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Freezer Excessive Ice / Defrost Timer & Bi-metal Fix',
     hindiTitle: 'फ्रीजर बर्फ जमना और डीफ्रॉस्ट हीटर ठीक करना',
     description: 'Fix heavy ice blocks clogging cold airflow to lower fridge, faulty bi-metal thermostat, defrost heater rod, and timer motor.',
@@ -327,7 +327,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: 'fridge-inverter-board',
-    category: 'fridge_repair',
+    category: 'technician',
     title: 'Inverter Refrigerator PCB Circuit Board Repair',
     hindiTitle: 'इन्वर्टर फ्रिज पीसीबी बोर्ड रिपेयर',
     description: 'Direct repair for multi-door & side-by-side smart inverter refrigerators showing blinking LED error codes or sudden power trip.',
@@ -343,7 +343,727 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Fan motor PWM signal verification',
       'Factory electronic test cycle run'
     ]
-  }
+  },
+
+
+  // Additional Technician services for common household appliances
+  {
+    id: 'tech-washing-machine-repair', category: 'technician',
+    title: 'Washing Machine Repair', hindiTitle: 'वॉशिंग मशीन मरम्मत',
+    description: 'Diagnose top-load and front-load washing machine issues including not starting, not draining, vibration and wash-cycle faults. Parts quoted separately.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Error-code and operating check', 'Drain, inlet and basic electrical inspection', 'Motor, PCB and replacement parts quoted after diagnosis']
+  },
+  {
+    id: 'tech-washing-machine-install', category: 'technician',
+    title: 'Washing Machine Installation & Demo', hindiTitle: 'वॉशिंग मशीन फिटिंग और डेमो',
+    description: 'Install and level a washing machine, connect inlet and drain hoses, and demonstrate basic operation. New plumbing or electrical points extra.',
+    startingPrice: 349, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Installation',
+    included: ['Positioning and leveling', 'Existing tap and drain connection', 'New fittings, stands and electrical work extra']
+  },
+  {
+    id: 'tech-microwave-repair', category: 'technician',
+    title: 'Microwave Oven Repair', hindiTitle: 'माइक्रोवेव ओवन मरम्मत',
+    description: 'Diagnose heating failure, turntable, keypad and door-switch problems. High-voltage components are handled only by qualified technicians.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Safety inspection',
+    included: ['Basic function and door interlock check', 'Fault diagnosis and estimate', 'Magnetron, PCB and parts extra']
+  },
+  {
+    id: 'tech-geyser-repair', category: 'technician',
+    title: 'Geyser / Water Heater Repair', hindiTitle: 'गीजर और वॉटर हीटर मरम्मत',
+    description: 'Check no-heating, thermostat, heating element, leakage and safety cut-off issues in electric water heaters.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Electrical safety check',
+    included: ['Power isolation and initial safety inspection', 'Thermostat and heating-element diagnosis', 'Replacement parts and plumbing changes extra']
+  },
+  {
+    id: 'tech-geyser-install', category: 'technician',
+    title: 'Geyser Installation & Removal', hindiTitle: 'गीजर लगाना और उतारना',
+    description: 'Install or remove a wall-mounted electric water heater using suitable existing connections. New wiring, plumbing and heavy civil work quoted separately.',
+    startingPrice: 499, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site conditions apply',
+    included: ['Mounting and connection inspection', 'Basic installation labour', 'Pipes, valves, wiring and mounting hardware extra']
+  },
+  {
+    id: 'tech-ro-purifier-service', category: 'technician',
+    title: 'RO / Water Purifier Service', hindiTitle: 'आरओ और वाटर प्यूरिफायर सर्विस',
+    description: 'Inspect water flow, leakage, pump, filters and purification performance for domestic RO and UV systems.',
+    startingPrice: 249, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Filter model check',
+    included: ['Leak and flow inspection', 'Pump and purifier operation check', 'Filters, membrane and consumables extra']
+  },
+  {
+    id: 'tech-ro-install', category: 'technician',
+    title: 'RO / Water Purifier Installation', hindiTitle: 'आरओ मशीन फिटिंग',
+    description: 'Mount and connect a domestic water purifier at an existing suitable water and drain point. Extra plumbing and electrical points are separate.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Installation',
+    included: ['Wall mounting and leak check', 'Existing inlet and drain connection', 'Pipes, taps and additional fittings extra']
+  },
+  {
+    id: 'tech-chimney-service', category: 'technician',
+    title: 'Kitchen Chimney Cleaning & Service', hindiTitle: 'किचन चिमनी सफाई और सर्विस',
+    description: 'Clean accessible filters and inspect suction, lights and basic controls. Deep motor repair and replacement parts are extra.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Cleaning service',
+    included: ['Filter and outer-surface cleaning', 'Suction and control check', 'Motor, duct and spare parts extra']
+  },
+  {
+    id: 'tech-dishwasher-repair', category: 'technician',
+    title: 'Dishwasher Repair', hindiTitle: 'डिशवॉशर मरम्मत',
+    description: 'Diagnose water inlet, drainage, heating, door latch and wash-cycle issues in domestic dishwashers.',
+    startingPrice: 349, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Error and wash-cycle check', 'Inlet, drain and basic electrical inspection', 'Pump, heater, PCB and parts extra']
+  },
+  {
+    id: 'tech-tv-repair', category: 'technician',
+    title: 'LED / Smart TV Inspection & Repair', hindiTitle: 'एलईडी और स्मार्ट टीवी जांच',
+    description: 'Inspect no-display, sound, power and connectivity faults. Screen replacement and board-level work require a separate estimate.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Power and connection checks', 'Initial fault diagnosis', 'Display panel, motherboard and parts extra']
+  },
+  {
+    id: 'tech-air-cooler-service', category: 'technician',
+    title: 'Air Cooler Repair & Service', hindiTitle: 'एयर कूलर मरम्मत और सर्विस',
+    description: 'Service domestic air coolers including pump, fan, motor, water leakage and cooling-pad inspection.',
+    startingPrice: 249, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Seasonal service',
+    included: ['Pump, fan and wiring check', 'Water flow and leakage inspection', 'Cooling pads, motor and parts extra']
+  },
+  {
+    id: 'tech-deep-freezer-repair', category: 'technician',
+    title: 'Deep Freezer / Commercial Cooler Repair', hindiTitle: 'डीप फ्रीजर और कमर्शियल कूलर मरम्मत',
+    description: 'Inspect cooling, thermostat, compressor start, door seal and temperature-control issues in deep freezers and display coolers.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Commercial appliance',
+    included: ['Temperature and electrical diagnosis', 'Door seal and control inspection', 'Gas, compressor and replacement parts extra']
+  },
+  {
+    id: 'tech-small-appliance-repair', category: 'technician',
+    title: 'Small Home Appliance Repair', hindiTitle: 'छोटे घरेलू उपकरणों की मरम्मत',
+    description: 'Initial diagnosis for mixer grinder, iron, induction cooktop, electric kettle and similar small household appliances.',
+    startingPrice: 199, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Appliance check',
+    included: ['Basic electrical and function check', 'Repair feasibility and estimate', 'Motor, heating element, PCB and parts extra']
+  },
+  // Home & Household Services — booking scope, hours and supplies are confirmed before acceptance.
+  {
+    id: 'home-sweep-mop', category: 'household',
+    title: 'Daily Sweeping & Mopping', hindiTitle: 'रोज़ाना झाड़ू-पोंछा',
+    description: 'Daily floor sweeping and mopping for homes. Number of rooms, floor type and visit frequency are confirmed before booking.',
+    startingPrice: 249, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Daily home help',
+    included: ['Sweeping of agreed rooms', 'Wet mopping of accessible floors', 'Room count and cleaning supplies confirmed before work']
+  },
+  {
+    id: 'home-utensil-washing', category: 'household',
+    title: 'Utensil & Kitchen Washing', hindiTitle: 'बर्तन और रसोई के बर्तन साफ़ करना',
+    description: 'Wash everyday utensils, cookware and kitchen counter surfaces. Quantity and heavy cookware are agreed before booking.',
+    startingPrice: 199, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Kitchen help',
+    included: ['Wash and rinse agreed utensils', 'Keep washed utensils in the agreed place', 'Cleaning liquid and quantity confirmed before work']
+  },
+  {
+    id: 'home-cooking', category: 'household',
+    title: 'Home Cooking / Meal Preparation', hindiTitle: 'घर का खाना बनाना',
+    description: 'Prepare everyday home meals such as roti, sabzi, dal, rice and breakfast according to the customer instructions.',
+    startingPrice: 299, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Home cook',
+    included: ['Menu and number of people confirmed first', 'Meal preparation in the customer kitchen', 'Groceries, special diet and extra dishes agreed separately']
+  },
+  {
+    id: 'home-laundry-wash', category: 'household',
+    title: 'Laundry & Clothes Washing', hindiTitle: 'कपड़े धोने का काम',
+    description: 'Hand-wash or machine-wash everyday clothes and help with drying. Delicates and special fabrics are handled only by prior agreement.',
+    startingPrice: 199, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Laundry help',
+    included: ['Sort clothes as instructed', 'Hand wash or operate customer washing machine', 'Detergent, load size and drying arrangement confirmed first']
+  },
+  {
+    id: 'home-ironing', category: 'household',
+    title: 'Clothes Ironing & Folding', hindiTitle: 'कपड़ों की इस्त्री और तह करना',
+    description: 'Iron and fold everyday clothes using the customer iron and ironing board.',
+    startingPrice: 149, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Clothes care',
+    included: ['Iron agreed everyday garments', 'Fold and arrange clothes', 'Delicate garments and per-piece quantity confirmed first']
+  },
+  {
+    id: 'home-bathroom-clean', category: 'household',
+    title: 'Bathroom & Toilet Cleaning', hindiTitle: 'बाथरूम और टॉयलेट की सफाई',
+    description: 'Clean bathroom floors, washbasin, toilet and accessible fittings using agreed cleaning products.',
+    startingPrice: 249, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Bathroom cleaning',
+    included: ['Clean agreed bathroom fixtures and floor', 'Rinse and leave the area tidy', 'Number of bathrooms and cleaning chemicals confirmed first']
+  },
+  {
+    id: 'home-deep-clean', category: 'household',
+    title: 'Full Home / Deep Cleaning', hindiTitle: 'पूरे घर की गहरी सफाई',
+    description: 'Detailed dusting and cleaning of agreed rooms, shelves and reachable surfaces. High-risk or high-level work is excluded.',
+    startingPrice: 699, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Deep cleaning',
+    included: ['Dust reachable surfaces and agreed furniture', 'Clean floors and common touch points', 'Home size, scope and supplies confirmed before booking']
+  },
+  {
+    id: 'home-helper-errands', category: 'household',
+    title: 'Everyday Household Helper', hindiTitle: 'घर के रोज़मर्रा के कामों में मदद',
+    description: 'Flexible help with making beds, organizing rooms, watering plants and other agreed non-specialist daily household tasks.',
+    startingPrice: 199, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Flexible home help',
+    included: ['Task list agreed before booking', 'One helper for the selected time slot', 'Childcare, medical care and hazardous work are not included']
+  },
+  // Labour / Helper Services. Prices are illustrative starting rates; final scope and duration are confirmed before booking.
+  {
+    id: 'labour-general-helper',
+    category: 'labour',
+    title: 'General Labour / Helper',
+    hindiTitle: 'सामान्य मजदूर / हेल्पर',
+    description: 'Household shifting help, loading and unloading, lifting and carrying, and basic on-site assistance. Final price depends on work scope and hours.',
+    startingPrice: 299,
+    durationMinutes: 120,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: [
+      'One helper for the initial two-hour booking slot',
+      'Work scope and safety requirements confirmed before acceptance',
+      'Extra time or additional helpers quoted separately'
+    ]
+  },
+  {
+    id: 'labour-cleanup-helper',
+    category: 'labour',
+    title: 'Cleaning & Site Helper',
+    hindiTitle: 'सफाई और साइट हेल्पर',
+    description: 'General cleaning assistance, material movement, and non-specialist site support. Specialist construction or hazardous work is excluded.',
+    startingPrice: 349,
+    durationMinutes: 120,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: [
+      'One helper for the initial two-hour booking slot',
+      'Customer and partner agree the task list before starting',
+      'Tools, materials, and extra hours quoted separately'
+    ]
+  },
+
+  // Welder / Fabricator services — starting estimates; final scope and material costs are confirmed before booking.
+  {
+    id: 'welder-gate-grill-repair', category: 'welder',
+    title: 'Gate, Grill & Railing Welding', hindiTitle: 'गेट, ग्रिल और रेलिंग वेल्डिंग',
+    description: 'Repair and fabrication of household gates, grills, railings and metal frames. Material and site measurements are quoted separately.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site estimate may apply',
+    included: ['On-site inspection and work-scope confirmation', 'Basic welding labour estimate', 'Metal, paint and consumables charged after approval']
+  },
+  {
+    id: 'welder-furniture-repair', category: 'welder',
+    title: 'Metal Furniture Welding', hindiTitle: 'लोहे के फर्नीचर की वेल्डिंग',
+    description: 'Repair of metal chairs, tables, racks, beds and similar household items. Heavy or structural work requires a separate site assessment.',
+    startingPrice: 399, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Price confirmed before work',
+    included: ['Inspection of the damaged joint', 'Repair labour estimate', 'Parts and finishing quoted separately']
+  },
+  // Mechanic services
+  {
+    id: 'mechanic-two-wheeler', category: 'mechanic',
+    title: 'Two-Wheeler Inspection & Repair', hindiTitle: 'बाइक / स्कूटर जांच और मरम्मत',
+    description: 'Basic two-wheeler diagnosis, battery, brake, chain and starting issue checks. Spare parts and major repairs are quoted separately.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Initial vehicle inspection', 'Fault explanation before repair', 'Parts and additional labour require customer approval']
+  },
+  {
+    id: 'mechanic-car-breakdown', category: 'mechanic',
+    title: 'Car Breakdown Assistance', hindiTitle: 'कार खराब होने पर सहायता',
+    description: 'Basic roadside diagnosis for starting, battery and minor mechanical issues. Towing and major repairs are not included.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['On-site initial diagnosis', 'Repair feasibility and estimate', 'Towing, parts and major work quoted separately']
+  },
+  // Driver services
+  {
+    id: 'driver-hourly', category: 'driver',
+    title: 'Hourly Personal Driver', hindiTitle: 'घंटे के हिसाब से ड्राइवर',
+    description: 'Book a verified driver for your own vehicle. Trip duration, route, waiting and overtime charges are confirmed before the trip.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Trip details confirmed',
+    included: ['Driver for the initial two-hour slot', 'Valid driving licence and identity checks', 'Fuel, tolls, parking and extra hours excluded']
+  },
+  {
+    id: 'driver-outstation', category: 'driver',
+    title: 'Outstation Driver Booking', hindiTitle: 'आउटस्टेशन यात्रा के लिए ड्राइवर',
+    description: 'Driver booking for an outstation journey in the customer vehicle. Route, dates, night halt and return plan must be agreed first.',
+    startingPrice: 999, durationMinutes: 480, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom trip quote',
+    included: ['Driver availability confirmation', 'Route and schedule agreed before acceptance', 'Stay, meals, tolls and extra days quoted separately']
+  },
+  // Tourist guide services
+  {
+    id: 'tour-guide-city', category: 'tourist_guide',
+    title: 'Local City Sightseeing Guide', hindiTitle: 'शहर घूमने के लिए स्थानीय गाइड',
+    description: 'Local guide for popular attractions, local history and a planned city visit. Entry tickets, transport and meals are separate.',
+    startingPrice: 799, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Itinerary confirmed first',
+    included: ['Guide for the initial three-hour slot', 'Route and language preference agreed in advance', 'Tickets and transport excluded']
+  },
+  {
+    id: 'tour-guide-custom', category: 'tourist_guide',
+    title: 'Custom Local Tour Guide', hindiTitle: 'अपनी पसंद का लोकल टूर गाइड',
+    description: 'A guide for a customer-planned local visit, food walk or heritage route. The itinerary and guide credentials are confirmed before booking.',
+    startingPrice: 999, durationMinutes: 240, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom itinerary',
+    included: ['Initial four-hour guide slot', 'Stops and language agreed before booking', 'Tickets, food and transport excluded']
+  },
+  // Contractor services
+  {
+    id: 'contractor-site-visit', category: 'contractor',
+    title: 'Home Renovation Site Visit', hindiTitle: 'घर के रिनोवेशन के लिए साइट विजिट',
+    description: 'Contractor visit for renovation planning, measurements and a preliminary work estimate. Final quotation follows site inspection.',
+    startingPrice: 499, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Visit fee estimate',
+    included: ['Initial site inspection', 'Work scope and material discussion', 'Detailed BOQ and execution quoted separately']
+  },
+  {
+    id: 'contractor-civil-work', category: 'contractor',
+    title: 'Civil Work Consultation', hindiTitle: 'सिविल वर्क सलाह',
+    description: 'Consultation for masonry, plaster, tiling and small civil works. Structural changes require qualified assessment and applicable approvals.',
+    startingPrice: 599, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site estimate may apply',
+    included: ['Initial work assessment', 'Material and labour scope discussion', 'Execution, materials and permissions quoted separately']
+  },
+  // Bike Taxi Captain services
+  {
+    id: 'bike-rider-local-ride', category: 'bike_rider',
+    title: 'QuickFix Bike Taxi Ride', hindiTitle: 'क्विकफिक्स बाइक टैक्सी राइड',
+    description: 'Local point-to-point bike ride with a verified captain. Fare and route are shown for confirmation before the ride is accepted.',
+    startingPrice: 49, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Fare confirmed before ride',
+    included: ['One local point-to-point ride request', 'Captain and vehicle details before pickup', 'Applicable safety, helmet and local transport rules must be followed']
+  },
+  {
+    id: 'bike-rider-parcel', category: 'bike_rider',
+    title: 'Local Bike Pickup & Drop', hindiTitle: 'लोकल बाइक पिकअप और ड्रॉप',
+    description: 'Local small-item pickup and drop by bike. Restricted, hazardous, illegal or prohibited items are not accepted.',
+    startingPrice: 79, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Distance-based quote',
+    included: ['One local pickup and drop request', 'Item and delivery details confirmed before acceptance', 'Distance and waiting charges shown before confirmation']
+  },
+
+  // Additional trade-specific work options for every non-core partner category.
+  // These are starting estimates only; final scope, materials and travel are confirmed before booking.
+  {
+    id: 'welder-door-hinge-repair', category: 'welder',
+    title: 'Iron Door Hinge & Welding Repair', hindiTitle: 'लोहे के दरवाजे के कब्जे की वेल्डिंग',
+    description: 'Repair loose or broken iron door hinges, brackets and small metal joints. Replacement parts and repainting are quoted separately.',
+    startingPrice: 299, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Work scope confirmed first',
+    included: ['Inspect hinge and metal condition', 'Labour estimate before welding', 'Replacement hinges and paint extra']
+  },
+  {
+    id: 'welder-shed-frame', category: 'welder',
+    title: 'Small Shed & Metal Frame Fabrication', hindiTitle: 'शेड और मेटल फ्रेम बनवाना',
+    description: 'Fabrication estimate for small household frames, racks and shed supports. Structural load-bearing work needs a qualified site assessment.',
+    startingPrice: 699, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site measurement required',
+    included: ['Basic measurement and design discussion', 'Labour estimate', 'Steel, roofing, transport and structural design extra']
+  },
+  {
+    id: 'welder-window-grill', category: 'welder',
+    title: 'Window Grill Repair & Installation', hindiTitle: 'खिड़की की ग्रिल मरम्मत और फिटिंग',
+    description: 'Repair or fit household window grills and safety frames after measurements. Materials, anchors and finishing are quoted separately.',
+    startingPrice: 449, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Measurement based quote',
+    included: ['Window opening measurement', 'Fitment labour estimate', 'Metal, fasteners and paint extra']
+  },
+  {
+    id: 'mechanic-bike-servicing', category: 'mechanic',
+    title: 'Bike / Scooter General Service', hindiTitle: 'बाइक / स्कूटर जनरल सर्विस',
+    description: 'Basic scheduled two-wheeler inspection and service including chain, brake and fluid checks. Oil and replacement parts are extra.',
+    startingPrice: 399, durationMinutes: 75, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Parts billed separately',
+    included: ['Vehicle condition checklist', 'Brake, chain and battery inspection', 'Oil, filters and parts require approval']
+  },
+  {
+    id: 'mechanic-car-battery', category: 'mechanic',
+    title: 'Car Battery & Starting Problem Check', hindiTitle: 'कार बैटरी और स्टार्टिंग समस्या जांच',
+    description: 'Check weak battery, loose terminals, starter symptoms and charging voltage. Battery replacement and towing are extra.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Battery and terminal inspection', 'Charging voltage check', 'New battery and towing quoted separately']
+  },
+  {
+    id: 'mechanic-puncture', category: 'mechanic',
+    title: 'Two-Wheeler Puncture & Tyre Check', hindiTitle: 'बाइक पंचर और टायर जांच',
+    description: 'On-site puncture inspection and basic tyre condition check where safe access and repair are possible. Tube or tyre replacement is extra.',
+    startingPrice: 149, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Local assistance',
+    included: ['Tyre and valve inspection', 'Repair feasibility confirmation', 'Tube, tyre and parts charged separately']
+  },
+  {
+    id: 'driver-airport-transfer', category: 'driver',
+    title: 'Airport / Railway Station Driver', hindiTitle: 'एयरपोर्ट / रेलवे स्टेशन के लिए ड्राइवर',
+    description: 'Driver for a pickup or drop in the customer vehicle. Pickup time, waiting, route and return trip are confirmed before booking.',
+    startingPrice: 599, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Schedule confirmed first',
+    included: ['One scheduled driver assignment', 'Licence and identity verification', 'Fuel, parking, tolls and waiting extra']
+  },
+  {
+    id: 'driver-full-day', category: 'driver',
+    title: 'Full-Day Personal Driver', hindiTitle: 'पूरे दिन के लिए पर्सनल ड्राइवर',
+    description: 'Book a driver for multiple local stops in the customer vehicle. Duty hours, kilometres, breaks and overtime are agreed in advance.',
+    startingPrice: 1199, durationMinutes: 480, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Duty hours confirmed',
+    included: ['Initial eight-hour duty slot', 'Route and duty timing agreed', 'Fuel, tolls, parking and overtime extra']
+  },
+  {
+    id: 'driver-business-duty', category: 'driver',
+    title: 'Monthly / Regular Driver Enquiry', hindiTitle: 'महीने या नियमित ड्राइवर की मांग',
+    description: 'Request a driver for recurring duty. This is an enquiry for availability and terms, not an instant monthly employment confirmation.',
+    startingPrice: 199, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Availability enquiry',
+    included: ['Requirement and schedule capture', 'Licence and experience review', 'Monthly pay and terms agreed separately']
+  },
+  {
+    id: 'tour-guide-heritage', category: 'tourist_guide',
+    title: 'Heritage & Monument Guided Visit', hindiTitle: 'ऐतिहासिक स्थल और स्मारक गाइड',
+    description: 'Guided visit focused on local history and heritage locations. Guide credentials, route and language are confirmed before the visit.',
+    startingPrice: 699, durationMinutes: 150, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Guide details confirmed',
+    included: ['Initial guided visit slot', 'History and route briefing', 'Entry tickets and transport excluded']
+  },
+  {
+    id: 'tour-guide-food-walk', category: 'tourist_guide',
+    title: 'Local Food Walk Guide', hindiTitle: 'लोकल फूड वॉक गाइड',
+    description: 'Local guide for a planned food walk and neighbourhood introduction. Food purchases, transport and venue entry are paid separately.',
+    startingPrice: 599, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Route agreed first',
+    included: ['Initial two-hour guided walk', 'Stops and language agreed in advance', 'Food, drinks and transport excluded']
+  },
+  {
+    id: 'tour-guide-day-trip', category: 'tourist_guide',
+    title: 'Nearby Day-Trip Guide', hindiTitle: 'आसपास घूमने के लिए डे-ट्रिप गाइड',
+    description: 'Guide enquiry for a nearby day trip with itinerary and meeting point agreed in advance. Transport, tickets and meals are separate.',
+    startingPrice: 1299, durationMinutes: 360, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom day plan',
+    included: ['Initial six-hour guide slot', 'Stops and schedule agreed first', 'Vehicle, tickets and meals excluded']
+  },
+  {
+    id: 'contractor-painting', category: 'contractor',
+    title: 'Painting & Waterproofing Estimate', hindiTitle: 'पेंटिंग और वॉटरप्रूफिंग का अनुमान',
+    description: 'Site visit to assess interior or exterior painting and basic waterproofing requirements. Materials and execution are quoted after inspection.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site inspection',
+    included: ['Area and surface inspection', 'Preparation and material discussion', 'Paint, chemicals, scaffolding and labour quoted separately']
+  },
+  {
+    id: 'contractor-tiling', category: 'contractor',
+    title: 'Tile & Bathroom Renovation Estimate', hindiTitle: 'टाइल और बाथरूम रिनोवेशन अनुमान',
+    description: 'Assessment for tile replacement, bathroom upgrades and related civil work. Plumbing changes and waterproofing are separately scoped.',
+    startingPrice: 499, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Measurement required',
+    included: ['Site measurement and condition check', 'Work sequence discussion', 'Tiles, fittings, debris removal and execution extra']
+  },
+  {
+    id: 'contractor-masonry', category: 'contractor',
+    title: 'Masonry & Plaster Repair Estimate', hindiTitle: 'राजमिस्त्री और प्लास्टर मरम्मत अनुमान',
+    description: 'Assessment for wall crack repair, plaster patching and small masonry work. Structural cracks need qualified engineering assessment.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Scope confirmed first',
+    included: ['Affected area inspection', 'Labour and material estimate', 'Structural repair and permissions excluded']
+  },
+  {
+    id: 'bike-rider-commute', category: 'bike_rider',
+    title: 'Daily Commute Bike Ride', hindiTitle: 'रोजाना आने-जाने के लिए बाइक राइड',
+    description: 'Request a point-to-point commute ride. Captain availability, pickup, destination, fare and applicable local rules are confirmed before acceptance.',
+    startingPrice: 49, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Fare shown before ride',
+    included: ['One local commute request', 'Pickup and drop confirmation', 'Ride subject to local transport permissions and safety rules']
+  },
+  {
+    id: 'bike-rider-urgent-delivery', category: 'bike_rider',
+    title: 'Urgent Document / Small Parcel Delivery', hindiTitle: 'जरूरी दस्तावेज / छोटा पार्सल डिलीवरी',
+    description: 'Local delivery request for permitted documents and small parcels. Identity, item contents and recipient details are checked before acceptance.',
+    startingPrice: 99, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Permitted items only',
+    included: ['One local pickup and drop request', 'Recipient and handover details confirmed', 'Cash, valuables, hazardous and prohibited items excluded']
+  },
+  {
+    id: 'bike-rider-errand', category: 'bike_rider',
+    title: 'Local Errand Pickup & Drop', hindiTitle: 'लोकल सामान लाना और पहुंचाना',
+    description: 'Request a captain for a permitted local errand such as collecting a small order. Purchase cost, waiting and distance are confirmed separately.',
+    startingPrice: 99, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Distance-based quote',
+    included: ['One local errand request', 'Shop, item and recipient confirmed', 'Item cost, waiting and extra distance charged separately']
+  },
+  {
+    id: 'labour-loading-shifting', category: 'labour',
+    title: 'Loading, Unloading & Shifting Helper', hindiTitle: 'सामान चढ़ाने, उतारने और शिफ्टिंग में मदद',
+    description: 'Helper for household goods loading, unloading and local shifting assistance. Vehicle, stairs, item weight and number of helpers are quoted separately.',
+    startingPrice: 349, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Hours and helpers confirmed',
+    included: ['One helper for the initial two-hour slot', 'Item and access conditions confirmed', 'Vehicle, extra helpers and extra hours quoted separately']
+  },
+  {
+    id: 'labour-garden-cleanup', category: 'labour',
+    title: 'Garden & Outdoor Cleanup Helper', hindiTitle: 'बगीचे और बाहर की सफाई में मदद',
+    description: 'General non-specialist outdoor cleanup and yard assistance. Pesticide use, tree felling and hazardous waste handling are excluded.',
+    startingPrice: 399, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Task list confirmed',
+    included: ['One helper for the initial two-hour slot', 'Task and access confirmation', 'Tools, disposal and extra hours quoted separately']
+  },
+  {
+    id: 'labour-event-setup', category: 'labour',
+    title: 'Event Setup & Furniture Moving Helper', hindiTitle: 'कार्यक्रम सेटअप और फर्नीचर शिफ्टिंग हेल्पर',
+    description: 'Helper for arranging chairs, tables and basic event materials. Electrical rigging, heavy lifting equipment and specialist installation are excluded.',
+    startingPrice: 399, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Work scope confirmed',
+    included: ['One helper for the initial two-hour slot', 'Venue and item details confirmed', 'Equipment, extra helpers and extra hours quoted separately']
+  },
+
+
+  // Expanded practical service menu so every smaller partner trade has at least eight choices.
+  {
+    id: 'ac-water-drain-repair', category: 'technician',
+    title: 'AC Water Leakage & Drain Pipe Repair', hindiTitle: 'एसी से पानी टपकना और ड्रेन पाइप मरम्मत',
+    description: 'Inspect blocked drain lines, drain tray and indoor-unit water leakage. Insulation and replacement parts are quoted separately.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Drain pipe and tray inspection', 'Basic blockage clearing where accessible', 'Replacement pipe, insulation and parts extra']
+  },
+  {
+    id: 'ac-no-cooling-diagnosis', category: 'technician',
+    title: 'AC Not Cooling Diagnosis', hindiTitle: 'एसी कूलिंग नहीं कर रहा जांच',
+    description: 'Check filters, airflow, sensors, electrical supply and operating pressures to identify cooling issues. Repairs are quoted after diagnosis.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Cooling and airflow checks', 'Basic electrical and sensor inspection', 'Gas, parts and repair work quoted separately']
+  },
+  {
+    id: 'ac-uninstall-reinstall', category: 'technician',
+    title: 'AC Uninstallation & Reinstallation', hindiTitle: 'एसी खोलना और दोबारा लगाना',
+    description: 'Careful removal or reinstallation of a split or window AC. Copper piping, brackets, core cutting and additional gas are extra.',
+    startingPrice: 899, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site conditions apply',
+    included: ['Unit removal or installation labour', 'Basic fitting and operation check', 'Stand, piping, transport and civil work extra']
+  },
+  {
+    id: 'ac-remote-sensor', category: 'technician',
+    title: 'AC Remote, Sensor & Thermistor Check', hindiTitle: 'एसी रिमोट और सेंसर जांच',
+    description: 'Troubleshoot remote response, receiver board, room sensor and thermistor faults. Replacement devices and boards are extra.',
+    startingPrice: 249, durationMinutes: 30, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Parts extra',
+    included: ['Remote and receiver response check', 'Sensor wiring inspection', 'Replacement remote, sensor and PCB extra']
+  },
+  {
+    id: 'fridge-defrost-repair', category: 'technician',
+    title: 'Fridge Defrost & Ice Build-up Repair', hindiTitle: 'फ्रिज में बर्फ जमना और डीफ्रॉस्ट मरम्मत',
+    description: 'Inspect defrost heater, timer, thermostat and airflow for excess ice build-up. Replacement components are quoted separately.',
+    startingPrice: 349, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Defrost system inspection', 'Airflow and sensor checks', 'Heater, timer and parts extra']
+  },
+  {
+    id: 'fridge-compressor-check', category: 'technician',
+    title: 'Fridge Compressor & Relay Diagnosis', hindiTitle: 'फ्रिज कंप्रेसर और रिले जांच',
+    description: 'Check compressor start relay, overload protector, wiring and running symptoms. Compressor replacement is quoted only after diagnosis.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Diagnosis first',
+    included: ['Relay and overload inspection', 'Electrical and start-up checks', 'Compressor and replacement parts extra']
+  },
+  {
+    id: 'fridge-door-gasket', category: 'technician',
+    title: 'Fridge Door Seal & Gasket Replacement', hindiTitle: 'फ्रिज दरवाजे की रबर सील बदलना',
+    description: 'Inspect loose or damaged door gasket and alignment causing cooling loss. Correct gasket availability is checked by model.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Model confirmation',
+    included: ['Door seal and alignment inspection', 'Model and gasket size check', 'New gasket and parts extra']
+  },
+  {
+    id: 'fridge-water-dispenser', category: 'technician',
+    title: 'Fridge Water Dispenser & Ice Maker Check', hindiTitle: 'फ्रिज वाटर डिस्पेंसर और आइस मेकर जांच',
+    description: 'Troubleshoot dispenser flow, inlet valve, water line and ice maker operation where supported by the model.',
+    startingPrice: 299, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Model dependent',
+    included: ['Water line and valve inspection', 'Dispenser or ice maker function check', 'Filters, valves and replacement parts extra']
+  },
+  {
+    id: 'welder-gate-repair', category: 'welder',
+    title: 'Main Gate Alignment & Hinge Repair', hindiTitle: 'मेन गेट की अलाइनमेंट और कब्जा मरम्मत',
+    description: 'Inspect sagging gates, hinges, latch plates and metal joints. Heavy gate lifting and replacement hardware are extra.',
+    startingPrice: 399, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site inspection',
+    included: ['Gate and hinge inspection', 'Basic alignment and welding estimate', 'New hinges, paint and heavy lifting extra']
+  },
+  {
+    id: 'welder-stair-railing', category: 'welder',
+    title: 'Staircase & Balcony Railing Repair', hindiTitle: 'सीढ़ी और बालकनी रेलिंग मरम्मत',
+    description: 'Repair loose metal railing joints and brackets after a safety inspection. New railing fabrication is quoted separately.',
+    startingPrice: 499, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Safety inspection',
+    included: ['Visible joint and bracket inspection', 'Repair labour estimate', 'New metal, finishing and structural redesign extra']
+  },
+  {
+    id: 'welder-metal-rack', category: 'welder',
+    title: 'Metal Rack & Storage Stand Fabrication', hindiTitle: 'मेटल रैक और स्टैंड बनवाना',
+    description: 'Custom measurement and fabrication estimate for small household racks and stands. Steel and coating are charged separately.',
+    startingPrice: 499, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom measurement',
+    included: ['Size and load requirement discussion', 'Basic fabrication estimate', 'Metal, coating and delivery extra']
+  },
+  {
+    id: 'mechanic-car-basic-check', category: 'mechanic',
+    title: 'Car Basic Health & Fluid Check', hindiTitle: 'कार की बेसिक जांच और फ्लूइड चेक',
+    description: 'Basic visual inspection of engine oil, coolant, brake fluid, belts and visible leaks. No roadworthiness certificate is issued.',
+    startingPrice: 349, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection only',
+    included: ['Fluid level and visible leak check', 'Belts and hose visual inspection', 'Top-up fluids and repairs extra']
+  },
+  {
+    id: 'mechanic-bike-brake', category: 'mechanic',
+    title: 'Bike Brake & Clutch Adjustment', hindiTitle: 'बाइक ब्रेक और क्लच एडजस्टमेंट',
+    description: 'Inspect and adjust accessible brake and clutch controls. Worn pads, cables and hydraulic parts are quoted separately.',
+    startingPrice: 199, durationMinutes: 35, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Safety check',
+    included: ['Brake and clutch free-play inspection', 'Basic adjustment where safe', 'Brake pads, cables and fluid extra']
+  },
+  {
+    id: 'mechanic-car-puncture', category: 'mechanic',
+    title: 'Car Tyre Puncture & Pressure Check', hindiTitle: 'कार टायर पंचर और हवा जांच',
+    description: 'Inspect tyre puncture and pressure where the vehicle is safely accessible. Sidewall damage and unsafe tyres require replacement.',
+    startingPrice: 249, durationMinutes: 35, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Safe repair only',
+    included: ['Tyre and valve inspection', 'Pressure check and repair feasibility', 'New tyre, wheel alignment and roadside towing extra']
+  },
+  {
+    id: 'driver-school-duty', category: 'driver',
+    title: 'School / Office Pickup & Drop Driver', hindiTitle: 'स्कूल और ऑफिस पिकअप ड्राइवर',
+    description: 'Scheduled driver request for recurring pickup and drop in the customer vehicle. Route, timings and guardian handover are agreed first.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Schedule enquiry',
+    included: ['Route and timing discussion', 'Licence and identity verification', 'Vehicle, fuel and recurring terms separate']
+  },
+  {
+    id: 'driver-outstation-trip-driver', category: 'driver',
+    title: 'Outstation Trip Driver', hindiTitle: 'आउटस्टेशन यात्रा के लिए ड्राइवर',
+    description: 'Driver request for an outstation journey using the customer vehicle. Multi-day duty, rest, route and return terms are confirmed first.',
+    startingPrice: 999, durationMinutes: 360, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Trip terms confirmed',
+    included: ['Trip and route planning', 'Licence and identity verification', 'Fuel, tolls, lodging and driver allowance extra']
+  },
+  {
+    id: 'driver-emergency-replacement', category: 'driver',
+    title: 'Short-Notice Replacement Driver', hindiTitle: 'तुरंत दूसरे ड्राइवर की व्यवस्था',
+    description: 'Request a replacement driver when the regular driver is unavailable. Availability and arrival time are confirmed before acceptance.',
+    startingPrice: 399, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Availability based',
+    included: ['One short local duty request', 'Identity and licence check', 'Waiting, extra hours and travel costs extra']
+  },
+  {
+    id: 'tour-guide-temple', category: 'tourist_guide',
+    title: 'Temple & Spiritual Heritage Guide', hindiTitle: 'मंदिर और सांस्कृतिक स्थल गाइड',
+    description: 'Local guide for a temple or cultural heritage visit, subject to site rules. Ritual services, donations and transport are not included.',
+    startingPrice: 499, durationMinutes: 90, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site rules apply',
+    included: ['Initial guided visit slot', 'Meeting point and language confirmation', 'Donations, entry tickets and transport excluded']
+  },
+  {
+    id: 'tour-guide-family', category: 'tourist_guide',
+    title: 'Family-Friendly City Tour Guide', hindiTitle: 'परिवार के साथ शहर घूमने का गाइड',
+    description: 'Plan a family-friendly city route with suitable stops and breaks. Entry tickets, food and transport are separate.',
+    startingPrice: 799, durationMinutes: 180, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Custom route',
+    included: ['Initial three-hour guided slot', 'Stops and pace agreed in advance', 'Tickets, meals and transport excluded']
+  },
+  {
+    id: 'tour-guide-photo', category: 'tourist_guide',
+    title: 'Photo Spots & Local Market Walk', hindiTitle: 'फोटो स्पॉट और लोकल मार्केट वॉक',
+    description: 'Guided walk to local photo spots and markets. Shopping, photography fees and transport are paid separately.',
+    startingPrice: 499, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Walking route',
+    included: ['Initial two-hour walk', 'Route and meeting point confirmation', 'Shopping, entry fees and transport excluded']
+  },
+  {
+    id: 'contractor-kitchen', category: 'contractor',
+    title: 'Kitchen Renovation & Platform Estimate', hindiTitle: 'किचन रिनोवेशन और प्लेटफॉर्म अनुमान',
+    description: 'Site assessment for kitchen platform, cabinets and renovation planning. Stone, fittings and execution are quoted separately.',
+    startingPrice: 499, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site measurement',
+    included: ['Kitchen measurements and needs review', 'Basic work estimate discussion', 'Stone, cabinets, fittings and labour extra']
+  },
+  {
+    id: 'contractor-roof-repair', category: 'contractor',
+    title: 'Roof & Terrace Leakage Assessment', hindiTitle: 'छत और टेरेस लीकेज जांच',
+    description: 'Inspect visible roof or terrace seepage and discuss repair options. Structural damage requires qualified engineering assessment.',
+    startingPrice: 449, durationMinutes: 60, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Inspection first',
+    included: ['Visible leakage and surface inspection', 'Repair approach estimate', 'Waterproofing materials and execution extra']
+  },
+  {
+    id: 'contractor-door-window', category: 'contractor',
+    title: 'Door, Window & Frame Repair Estimate', hindiTitle: 'दरवाजे, खिड़की और फ्रेम मरम्मत अनुमान',
+    description: 'Assess damaged frames, plaster around openings and fitting issues. Carpentry, metal fabrication and replacement materials are separate.',
+    startingPrice: 349, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Scope confirmed',
+    included: ['Opening and frame inspection', 'Repair scope and estimate', 'Replacement frames, hardware and finishing extra']
+  },
+  {
+    id: 'bike-rider-grocery', category: 'bike_rider',
+    title: 'Grocery & Essentials Pickup', hindiTitle: 'किराना और जरूरी सामान पिकअप',
+    description: 'Local pickup and delivery of permitted everyday essentials. Purchase amount, distance and waiting are confirmed separately.',
+    startingPrice: 79, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Local pickup',
+    included: ['One local shop pickup request', 'Item list and recipient confirmation', 'Purchase cost and waiting charged separately']
+  },
+  {
+    id: 'bike-rider-food', category: 'bike_rider',
+    title: 'Restaurant Order Pickup & Drop', hindiTitle: 'रेस्टोरेंट ऑर्डर पिकअप और डिलीवरी',
+    description: 'Pickup of a prepaid or confirmed restaurant order and delivery to the customer. Food cost is paid to the restaurant.',
+    startingPrice: 69, durationMinutes: 40, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Order confirmation',
+    included: ['One restaurant pickup and drop', 'Order and recipient verification', 'Food bill, waiting and extra distance separate']
+  },
+  {
+    id: 'bike-rider-medicine', category: 'bike_rider',
+    title: 'Pharmacy Order Pickup', hindiTitle: 'मेडिकल स्टोर से ऑर्डर पिकअप',
+    description: 'Pickup of a lawfully dispensed, properly documented pharmacy order. Prescription medicines require valid prescription and pharmacy approval.',
+    startingPrice: 79, durationMinutes: 45, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Pharmacy rules apply',
+    included: ['Sealed pharmacy order pickup', 'Recipient handover confirmation', 'Medicine cost and pharmacy requirements separate']
+  },
+  {
+    id: 'labour-house-cleanup', category: 'labour',
+    title: 'Household Deep Cleaning Helper', hindiTitle: 'घर की गहरी सफाई के लिए हेल्पर',
+    description: 'General cleaning assistance for rooms, balconies and common areas. Specialist chemical treatment and equipment are extra.',
+    startingPrice: 349, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Task list confirmed',
+    included: ['One helper for initial two-hour slot', 'Rooms and tasks confirmed first', 'Cleaning chemicals and equipment extra']
+  },
+  {
+    id: 'labour-construction-helper', category: 'labour',
+    title: 'Construction Site General Helper', hindiTitle: 'निर्माण स्थल के लिए सामान्य हेल्पर',
+    description: 'Non-specialist site assistance and material movement under site supervision. Skilled, hazardous and height work are excluded.',
+    startingPrice: 399, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Site safety required',
+    included: ['One helper for initial two-hour slot', 'Task and site safety confirmation', 'Tools, materials and extra hours separate']
+  },
+  {
+    id: 'labour-shop-assistant', category: 'labour',
+    title: 'Shop / Warehouse Stock Helper', hindiTitle: 'दुकान और गोदाम के लिए स्टॉक हेल्पर',
+    description: 'General assistance for stock arrangement, packing and inventory movement. Heavy machinery and hazardous goods handling are excluded.',
+    startingPrice: 349, durationMinutes: 120, rating: 0, reviewsCount: 0, warrantyDays: 0,
+    badge: 'Work scope confirmed',
+    included: ['One helper for initial two-hour slot', 'Stock and task details confirmed', 'Equipment and extra hours separate']
+  },
+
+
 ];
 
 export const INITIAL_TECHNICIANS: Technician[] = [
@@ -624,7 +1344,7 @@ export const INITIAL_TECHNICIANS: Technician[] = [
     name: 'Vikas Chordia (AC & Fridge Specialist)',
     phone: '+91 98263 99011',
     email: 'vikas.hvac@quickfix.in',
-    trades: ['ac_repair', 'fridge_repair'],
+    trades: ['technician'],
     experienceYears: 8,
     city: 'Indore',
     rating: 4.94,
@@ -1113,7 +1833,9 @@ export const INITIAL_BOOKINGS: Booking[] = [
       tags: ['Affordable', 'Fast Service'],
       createdAt: '2026-11-03T17:30:00Z'
     }
-  }
+  },
+
+
 ];
 
 export const INITIAL_COMMISSION_SETTINGS: CommissionSettings = {

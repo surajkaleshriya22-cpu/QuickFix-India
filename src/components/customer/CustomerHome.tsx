@@ -222,10 +222,10 @@ export const CustomerHome: React.FC = () => {
               <span>India’s Most Trusted Home Services</span>
             </div>
             <h1 className="text-base font-extrabold tracking-tight leading-snug">
-              Certified Electricians, Plumbers & AC/Fridge Technicians
+              Electricians, Plumbers & Multi-Skill Technicians
             </h1>
             <p className="text-xs text-blue-100 max-w-xs">
-              Transparent upfront rate cards, verified ID checks, 2000 INR technician guarantee & 30-day warranty.
+              Clear starting prices, partner verification and service terms shown before booking.
             </p>
           </div>
         </div>
@@ -316,41 +316,76 @@ export const CustomerHome: React.FC = () => {
               </div>
             </button>
 
-            {/* AC Repair */}
-            <button
-              onClick={() => setSelectedCategory('ac_repair')}
-              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'ac_repair'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'ac_repair' ? 'bg-white/20 text-sky-200' : 'bg-sky-50 text-sky-600'}`}>
+            {/* One Technician category for AC, fridge, freezer and appliances */}
+            <button onClick={() => setSelectedCategory('technician')} className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${selectedCategory === 'technician' ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'}`}>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'technician' ? 'bg-white/20 text-sky-200' : 'bg-sky-50 text-sky-600'}`}>
                 <Wind className="w-3.5 h-3.5" />
               </div>
               <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">AC Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'ac_repair' ? 'text-blue-100' : 'text-slate-400'}`}>एसी सर्विस</span>
+                <span className="text-xs block leading-tight truncate">Technician</span>
+                <span className={`text-[9px] block ${selectedCategory === 'technician' ? 'text-blue-100' : 'text-slate-400'}`}>AC, फ्रिज व घरेलू उपकरण</span>
               </div>
             </button>
-
-            {/* Fridge & Freezer */}
+            {/* Home & Household daily work */}
             <button
-              onClick={() => setSelectedCategory('fridge_repair')}
+              onClick={() => setSelectedCategory('household')}
               className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
-                selectedCategory === 'fridge_repair'
+                selectedCategory === 'household' ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
+              }`}
+            >
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'household' ? 'bg-white/20 text-emerald-200' : 'bg-emerald-50 text-emerald-600'}`}>
+                <span className="text-sm">🏠</span>
+              </div>
+              <div className="text-left overflow-hidden">
+                <span className="text-xs block leading-tight truncate">Home & Household</span>
+                <span className={`text-[9px] block ${selectedCategory === 'household' ? 'text-blue-100' : 'text-slate-400'}`}>घरेलू कामकाज</span>
+              </div>
+            </button>
+            {/* Labour / Helper */}
+            <button
+              onClick={() => setSelectedCategory('labour')}
+              className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
+                selectedCategory === 'labour'
                   ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
                   : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
               }`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'fridge_repair' ? 'bg-white/20 text-teal-200' : 'bg-teal-50 text-teal-600'}`}>
-                <Snowflake className="w-3.5 h-3.5" />
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${selectedCategory === 'labour' ? 'bg-white/20 text-orange-200' : 'bg-orange-50 text-orange-600'}`}>
+                <Wrench className="w-3.5 h-3.5" />
               </div>
               <div className="text-left overflow-hidden">
-                <span className="text-xs block leading-tight truncate">Fridge Repair</span>
-                <span className={`text-[9px] block ${selectedCategory === 'fridge_repair' ? 'text-blue-100' : 'text-slate-400'}`}>फ्रिज व फ्रीजर</span>
+                <span className="text-xs block leading-tight truncate">Labour / Helper</span>
+                <span className={`text-[9px] block ${selectedCategory === 'labour' ? 'text-blue-100' : 'text-slate-400'}`}>मजदूर / हेल्पर</span>
               </div>
             </button>
+            {([
+              ['welder', 'Welder / Fabricator', 'वेल्डर / फैब्रिकेटर'],
+              ['mechanic', 'Vehicle Mechanic', 'वाहन मैकेनिक'],
+              ['driver', 'Personal Driver', 'पर्सनल ड्राइवर'],
+              ['tourist_guide', 'Tourist Guide', 'पर्यटक गाइड'],
+              ['contractor', 'Contractor', 'कॉन्ट्रैक्टर'],
+              ['bike_rider', 'Bike Taxi Captain', 'बाइक टैक्सी कैप्टन']
+            ] as Array<[ServiceCategoryType, string, string]>).map(([category, label, hindiLabel]) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`p-2 rounded-xl border text-center transition-all flex items-center gap-2 ${
+                  selectedCategory === category
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 font-medium'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  selectedCategory === category ? 'bg-white/20 text-blue-100' : 'bg-blue-50 text-blue-600'
+                }`}>
+                  <Wrench className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left overflow-hidden">
+                  <span className="text-xs block leading-tight truncate">{label}</span>
+                  <span className={`text-[9px] block ${selectedCategory === category ? 'text-blue-100' : 'text-slate-400'}`}>{hindiLabel}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -371,7 +406,7 @@ export const CustomerHome: React.FC = () => {
                         : 'bg-cyan-100 text-cyan-800'
                     }`}>
                       {service.category === 'electrician' ? <Zap className="w-3 h-3 fill-current" /> : <Wrench className="w-3 h-3" />}
-                      <span>{service.category}</span>
+                      <span>{service.category === 'household' ? 'Home & Household' : service.category === 'labour' ? 'Labour / Helper' : service.category.replaceAll('_', ' ')}</span>
                     </span>
                     {service.badge && (
                       <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded">

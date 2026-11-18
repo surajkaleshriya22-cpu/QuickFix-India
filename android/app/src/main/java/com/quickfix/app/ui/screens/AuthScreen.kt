@@ -306,7 +306,8 @@ fun AuthScreen(
                                     "tourist_guide" to "Tourist Guide",
                                     "contractor" to "Contractor",
                                     "bike_rider" to "Bike Rider Captain",
-                                    "labour" to "Labour"
+                                    "labour" to "Labour",
+                                    "household" to "Home & Household (घरेलू कामकाज)"
                                 )
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     partnerTrades.chunked(2).forEach { rowTrades ->

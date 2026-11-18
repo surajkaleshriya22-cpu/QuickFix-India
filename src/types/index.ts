@@ -1,4 +1,6 @@
-export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair';
+export type ServiceCategoryType = 'electrician' | 'plumber' | 'technician' | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider' | 'labour' | 'household';
+
+export type PartnerTradeType = ServiceCategoryType;
 
 export interface ServiceItem {
   id: string;
@@ -96,7 +98,7 @@ export interface Technician {
   name: string;
   phone: string;
   email: string;
-  trades: ServiceCategoryType[];
+  trades: PartnerTradeType[];
   experienceYears: number;
   city: string;
   rating: number;
@@ -247,7 +249,7 @@ export interface AppUser {
   city: string;
   pincode?: string;
   // Partner specific fields
-  trades?: ServiceCategoryType[];
+  trades?: PartnerTradeType[];
   experienceYears?: number;
   kycDocType?: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
   kycDocNumber?: string;

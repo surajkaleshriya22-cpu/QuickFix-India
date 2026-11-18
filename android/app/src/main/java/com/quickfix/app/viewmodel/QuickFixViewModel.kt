@@ -314,7 +314,15 @@ class QuickFixViewModel : ViewModel() {
                 startingPrice = 349,
                 rating = 4.91,
                 warrantyDays = 45
-            )
+            ),
+            ServiceItem("home-sweep-mop", "household", "Daily Sweeping & Mopping", "रोज़ाना झाड़ू-पोंछा", 249, 0.0, 0),
+            ServiceItem("home-utensil-washing", "household", "Utensil & Kitchen Washing", "बर्तन और रसोई की सफाई", 199, 0.0, 0),
+            ServiceItem("home-cooking", "household", "Home Cooking / Meal Preparation", "घर का खाना बनाना", 299, 0.0, 0),
+            ServiceItem("home-laundry-wash", "household", "Laundry & Clothes Washing", "कपड़े धोने का काम", 199, 0.0, 0),
+            ServiceItem("home-ironing", "household", "Clothes Ironing & Folding", "कपड़ों की इस्त्री और तह", 149, 0.0, 0),
+            ServiceItem("home-bathroom-clean", "household", "Bathroom & Toilet Cleaning", "बाथरूम और टॉयलेट की सफाई", 249, 0.0, 0),
+            ServiceItem("home-deep-clean", "household", "Full Home / Deep Cleaning", "पूरे घर की गहरी सफाई", 699, 0.0, 0),
+            ServiceItem("home-helper-errands", "household", "Everyday Household Helper", "घर के रोज़मर्रा के कामों में मदद", 199, 0.0, 0)
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()

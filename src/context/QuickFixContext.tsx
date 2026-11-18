@@ -8,6 +8,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   ServiceCategoryType,
+  PartnerTradeType,
   ServiceItem,
   Technician,
   ActiveRole,
@@ -61,7 +62,7 @@ interface QuickFixContextType {
     role: UserRole;
     address?: string;
     city: string;
-    trades?: ServiceCategoryType[];
+    trades?: PartnerTradeType[];
     rememberMe: boolean;
   }) => { success: boolean; message?: string };
   authenticateVerifiedAdmin: (params: {
@@ -74,7 +75,7 @@ interface QuickFixContextType {
     displayName: string;
     phoneNumber: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
     address?: string;
@@ -128,16 +129,9 @@ interface QuickFixContextType {
     name: string;
     phone: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
-    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
-    qualificationRegNumber?: string;
-    qualificationInstitute?: string;
-    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
-    kycDocNumber: string;
-    upiId: string;
-    initialDepositAmount?: number;
   }) => Promise<{ success: boolean; message?: string }>;
   logoutTechnician: () => void;
   serviceZones: ServiceZone[];
@@ -380,7 +374,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     role: UserRole;
     address?: string;
     city: string;
-    trades?: ServiceCategoryType[];
+    trades?: PartnerTradeType[];
     rememberMe: boolean;
   }): { success: boolean; message?: string } => ({
     success: false,
@@ -551,16 +545,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     name: string;
     phone: string;
     email: string;
-    trades: ServiceCategoryType[];
+    trades: PartnerTradeType[];
     experienceYears: number;
     city: string;
-    qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
-    qualificationRegNumber?: string;
-    qualificationInstitute?: string;
-    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
-    kycDocNumber: string;
-    upiId: string;
-    initialDepositAmount?: number;
   }): Promise<{ success: boolean; message?: string }> => {
     // Legacy adapter: KYC identifiers, certificate numbers, UPI and deposits are not sent.
     return registerNewPartner({
@@ -735,9 +722,9 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ? commissionSettings.electricianCommissionPct
         : service.category === 'plumber'
         ? commissionSettings.plumberCommissionPct
-        : service.category === 'ac_repair'
+        : service.category === 'technician'
         ? (commissionSettings.acCommissionPct || 15)
-        : (commissionSettings.fridgeCommissionPct || 15);
+        : 15;
 
     // Partner-specific commission overrides are applied by the trusted backend
     // after a real partner has been assigned.

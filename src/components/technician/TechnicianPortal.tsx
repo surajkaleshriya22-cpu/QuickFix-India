@@ -31,7 +31,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { Booking, BookingStatus, ServiceCategoryType, WalletTransaction } from '../../types';
+import { Booking, BookingStatus, PartnerTradeType, WalletTransaction } from '../../types';
 import { INDIAN_CITIES } from '../../data/mockData';
 import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
@@ -146,22 +146,16 @@ export const TechnicianPortal: React.FC = () => {
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupAmount, setTopupAmount] = useState<number>(1000);
   const [topupFeedback, setTopupFeedback] = useState('');
+  const [topupError, setTopupError] = useState('');
   const [showPassbook, setShowPassbook] = useState(false);
 
   // Register Form State
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regTrades, setRegTrades] = useState<ServiceCategoryType[]>(['electrician']);
+  const [regTrades, setRegTrades] = useState<PartnerTradeType[]>(['electrician']);
   const [regExp, setRegExp] = useState(5);
   const [regCity, setRegCity] = useState('Bengaluru');
-  const [regKycType, setRegKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
-  const [regKycDoc, setRegKycDoc] = useState('');
-  const [regQualType, setRegQualType] = useState<'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma'>('ITI Trade Certificate');
-  const [regQualNumber, setRegQualNumber] = useState('');
-  const [regQualInst, setRegQualInst] = useState('');
-  const [regUpi, setRegUpi] = useState('');
-  const [regDeposit, setRegDeposit] = useState<number>(2000);
   const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
@@ -286,7 +280,13 @@ export const TechnicianPortal: React.FC = () => {
   };
 
   const handleTopupWallet = (amount: number) => {
+    setTopupError('');
+    setTopupFeedback('');
     const res = topupTechnicianWallet(currentTechnician.id, amount);
+    if (!res.success) {
+      setTopupError(res.message || 'Wallet top-up is unavailable. No money was collected.');
+      return;
+    }
     if (res.success) {
       setTopupFeedback(res.message);
       setTimeout(() => {
@@ -390,23 +390,39 @@ export const TechnicianPortal: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['electrician'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('electrician') ? 'bg-amber-100 text-amber-900 border-amber-400' : 'bg-slate-50'}`}
-                  >
-                    Electrician
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegTrades(['plumber'])}
-                    className={`flex-1 py-1.5 rounded-lg border text-center font-bold ${regTrades.includes('plumber') ? 'bg-cyan-100 text-cyan-900 border-cyan-400' : 'bg-slate-50'}`}
-                  >
-                    Plumber
-                  </button>
+                <label className="font-bold text-slate-700 block mb-1">Select Partner Services (एक से अधिक चुन सकते हैं)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ['electrician', 'Electrician'],
+                    ['plumber', 'Plumber'],
+                    ['technician', 'Technician (AC / Fridge / Appliances)'],
+                    ['welder', 'Welder'],
+                    ['mechanic', 'Mechanic'],
+                    ['driver', 'Driver'],
+                    ['tourist_guide', 'Tourist Guide'],
+                    ['contractor', 'Contractor'],
+                    ['bike_rider', 'QuickFix Bike Taxi Captain'],
+                    ['labour', 'Labour / Helper']
+                  ] as Array<[PartnerTradeType, string]>).map(([trade, label]) => {
+                    const selected = regTrades.includes(trade);
+                    return (
+                      <button
+                        key={trade}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setRegTrades(previous =>
+                          selected
+                            ? previous.filter(item => item !== trade)
+                            : [...previous, trade]
+                        )}
+                        className={`py-2 px-3 rounded-lg border text-left font-semibold ${selected ? 'bg-blue-50 text-blue-800 border-blue-400' : 'bg-slate-50 border-slate-200'}`}
+                      >
+                        {selected ? '✓ ' : '+ '}{label}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">Apne kaam ke hisaab se ek ya kai services select karein.</p>
               </div>
 
               <div>
@@ -422,119 +438,9 @@ export const TechnicianPortal: React.FC = () => {
                 </select>
               </div>
 
-              {/* Trade Qualification Proof */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
-                  Mandatory Trade Certificate
-                </span>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Qualification Type</label>
-                  <select
-                    value={regQualType}
-                    onChange={e => setRegQualType(e.target.value as any)}
-                    className="w-full p-1.5 rounded-lg border border-slate-300 bg-white text-xs"
-                  >
-                    <option value="ITI Trade Certificate">ITI Trade Certificate</option>
-                    <option value="Skill India / NSDC Certified">Skill India / NSDC Certified</option>
-                    <option value="State Wireman/Plumber License">State Wireman / Plumber License</option>
-                    <option value="Govt Polytechnic Diploma">Govt Polytechnic Diploma</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Certificate / Reg Number</label>
-                  <input
-                    type="text"
-                    value={regQualNumber}
-                    onChange={e => setRegQualNumber(e.target.value)}
-                    placeholder="e.g. ITI-MP-2021-9921"
-                    className="w-full p-1.5 rounded-lg border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Issuing Institute / Board</label>
-                  <input
-                    type="text"
-                    value={regQualInst}
-                    onChange={e => setRegQualInst(e.target.value)}
-                    placeholder="e.g. Govt ITI / Skill Center"
-                    className="w-full p-1.5 rounded-lg border border-slate-300 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">KYC Proof Type</label>
-                <select
-                  value={regKycType}
-                  onChange={e => setRegKycType(e.target.value as any)}
-                  className="w-full p-2 rounded-lg border border-slate-300 bg-white"
-                >
-                  <option value="Skill India Certificate">Skill India Certificate</option>
-                  <option value="Aadhaar">Aadhaar Card</option>
-                  <option value="PAN">PAN Card</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Document Number</label>
-                <input
-                  type="text"
-                  value={regKycDoc}
-                  onChange={e => setRegKycDoc(e.target.value)}
-                  placeholder="e.g. SIC-EL-9921"
-                  className="w-full p-2 rounded-lg border border-slate-300"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">UPI ID for Payouts</label>
-                <input
-                  type="text"
-                  value={regUpi}
-                  onChange={e => setRegUpi(e.target.value)}
-                  placeholder="name@okaxis / paytm"
-                  className="w-full p-2 rounded-lg border border-slate-300"
-                />
-              </div>
-
-              {/* Mandatory Security Deposit of ₹2,000 */}
-              <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-950 text-[11px]">
-                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Mandatory Partner Security Deposit</span>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded">
-                    Non-Withdrawable Base
-                  </span>
-                </div>
-                <p className="text-[10px] text-amber-800 leading-tight">
-                  Technicians must maintain a minimum balance of <strong>₹2,000</strong> to complete registration. This initial ₹2,000 deposit is permanently locked to guarantee customer cash commissions and cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.
-                </p>
-                <div className="pt-0.5">
-                  <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
-                    Select Initial Wallet Fund:
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[2000, 3000, 5000].map(amt => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setRegDeposit(amt)}
-                        className={`flex-1 py-1 rounded-lg border text-center font-mono font-bold text-xs transition-colors ${
-                          regDeposit === amt
-                            ? 'bg-amber-600 text-white border-amber-700 shadow-2xs'
-                            : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100'
-                        }`}
-                      >
-                        ₹{amt} {amt === 2000 ? '(Min)' : ''}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                <p className="font-bold">Basic registration only</p>
+                <p>KYC document upload, certificate review, UPI details and the ₹2,000 security deposit are not enabled yet. Do not enter document numbers or send money here. No payment will be collected during this registration.</p>
               </div>
 
               {regError && (
@@ -559,14 +465,7 @@ export const TechnicianPortal: React.FC = () => {
                       trades: regTrades,
                       experienceYears: Math.max(0, regExp),
                       city: regCity.trim(),
-                      qualificationType: regQualType,
-                      qualificationRegNumber: regQualNumber,
-                      qualificationInstitute: regQualInst,
-                      kycDocType: regKycType,
-                      kycDocNumber: regKycDoc,
-                      upiId: regUpi,
-                      initialDepositAmount: regDeposit
-                    });
+                        });
                     if (!res.success) {
                       setRegError(res.message || 'Registration failed');
                     }
@@ -632,60 +531,13 @@ export const TechnicianPortal: React.FC = () => {
           </button>
 
           <button
-            onClick={() => {
-              if (currentTechnician.isOnline) {
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 4500);
-                }
-              } else {
-                if (!currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit' || currentTechnician.approvalStatus === 'rejected') {
-                  setQualificationAlertMsg('Awaiting Trade Qualification Clearance: Your certificate is under audit by QuickFix Admin HQ. Only approved technicians can go online.');
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                if ((currentTechnician.walletBalance ?? 0) < 2000) {
-                  const deficit = 2000 - (currentTechnician.walletBalance ?? 0);
-                  setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${currentTechnician.walletBalance ?? 0}. Please top-up ₹${deficit}.`);
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (!res.success) {
-                  if (res.requiresGeofence) {
-                    setShowGeofenceModal(true);
-                  } else {
-                    setQualificationAlertMsg(res.message || 'Geo-fence verification required to go online.');
-                    setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  }
-                } else if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 5000);
-                }
-              }
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
-              currentTechnician.isOnline
-                ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
-                : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
-                ? 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 cursor-pointer'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 cursor-pointer'
-                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-            }`}
-            title={!currentTechnician.isVerified ? 'Qualification approval required' : (currentTechnician.walletBalance ?? 0) < 2000 ? 'Minimum ₹2,000 security reserve required' : undefined}
+            type="button"
+            disabled
+            title="Partner dispatch is locked until a verified server-side ₹2,000 reserve and live wallet ledger are active."
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 cursor-not-allowed shadow-xs"
           >
             <Power className="w-3.5 h-3.5" />
-            <span>
-              {currentTechnician.isOnline
-                ? 'ONLINE'
-                : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
-                ? 'AUDIT PENDING'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'RESERVE DEFICIT'
-                : 'OFFLINE'}
-            </span>
+            <span>DISPATCH NOT ACTIVE</span>
           </button>
         </div>
       </header>
@@ -758,7 +610,7 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>Security Reserve Deficit (Balance: ₹{currentTechnician.walletBalance ?? 0})</span>
+                <span>Security Reserve Deficit (Balance: Not available)</span>
               </span>
               <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
                 Need ₹{2000 - (currentTechnician.walletBalance ?? 0)}
@@ -796,7 +648,7 @@ export const TechnicianPortal: React.FC = () => {
                 Awaiting QuickFix HQ Qualification Clearance
               </h4>
               <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                As per QuickFix India safety policy, only verified and qualified <strong className="font-bold">Electricians</strong>, <strong className="font-bold">Plumbers</strong>, and <strong className="font-bold">Appliance Technicians</strong> can go online or accept bookings.
+                Every partner category can accept only matching service requests after identity, trade and service-area approval plus a server-verified ₹2,000 reserve. Wallet deposits and the server ledger are not active yet, so live partner dispatch remains unavailable until that payment flow is deployed.
               </p>
             </div>
 
@@ -860,23 +712,13 @@ export const TechnicianPortal: React.FC = () => {
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
-                <span className="text-[10px] text-slate-400">Escrow Protected · Real-Time Settled</span>
+                <span className="text-xs font-bold text-white block">Partner Wallet (setup pending)</span>
+                <span className="text-[10px] text-slate-400">Live balance is not connected; figures below are not account funds</span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5">
-              {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
-                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>₹2,000 Reserve Maintained</span>
-                </span>
-              ) : (
-                <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-rose-400" />
-                  <span>Reserve Deficit</span>
-                </span>
-              )}
+              <span className="bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Wallet setup pending</span>
             </div>
           </div>
 
@@ -884,9 +726,9 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
             {/* Total Balance */}
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Wallet</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Live balance</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
-                ₹{currentTechnician.walletBalance ?? 0}
+                Not available
               </div>
             </div>
 
@@ -894,19 +736,19 @@ export const TechnicianPortal: React.FC = () => {
             <div>
               <span className="text-[10px] text-amber-300 uppercase font-semibold flex items-center gap-1">
                 <Lock className="w-2.5 h-2.5 text-amber-400" />
-                <span>Base Reserve</span>
+                <span>Reserve policy</span>
               </span>
               <div className="text-lg font-extrabold font-mono text-amber-300 mt-0.5">
                 ₹2,000
               </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Locked (Non-withdrawable)</span>
+              <span className="text-[9px] text-slate-500 block leading-tight">Required reserve; not collected</span>
             </div>
 
             {/* Net Withdrawable Earnings */}
             <div>
               <span className="text-[10px] text-emerald-400 uppercase font-semibold block">Withdrawable</span>
               <div className="text-lg font-extrabold font-mono text-emerald-400 mt-0.5">
-                ₹{withdrawableAmount}
+                Not available
               </div>
               <span className="text-[9px] text-slate-500 block leading-tight">Amount over ₹2,000</span>
             </div>
@@ -916,17 +758,19 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Handed by Customers</span>
-              <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
+              <span className="font-bold text-white font-mono">Not available</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Commission Debited</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
+              <span className="font-bold text-rose-400 font-mono">Not available</span>
             </div>
           </div>
 
           {/* Wallet Actions */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
+              disabled
+              title="Wallet top-up is not connected yet"
               onClick={() => {
                 setTopupAmount(1000);
                 setShowTopupModal(true);
@@ -939,7 +783,7 @@ export const TechnicianPortal: React.FC = () => {
 
             <button
               onClick={handleWithdrawPayout}
-              disabled={withdrawableAmount <= 0}
+              disabled
               className={`font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors ${
                 withdrawableAmount > 0
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-98'
@@ -947,7 +791,7 @@ export const TechnicianPortal: React.FC = () => {
               }`}
             >
               <IndianRupee className="w-3.5 h-3.5" />
-              <span>Withdraw ₹{withdrawableAmount}</span>
+              <span>Withdrawals unavailable</span>
             </button>
           </div>
 
@@ -956,13 +800,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Platform Cash Commission Rule:</strong> When customers pay in cash, QuickFix commission is auto-deducted from your wallet. The ₹2,000 security reserve remains locked to guarantee platform settlements.
+                Cash commission deduction is not active yet. No commission has been debited from this wallet.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Safe Payout Protocol:</strong> Withdrawals reserve funds from your wallet and are reviewed by Admin HQ. Approved payouts are dispatched via payment gateway and marked settled only upon verified webhook confirmation.
+                Secure payouts are not active yet. No withdrawal is reserved, sent, or marked settled until the server ledger and verified payment-provider integration are deployed.
               </span>
             </div>
           </div>
@@ -1303,7 +1147,7 @@ export const TechnicianPortal: React.FC = () => {
             <h3 className="text-sm font-bold text-slate-800">Ready for Orders</h3>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
               {currentTechnician.isOnline
-                ? `You are online in ${currentTechnician.city || 'your area'}. Incoming electrician/plumber requests will ring here instantly.`
+                ? `You are online in ${currentTechnician.city || 'your area'}. Incoming requests for your registered partner services will appear here when dispatch is enabled.`
                 : 'Turn your status ONLINE above to receive nearby customer bookings.'}
             </p>
           </div>
@@ -1324,8 +1168,8 @@ export const TechnicianPortal: React.FC = () => {
                   <div className="text-[11px] text-slate-500">{b.customerName} · {b.scheduledDate}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono font-bold text-emerald-600">+₹{b.technicianPayout}</div>
-                  <div className="text-[10px] text-slate-400">Settled</div>
+                  <div className="font-mono font-bold text-slate-500">₹{b.technicianPayout} (not paid)</div>
+                  <div className="text-[10px] text-slate-400">Payout not settled</div>
                 </div>
               </div>
             ))}
@@ -1343,8 +1187,8 @@ export const TechnicianPortal: React.FC = () => {
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Top-Up Partner Wallet</h3>
-                  <p className="text-[10px] text-slate-500">Maintain ₹2,000 reserve to activate duty</p>
+                  <h3 className="font-bold text-slate-900 text-sm">Wallet top-up unavailable</h3>
+                  <p className="text-[10px] text-slate-500">No payment gateway is connected. No money will be collected.</p>
                 </div>
               </div>
               <button
@@ -1400,10 +1244,11 @@ export const TechnicianPortal: React.FC = () => {
             <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Reserve Guarantee:</strong> The base ₹2,000 security reserve is locked and cannot be withdrawn. It guarantees automated platform commission deductions when customers pay cash.
+                <strong>Not active:</strong> Wallet deposits and commission deductions are disabled until a secure payment provider and server-side ledger are connected.
               </span>
             </div>
 
+            {topupError && <div className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800">{topupError}</div>}
             {topupFeedback && (
               <div className="bg-emerald-50 border border-emerald-300 p-2 rounded-xl text-emerald-800 text-xs flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1412,12 +1257,8 @@ export const TechnicianPortal: React.FC = () => {
             )}
 
             {/* Pay Button */}
-            <button
-              onClick={() => handleTopupWallet(topupAmount)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-98 transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Confirm & Add ₹{topupAmount} to Wallet</span>
+            <button type="button" disabled className="w-full bg-slate-300 text-slate-600 font-bold py-2.5 rounded-xl text-xs cursor-not-allowed">
+              Wallet top-up is not available yet
             </button>
           </div>
         </div>
