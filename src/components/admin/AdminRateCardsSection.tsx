@@ -189,7 +189,7 @@ export const AdminRateCardsSection: React.FC = () => {
         approvalStatus: status, ...extra, updatedAt: serverTimestamp()
       });
       setMessage(status === 'approved'
-        ? 'Rate card approved in Firestore. Customer quote integration is still a separate release.'
+        ? 'Rate card approved in Firestore. Rate is now active for customer quotes and can be edited by Admin.'
         : 'Rate card moved to ' + status + '.');
       await loadCards();
     } catch (e) {
@@ -208,8 +208,8 @@ export const AdminRateCardsSection: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800 bg-amber-950/20 p-4">
-        <div><h4 className="text-sm font-bold">Indore service benchmark drafts</h4><p className="mt-1 text-xs text-slate-400">Indore draft coverage: electrician, plumber, technician, AC, fridge, carpenter, painter, driver, bike taxi, laundry, pest control, deep cleaning, gardening, shifting, welding and tourist guide. Some categories still require measured/local quotations. Draft only; verify and approve before publication.</p></div>
-        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Add researched Indore drafts</button>
+        <div><h4 className="text-sm font-bold">Indore market rates (publish defaults)</h4><p className="mt-1 text-xs text-slate-400">Indore draft coverage: electrician, plumber, technician, AC, fridge, carpenter, painter, driver, bike taxi, laundry, pest control, deep cleaning, gardening, shifting, welding and tourist guide. Some categories still require measured/local quotations. Market-based defaults will be published for customer quotes; Admin can edit or retire them at any time.</p></div>
+        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Publish Indore market rates</button>
       </div>
 
       <form onSubmit={saveDraft} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-2">
@@ -242,7 +242,7 @@ export const AdminRateCardsSection: React.FC = () => {
           <div className="flex flex-wrap gap-2"><button onClick={() => startEditing(card)} className="rounded-lg border border-blue-700 px-3 py-1.5 text-xs text-blue-300">Edit rate</button>{card.approvalStatus === 'draft' && <button onClick={() => void changeStatus(card, 'approved')} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold">Approve</button>}{card.approvalStatus !== 'retired' && <button onClick={() => void changeStatus(card, 'retired')} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Retire</button>}</div>
         </article>)}
       </div>
-      <p className="text-[11px] text-amber-300">Important: only approved location-specific cards can be used by the customer quote API. These research drafts are not live tariffs until an authorized admin verifies and approves them.</p>
+      <p className="text-[11px] text-amber-300">Only approved location-specific cards are used by customer quotes. Admin can change or retire published rates at any time; edited rates return to Draft until re-approved.</p>
     </section>
   );
 };
