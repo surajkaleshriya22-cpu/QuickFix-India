@@ -380,8 +380,8 @@ export const TechnicianPortal: React.FC = () => {
                 <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    ['electrician','Electrician'],['plumber','Plumber'],['ac_repair','AC / Appliance Technician'],
-                    ['fridge_repair','Fridge Technician'],['welder','Welder / Fabricator'],['mechanic','Mechanic'],
+                    ['electrician','Electrician'],['plumber','Plumber'],['technician','Technician (AC / Fridge / Appliances)'],
+                    ['welder','Welder / Fabricator'],['mechanic','Mechanic'],
                     ['driver','Driver'],['tourist_guide','Tourist Guide'],['contractor','Contractor'],
                     ['bike_taxi','QuickFix Bike Taxi Captain'],['house_cleaning','House Cleaning'],
                     ['cook','Cook'],['laundry','Laundry'],['maid','Domestic Helper'],
@@ -391,7 +391,7 @@ export const TechnicianPortal: React.FC = () => {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setRegTrades([id])}
+                      onClick={() => setRegTrades(id === 'technician' ? ['ac_repair', 'fridge_repair'] : [id])}
                       className={`py-2 px-2 rounded-lg border text-left text-xs font-semibold ${regTrades.includes(id) ? 'bg-blue-100 text-blue-900 border-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
                     >
                       {label}
