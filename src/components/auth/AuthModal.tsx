@@ -529,7 +529,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             ['driver', 'Driver'],
                             ['tourist_guide', 'Tourist Guide'],
                             ['contractor', 'Contractor'],
-                            ['bike_rider', 'Bike Rider Captain']
+                            ['bike_rider', 'QuickFix Bike Taxi Captain']
                           ] as Array<[PartnerTradeType, string]>).map(([trade, label]) => (
                             <button
                               key={trade}
