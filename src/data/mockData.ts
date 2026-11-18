@@ -381,7 +381,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
       'Customer and partner agree the task list before starting',
       'Tools, materials, and extra hours quoted separately'
     ]
-  },,
+  },
 
   // Welder / Fabricator services — starting estimates; final scope and material costs are confirmed before booking.
   {
