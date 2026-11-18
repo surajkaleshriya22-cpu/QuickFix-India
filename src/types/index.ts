@@ -1,4 +1,4 @@
-export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair';
+export type ServiceCategoryType = 'electrician' | 'plumber' | 'ac_repair' | 'fridge_repair' | 'labour';
 
 export type PartnerTradeType = ServiceCategoryType | 'welder' | 'mechanic' | 'driver' | 'tourist_guide' | 'contractor' | 'bike_rider' | 'labour';
 
