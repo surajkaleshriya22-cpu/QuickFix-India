@@ -92,7 +92,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
               <span>Find Nearby Stores</span>
             </button>
           </div>
-        </div>
 
         {/* Assigned Technician Profile */}
         {booking.technicianName && (
