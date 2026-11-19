@@ -151,18 +151,18 @@ export const AdminRateCardsSection: React.FC = () => {
         const payload = {
           state: 'Madhya Pradesh', district: 'Indore', city: 'Indore', tehsil: null,
           serviceCategory: row.serviceCategory, serviceId: row.serviceId || null, unit: row.unit, currency: 'INR',
-          minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: row.baseFee || 0, materialsIncluded: false,
-          approvalStatus: row.requiresAdminQuote ? 'draft' as RateApprovalStatus : 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
+          minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: ('baseFee' in row ? row.baseFee : 0) || 0, materialsIncluded: false,
+          approvalStatus: ('requiresAdminQuote' in row && row.requiresAdminQuote) ? 'draft' as RateApprovalStatus : 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
           sourceName: row.sourceName, sourceUrl: row.sourceUrl, sourceCheckedAt,
           notes: row.note + ' Active Indore market-based QuickFix default. Parts, materials and out-of-scope work are extra and must be itemised before customer confirmation.',
-          ...(row.requiresAdminQuote ? {} : { approvedBy: user.uid, approvedAt: new Date().toISOString() }), updatedBy: user.uid, updatedAt: serverTimestamp()
+          ...(('requiresAdminQuote' in row && row.requiresAdminQuote) ? {} : { approvedBy: user.uid, approvedAt: new Date().toISOString() }), updatedBy: user.uid, updatedAt: serverTimestamp()
         };
         if (prior) {
           await updateDoc(doc(db, 'rate_cards', prior.id), payload);
         } else {
           await addDoc(collection(db, 'rate_cards'), { ...payload, createdBy: user.uid, createdAt: serverTimestamp() });
         }
-        if (row.requiresAdminQuote) drafted++; else published++;
+        if ('requiresAdminQuote' in row && row.requiresAdminQuote) drafted++; else published++;
       }
       setMessage(published + ' Indore market rate cards published as active customer quote defaults; ' + drafted + ' quotation-only category cards saved as Draft for local admin pricing; ' + unchanged + ' existing approved/retired cards left unchanged. Admin can edit or retire rates anytime; edited rates return to Draft until re-approved.');
       await loadCards();
