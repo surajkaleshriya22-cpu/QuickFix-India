@@ -249,17 +249,33 @@ fun CustomerHomeScreen(
                 }
             }
 
-            // Category Chips
+            // All partner categories from the canonical Android service catalogue.
             item {
-                Row(
+                val categoryOptions = listOf(
+                    "all" to "सभी सेवाएँ",
+                    "electrician" to "⚡ Electrician",
+                    "plumber" to "🔧 Plumber",
+                    "ac_repair" to "❄️ AC Repair",
+                    "fridge_repair" to "🧊 Fridge",
+                    "appliance_repair" to "🛠️ Appliance",
+                    "welder" to "Welder",
+                    "mechanic" to "Mechanic",
+                    "driver" to "Driver",
+                    "tourist_guide" to "Tourist Guide",
+                    "contractor" to "Contractor",
+                    "bike_taxi" to "🏍️ Bike Taxi",
+                    "kaamkaaj_partner" to "🏠 Kaam-Kaaj",
+                    "carpenter" to "Carpenter",
+                    "painter" to "Painter",
+                    "gardener" to "Gardener",
+                    "pest_control" to "Pest Control",
+                    "house_shifting" to "House Shifting"
+                )
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(
-                        "all" to "All Services",
-                        "electrician" to "⚡ Electrician",
-                        "plumber" to "🔧 Plumber"
-                    ).forEach { (id, label) ->
+                    items(categoryOptions) { (id, label) ->
                         FilterChip(
                             selected = selectedCategory == id,
                             onClick = { selectedCategory = id },
