@@ -138,18 +138,18 @@ export const AdminRateCardsSection: React.FC = () => {
       const snapshot = await getDocs(query(collection(db, 'rate_cards')));
       const existing = new Map<string, { id: string; approvalStatus?: string }>(snapshot.docs.map(d => {
         const x = d.data();
-        const key = [x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase();
+        const key = [x.state,x.district,x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase();
         return [key, { id: d.id, approvalStatus: typeof x.approvalStatus === 'string' ? x.approvalStatus : undefined }] as const;
       }));
       let published = 0;
       let drafted = 0;
       let unchanged = 0;
       for (const row of rows) {
-        const key = ['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
+        const key = ['Madhya Pradesh','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
         const prior = existing.get(key);
         if (prior?.approvalStatus === 'approved' || prior?.approvalStatus === 'retired') { unchanged++; continue; }
         const payload = {
-          state: 'Madhya Pradesh', district: 'Indore', city: 'Indore', tehsil: null,
+          state: 'Madhya Pradesh', district: 'Indore', city: null, tehsil: null,
           serviceCategory: row.serviceCategory, serviceId: row.serviceId || null, unit: row.unit, currency: 'INR',
           minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: ('baseFee' in row ? row.baseFee : 0) || 0, materialsIncluded: false,
           approvalStatus: ('requiresAdminQuote' in row && row.requiresAdminQuote) ? 'draft' as RateApprovalStatus : 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
