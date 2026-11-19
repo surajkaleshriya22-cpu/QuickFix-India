@@ -17,6 +17,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -316,6 +319,48 @@ fun ServiceBookingScreen(
                     }
                     locationMessage?.let { message ->
                         Text(message, fontSize = 11.sp, color = TextSecondary)
+                    }
+
+                    if (customerLatitude != null && customerLongitude != null) {
+                        val lat = customerLatitude!!
+                        val lon = customerLongitude!!
+                        val south = lat - 0.008
+                        val north = lat + 0.008
+                        val west = lon - 0.008
+                        val east = lon + 0.008
+                        val mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=$west%2C$south%2C$east%2C$north&layer=mapnik&marker=$lat%2C$lon"
+                        Text(
+                            "चुनी हुई GPS लोकेशन · $lat, $lon",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                        AndroidView(
+                            factory = { viewContext ->
+                                WebView(viewContext).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = false
+                                    webViewClient = WebViewClient()
+                                    loadUrl(mapUrl)
+                                }
+                            },
+                            update = { webView ->
+                                if (webView.url != mapUrl) webView.loadUrl(mapUrl)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                        )
+                        Text(
+                            "नक्शे पर पिन आपकी अनुमति से मिली GPS लोकेशन दिखाता है। पता और पिन जाँच लें।",
+                            fontSize = 10.sp,
+                            color = TextSecondary
+                        )
+                    } else {
+                        Text(
+                            "GPS चुनने के बाद यहाँ नक्शे पर आपका पिन दिखाई देगा।",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
                     }
                     OutlinedTextField(
                         value = state,
