@@ -181,7 +181,7 @@ export const AdminDashboard: React.FC = () => {
     trades?: string[]; approvalStatus?: string; kycStatus?: string;
     isVerified?: boolean; isOnline?: boolean; isSuspended?: boolean;
     securityDepositPaid?: boolean; walletBalance?: number | null;
-    dispatchEligible?: boolean; dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
+    dispatchEligible?: boolean; dispatchReady?: boolean; dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
     createdAt?: string | null;
   }>>([]);
   const [partnerDirectoryFilter, setPartnerDirectoryFilter] = useState<'all' | 'approved' | 'active' | 'pending'>('all');
@@ -1064,7 +1064,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-white">All Channel Partners</h3>
-                  <p className="text-[10px] text-slate-400 mt-1">Registered partner directory · maximum 200 most recently active profiles</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Registered partner directory · up to 200 profiles</p>
                 </div>
                 <button onClick={() => void loadChannelPartnerDirectory()} disabled={partnerDirectoryLoading} className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-white disabled:opacity-50">
                   {partnerDirectoryLoading ? 'Loading…' : 'Refresh list'}
@@ -1079,8 +1079,8 @@ export const AdminDashboard: React.FC = () => {
                 ] as const).map(([value, label]) => (
                   <button key={value} onClick={() => setPartnerDirectoryFilter(value)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border ${partnerDirectoryFilter === value ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-300'}`}>
                     {label} ({channelPartnerDirectory.filter(partner => value === 'all' ||
-                      (value === 'approved' && ['approved', 'basic_profile_approved'].includes(partner.approvalStatus || '')) ||
-                      (value === 'active' && partner.dispatchEligible === true) ||
+                      (value === 'approved' && partner.approvalStatus === 'approved') ||
+                      (value === 'active' && partner.dispatchReady === true) ||
                       (value === 'pending' && partner.approvalStatus === 'pending_audit')).length})
                   </button>
                 ))}
@@ -1099,7 +1099,7 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-[11px] text-slate-400">{partner.phoneNumber || 'Phone not provided'} · {partner.city || 'City not provided'}</p>
                     </div>
                     <span className={`text-[10px] rounded-full px-2 py-1 border ${partner.dispatchEligible ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'}`}>
-                      {partner.dispatchEligible ? 'Dispatch ready' : partner.approvalStatus || 'Status unknown'}
+                      {partner.dispatchReady ? 'Dispatch ready' : partner.approvalStatus || 'Not dispatch ready'}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-300">Category: {(partner.trades || []).join(', ') || 'Not specified'}</p>
