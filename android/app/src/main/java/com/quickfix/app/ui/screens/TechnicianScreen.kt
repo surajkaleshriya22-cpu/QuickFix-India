@@ -113,7 +113,12 @@ fun TechnicianScreen(
             }
         } else if (isLiveLocationSharing && !hasActiveAssignedJob) {
             isLiveLocationSharing = false
-            viewModel.stopPartnerLiveLocation()
+        }
+    }
+
+    DisposableEffect(isLiveLocationSharing) {
+        onDispose {
+            if (isLiveLocationSharing) viewModel.stopPartnerLiveLocation()
         }
     }
 
@@ -215,7 +220,6 @@ fun TechnicianScreen(
                         onClick = {
                             isLiveLocationSharing = false
                             requestingLiveShare = false
-                            viewModel.stopPartnerLiveLocation()
                         },
                         enabled = isLiveLocationSharing,
                         modifier = Modifier.fillMaxWidth()
