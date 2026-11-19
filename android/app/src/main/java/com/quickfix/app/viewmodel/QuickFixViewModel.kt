@@ -184,6 +184,10 @@ class QuickFixViewModel : ViewModel() {
     private val _partnerJobsStatus = MutableStateFlow("Available jobs have not been refreshed.")
     val partnerJobsStatus: StateFlow<String> = _partnerJobsStatus.asStateFlow()
 
+    private val _partnerJobsCursor = MutableStateFlow<String?>(null)
+    private val _partnerJobsHasMore = MutableStateFlow(false)
+    val partnerJobsHasMore: StateFlow<Boolean> = _partnerJobsHasMore.asStateFlow()
+
     private val _adminPaymentConfig = MutableStateFlow(AdminMasterPaymentConfig())
     val adminPaymentConfig: StateFlow<AdminMasterPaymentConfig> = _adminPaymentConfig.asStateFlow()
 
@@ -519,20 +523,27 @@ class QuickFixViewModel : ViewModel() {
         }
     }
 
-    fun refreshPartnerJobs() {
+    fun refreshPartnerJobs(loadMore: Boolean = false) {
         val user = auth.currentUser
         if (user == null) {
             _partnerJobs.value = emptyList()
             _partnerJobsStatus.value = "Available jobs देखने के लिए पहले sign in करें."
             return
         }
-        _partnerJobsStatus.value = "Available jobs लोड हो रहे हैं..."
+        val cursor = if (loadMore) _partnerJobsCursor.value else null
+        if (!loadMore) {
+            _partnerJobs.value = emptyList()
+            _partnerJobsCursor.value = null
+            _partnerJobsHasMore.value = false
+        }
+        _partnerJobsStatus.value = if (loadMore) "और काम लोड हो रहे हैं..." else "Available jobs लोड हो रहे हैं..."
         viewModelScope.launch {
             try {
                 val token = user.getIdToken(true).await().token
                     ?: throw SecurityException("Secure sign-in token unavailable.")
                 val body = withContext(Dispatchers.IO) {
-                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings")
+                    val cursorQuery = cursor?.let { "?cursor=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty()
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings$cursorQuery")
                         .openConnection() as java.net.HttpURLConnection
                     try {
                         connection.requestMethod = "GET"
@@ -554,6 +565,8 @@ class QuickFixViewModel : ViewModel() {
                 }
                 val json = org.json.JSONObject(body)
                 if (!json.optBoolean("success")) throw IllegalStateException("Server did not confirm the job feed.")
+                _partnerJobsCursor.value = json.optString("nextCursor").takeIf { it.isNotBlank() && it != "null" }
+                _partnerJobsHasMore.value = json.optBoolean("hasMore")
                 val items = json.optJSONArray("bookings")
                 val assignedItems = json.optJSONArray("assignedBookings")
                 val jobs = buildList {
@@ -586,15 +599,23 @@ class QuickFixViewModel : ViewModel() {
                         ))
                     }
                 }
-                _partnerJobs.value = jobs
-                val availableCount = jobs.count { it.status == "requested" }
-                val assignedCount = jobs.size - availableCount
+                _partnerJobs.value = if (loadMore) {
+                    (_partnerJobs.value + jobs).distinctBy { it.id }
+                } else {
+                    jobs.distinctBy { it.id }
+                }
+                val availableCount = _partnerJobs.value.count { it.status == "requested" }
+                val assignedCount = _partnerJobs.value.size - availableCount
                 _partnerJobsStatus.value = "$availableCount नए काम · $assignedCount पहले से assigned काम."
             } catch (error: Exception) {
-                _partnerJobs.value = emptyList()
+                if (!loadMore) _partnerJobs.value = emptyList()
                 _partnerJobsStatus.value = error.localizedMessage ?: "Available jobs लोड नहीं हो सके."
             }
         }
+    }
+
+    fun loadMorePartnerJobs() {
+        if (_partnerJobsHasMore.value) refreshPartnerJobs(loadMore = true)
     }
 
     /** Accepts a requested job through the authenticated, server-side atomic claim endpoint. */
