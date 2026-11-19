@@ -22,7 +22,7 @@ export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): b
 }
 
 const DISPATCHABLE_PARTNER_TRADES = new Set([
-  'electrician', 'plumber', 'ac_repair', 'fridge_repair', 'welder', 'mechanic',
+  'electrician', 'plumber', 'ac_repair', 'fridge_repair', 'appliance_repair', 'welder', 'mechanic',
   'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'kaamkaaj_partner',
   'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'
 ]);
@@ -36,6 +36,7 @@ export function getPartnerServiceCategories(trades: unknown): Set<string> {
     if (trade === 'technician' || trade === 'ac_fridge') {
       categories.add('ac_repair');
       categories.add('fridge_repair');
+      categories.add('appliance_repair');
     } else if (trade === 'bike_rider') {
       categories.add('bike_taxi');
     } else if (typeof trade === 'string' && ['house_cleaning', 'cook', 'laundry', 'maid'].includes(trade)) {

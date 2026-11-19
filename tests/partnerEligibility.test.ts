@@ -41,7 +41,7 @@ test('blocks unapproved, unverified, offline, unpaid and non-partner profiles', 
 test('maps Technician to both AC and fridge bookings', () => {
   assert.deepEqual(
     [...getPartnerServiceCategories(['technician'])].sort(),
-    ['ac_repair', 'fridge_repair']
+    ['ac_repair', 'appliance_repair', 'fridge_repair']
   );
 });
 
@@ -67,7 +67,7 @@ test('maps all other Channel Partner trades to their matching service categories
 test('keeps legacy AC/fridge and bike rider profiles dispatch-compatible', () => {
   assert.deepEqual(
     [...getPartnerServiceCategories(['ac_fridge', 'bike_rider'])].sort(),
-    ['ac_repair', 'bike_taxi', 'fridge_repair']
+    ['ac_repair', 'appliance_repair', 'bike_taxi', 'fridge_repair']
   );
 });
 
@@ -89,4 +89,11 @@ test('routes each order only to a partner registered for that service category',
   assert.equal(canPartnerReceiveBookingCategory(['bike_taxi'], 'bike_taxi'), true);
   assert.equal(canPartnerReceiveBookingCategory(['electrician'], ''), false);
   assert.equal(canPartnerReceiveBookingCategory(['electrician'], null), false);
+});
+
+
+test('routes appliance repair orders to registered technicians only', () => {
+  assert.equal(canPartnerReceiveBookingCategory(['technician'], 'appliance_repair'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], 'appliance_repair'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['plumber'], 'appliance_repair'), false);
 });

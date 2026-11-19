@@ -61,7 +61,7 @@ export const CustomerHome: React.FC = () => {
   const activeBooking = bookings.find(b => b.id === activeBookingId) || bookings[0];
 
   const filteredServices = services.filter(service => {
-    const matchesCat = selectedCategory === 'all' || service.category === selectedCategory || (selectedCategory === 'technician' && (service.category === 'ac_repair' || service.category === 'fridge_repair'));
+    const matchesCat = selectedCategory === 'all' || service.category === selectedCategory || (selectedCategory === 'technician' && (service.category === 'ac_repair' || service.category === 'fridge_repair' || service.category === 'appliance_repair'));
     const matchesQuery =
       service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
