@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -674,6 +674,52 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
 });
 
 
+// Update every active booking for a partner in bounded Firestore batches.
+// Each batch stays below Firestore's 500-write limit, and document-ID cursors
+// ensure bookings beyond the first page are not silently skipped.
+const updateActiveBookingLocations = async (
+  db: Firestore,
+  partnerUid: string,
+  location: { latitude: number; longitude: number; accuracyMeters?: number; updatedAt: FieldValue } | null
+) => {
+  const pageSize = 400;
+  let lastDocument: QueryDocumentSnapshot | undefined;
+  let updatedCount = 0;
+
+  while (true) {
+    let query = db.collection('bookings')
+      .where('technicianUid', '==', partnerUid)
+      .where('status', 'in', ['assigned', 'technician_en_route', 'in_progress'])
+      .orderBy(FieldPath.documentId())
+      .limit(pageSize);
+    if (lastDocument) query = query.startAfter(lastDocument);
+
+    const page = await query.get();
+    if (page.empty) break;
+
+    const batch = db.batch();
+    page.docs.forEach(document => {
+      if (location) {
+        batch.update(document.ref, {
+          partnerLocation: location,
+          partnerLocationUpdatedAt: FieldValue.serverTimestamp()
+        });
+      } else {
+        batch.update(document.ref, {
+          partnerLocation: FieldValue.delete(),
+          partnerLocationUpdatedAt: FieldValue.delete()
+        });
+      }
+    });
+    await batch.commit();
+    updatedCount += page.size;
+    lastDocument = page.docs[page.docs.length - 1];
+    if (page.size < pageSize) break;
+  }
+
+  return updatedCount;
+};
+
 // Partner live-location sharing is opt-in and limited to the partner's active assigned jobs.
 app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
@@ -689,23 +735,14 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
 
     const partner = partnerSnap.data()!;
     if (shareLocation === false) {
-      const active = await db.collection('bookings')
-        .where('technicianUid', '==', identity.uid)
-        .where('status', 'in', ['assigned', 'technician_en_route', 'in_progress'])
-        .limit(50).get();
-      const batch = db.batch();
-      batch.update(partnerRef, {
+      const clearedBookings = await updateActiveBookingLocations(db, identity.uid, null);
+      await partnerRef.update({
         locationSharingEnabled: false,
         liveLocation: FieldValue.delete(),
         liveLocationUpdatedAt: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp()
       });
-      active.docs.forEach(document => batch.update(document.ref, {
-        partnerLocation: FieldValue.delete(),
-        partnerLocationUpdatedAt: FieldValue.delete()
-      }));
-      await batch.commit();
-      return res.json({ success: true, sharingEnabled: false, clearedBookings: active.size });
+      return res.json({ success: true, sharingEnabled: false, clearedBookings });
     }
 
     const validPoint = typeof latitude === 'number' && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
@@ -716,34 +753,24 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
       return res.status(400).json({ success: false, error: 'Explicit location sharing consent and valid GPS coordinates are required.' });
     }
 
-    const active = await db.collection('bookings')
-      .where('technicianUid', '==', identity.uid)
-      .where('status', 'in', ['assigned', 'technician_en_route', 'in_progress'])
-      .limit(50).get();
-    if (active.empty) {
-      return res.status(409).json({ success: false, error: 'Live location can be shared only while you have an active assigned job.' });
-    }
-
     const location = {
       latitude,
       longitude,
       ...(typeof accuracyMeters === 'number' ? { accuracyMeters } : {}),
       updatedAt: FieldValue.serverTimestamp()
     };
-    const batch = db.batch();
-    batch.update(partnerRef, {
+    const updatedBookings = await updateActiveBookingLocations(db, identity.uid, location);
+    if (updatedBookings === 0) {
+      return res.status(409).json({ success: false, error: 'Live location can be shared only while you have an active assigned job.' });
+    }
+    await partnerRef.update({
       locationSharingEnabled: true,
       liveLocation: location,
       liveLocationUpdatedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     });
-    active.docs.forEach(document => batch.update(document.ref, {
-      partnerLocation: location,
-      partnerLocationUpdatedAt: FieldValue.serverTimestamp()
-    }));
-    await batch.commit();
 
-    return res.json({ success: true, sharingEnabled: true, updatedBookings: active.size, message: 'Live location shared with customers on your active assigned jobs.' });
+    return res.json({ success: true, sharingEnabled: true, updatedBookings, message: 'Live location shared with customers on your active assigned jobs.' });
   } catch (error) {
     console.error('Secure partner live-location update failed:', error);
     return res.status(500).json({ success: false, error: 'Live location could not be updated securely.' });
