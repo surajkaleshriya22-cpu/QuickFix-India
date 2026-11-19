@@ -192,6 +192,27 @@ export const AdminDashboard: React.FC = () => {
   const [partnerReviewError, setPartnerReviewError] = useState('');
   const [adminServerAuthStatus, setAdminServerAuthStatus] = useState<'checking' | 'authorized' | 'denied' | 'unavailable'>('checking');
 
+  // Coverage summaries are derived only from the profiles returned by the secure
+  // admin directory API. They are not estimates of total market/provider coverage.
+  const partnerCoverageByCategory = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
+    const categories = Array.isArray(partner.trades) && partner.trades.length > 0
+      ? partner.trades : ['Category not specified'];
+    categories.forEach((category) => {
+      const label = String(category || '').trim() || 'Category not specified';
+      counts[label] = (counts[label] || 0) + 1;
+    });
+    return counts;
+  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  const partnerCoverageByDistrict = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
+    const area = partner.serviceArea;
+    const district = area?.district?.trim();
+    const state = area?.state?.trim();
+    const label = district ? `${district}${state ? `, ${state}` : ''}` : (partner.city?.trim() || 'Area not specified');
+    counts[label] = (counts[label] || 0) + 1;
+    return counts;
+  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 12);
+
 
   // Primary Metrics Calculations
   const totalCustomers = customers.length;
@@ -3328,27 +3349,6 @@ export const AdminDashboard: React.FC = () => {
 
 // Activity Pulse icon helper
 function ActivityPulse(props: { className?: string }) {
-  // Coverage summaries are derived only from the profiles returned by the secure
-  // admin directory API. They are not estimates of total market/provider coverage.
-  const partnerCoverageByCategory = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
-    const categories = Array.isArray(partner.trades) && partner.trades.length > 0
-      ? partner.trades : ['Category not specified'];
-    categories.forEach((category) => {
-      const label = String(category || '').trim() || 'Category not specified';
-      counts[label] = (counts[label] || 0) + 1;
-    });
-    return counts;
-  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-
-  const partnerCoverageByDistrict = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
-    const area = partner.serviceArea;
-    const district = area?.district?.trim();
-    const state = area?.state?.trim();
-    const label = district ? `${district}${state ? `, ${state}` : ''}` : (partner.city?.trim() || 'Area not specified');
-    counts[label] = (counts[label] || 0) + 1;
-    return counts;
-  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 12);
-
   return (
     <svg className={props.className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
