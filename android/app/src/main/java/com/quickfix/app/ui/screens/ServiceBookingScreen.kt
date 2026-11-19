@@ -68,6 +68,8 @@ fun ServiceBookingScreen(
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     var locationMessage by remember { mutableStateOf<String?>(null) }
+    var customerLatitude by remember { mutableStateOf<Double?>(null) }
+    var customerLongitude by remember { mutableStateOf<Double?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -96,6 +98,8 @@ fun ServiceBookingScreen(
                             currentLocation.latitude, currentLocation.longitude, 1
                         )?.firstOrNull()
                     }
+                    customerLatitude = currentLocation.latitude
+                    customerLongitude = currentLocation.longitude
                     if (place == null) {
                         locationMessage = "GPS मिल गया, लेकिन पता नहीं मिला। कृपया पता हाथ से भरें।"
                     } else {
@@ -201,7 +205,9 @@ fun ServiceBookingScreen(
                                             district = district,
                                             tehsil = tehsil,
                                             notes = notes,
-                                            quantity = quantityValue!!
+                                            quantity = quantityValue!!,
+                                            customerLatitude = customerLatitude,
+                                            customerLongitude = customerLongitude
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
                                             popUpTo("customer_home")
