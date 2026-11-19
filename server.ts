@@ -674,6 +674,124 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
 });
 
 
+// Partner live-location sharing is opt-in and limited to the partner's active assigned jobs.
+app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure location service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { shareLocation, latitude, longitude, accuracyMeters } = req.body ?? {};
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const partnerSnap = await partnerRef.get();
+    if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partnerSnap.data()?.role || ''))) {
+      return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    }
+
+    const partner = partnerSnap.data()!;
+    if (shareLocation === false) {
+      const active = await db.collection('bookings')
+        .where('technicianUid', '==', identity.uid)
+        .where('status', 'in', ['assigned', 'technician_en_route', 'in_progress'])
+        .limit(50).get();
+      const batch = db.batch();
+      batch.update(partnerRef, {
+        locationSharingEnabled: false,
+        liveLocation: FieldValue.delete(),
+        liveLocationUpdatedAt: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      active.docs.forEach(document => batch.update(document.ref, {
+        partnerLocation: FieldValue.delete(),
+        partnerLocationUpdatedAt: FieldValue.delete()
+      }));
+      await batch.commit();
+      return res.json({ success: true, sharingEnabled: false, clearedBookings: active.size });
+    }
+
+    const validPoint = typeof latitude === 'number' && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
+      typeof longitude === 'number' && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+    const validAccuracy = accuracyMeters === undefined ||
+      (typeof accuracyMeters === 'number' && Number.isFinite(accuracyMeters) && accuracyMeters >= 0 && accuracyMeters <= 1000);
+    if (shareLocation !== true || !validPoint || !validAccuracy) {
+      return res.status(400).json({ success: false, error: 'Explicit location sharing consent and valid GPS coordinates are required.' });
+    }
+
+    const active = await db.collection('bookings')
+      .where('technicianUid', '==', identity.uid)
+      .where('status', 'in', ['assigned', 'technician_en_route', 'in_progress'])
+      .limit(50).get();
+    if (active.empty) {
+      return res.status(409).json({ success: false, error: 'Live location can be shared only while you have an active assigned job.' });
+    }
+
+    const location = {
+      latitude,
+      longitude,
+      ...(typeof accuracyMeters === 'number' ? { accuracyMeters } : {}),
+      updatedAt: FieldValue.serverTimestamp()
+    };
+    const batch = db.batch();
+    batch.update(partnerRef, {
+      locationSharingEnabled: true,
+      liveLocation: location,
+      liveLocationUpdatedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    active.docs.forEach(document => batch.update(document.ref, {
+      partnerLocation: location,
+      partnerLocationUpdatedAt: FieldValue.serverTimestamp()
+    }));
+    await batch.commit();
+
+    return res.json({ success: true, sharingEnabled: true, updatedBookings: active.size, message: 'Live location shared with customers on your active assigned jobs.' });
+  } catch (error) {
+    console.error('Secure partner live-location update failed:', error);
+    return res.status(500).json({ success: false, error: 'Live location could not be updated securely.' });
+  }
+});
+
+// Customers can read only the live location attached to their own active booking.
+// Locations older than five minutes are deliberately reported as stale, not presented as live.
+app.get('/api/customer/bookings/:bookingId/partner-location', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure location service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId)) return res.status(400).json({ success: false, error: 'Booking ID is invalid.' });
+    const bookingSnap = await getFirestore(firebaseAdminApp).collection('bookings').doc(bookingId).get();
+    if (!bookingSnap.exists || bookingSnap.data()?.customerUid !== identity.uid) {
+      return res.status(404).json({ success: false, error: 'Booking was not found for this customer.' });
+    }
+    const booking = bookingSnap.data()!;
+    if (!['assigned', 'technician_en_route', 'in_progress'].includes(String(booking.status || ''))) {
+      return res.status(409).json({ success: false, error: 'Partner live location is available only for an active assigned booking.' });
+    }
+    const point = booking.partnerLocation;
+    const updatedAt = booking.partnerLocationUpdatedAt;
+    if (!point || typeof point.latitude !== 'number' || typeof point.longitude !== 'number' || !updatedAt || typeof updatedAt.toMillis !== 'function') {
+      return res.json({ success: true, available: false, sharingEnabled: false });
+    }
+    const ageMs = Math.max(0, Date.now() - updatedAt.toMillis());
+    const stale = ageMs > 5 * 60 * 1000;
+    return res.json({
+      success: true,
+      available: !stale,
+      stale,
+      sharingEnabled: true,
+      location: stale ? null : {
+        latitude: point.latitude,
+        longitude: point.longitude,
+        ...(typeof point.accuracyMeters === 'number' ? { accuracyMeters: point.accuracyMeters } : {}),
+        updatedAt: updatedAt.toDate().toISOString()
+      },
+      ageSeconds: Math.floor(ageMs / 1000)
+    });
+  } catch (error) {
+    console.error('Customer partner live-location read failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner location could not be loaded securely.' });
+  }
+});
+
 // Customer-only retrieval of the server-issued service-start OTP.
 app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
