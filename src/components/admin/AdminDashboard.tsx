@@ -175,6 +175,17 @@ export const AdminDashboard: React.FC = () => {
     createdAt?: string; approvalStatus?: string; kycStatus?: string;
     dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
   }>>([]);
+  const [channelPartnerDirectory, setChannelPartnerDirectory] = useState<Array<{
+    uid: string; displayName?: string; phoneNumber?: string; email?: string; role?: string;
+    city?: string; serviceArea?: { state?: string; district?: string; tehsil?: string };
+    trades?: string[]; approvalStatus?: string; kycStatus?: string;
+    isVerified?: boolean; isOnline?: boolean; isSuspended?: boolean;
+    securityDepositPaid?: boolean; walletBalance?: number | null;
+    dispatchEligible?: boolean; dispatchReady?: boolean; dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
+    createdAt?: string | null;
+  }>>([]);
+  const [partnerDirectoryFilter, setPartnerDirectoryFilter] = useState<'all' | 'approved' | 'active' | 'pending'>('all');
+  const [partnerDirectoryLoading, setPartnerDirectoryLoading] = useState(false);
   const [partnerReviewLoading, setPartnerReviewLoading] = useState(false);
   const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
   const [partnerReviewMessage, setPartnerReviewMessage] = useState('');
@@ -427,6 +438,30 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const loadChannelPartnerDirectory = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setPartnerReviewError('Firebase admin session not found. Please sign in again.');
+      return;
+    }
+    setPartnerDirectoryLoading(true);
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/partners', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Channel Partner directory could not be loaded.');
+      }
+      setChannelPartnerDirectory(Array.isArray(result.partners) ? result.partners : []);
+    } catch (error: any) {
+      setPartnerReviewError(error?.message || 'Unable to load Channel Partner directory.');
+    } finally {
+      setPartnerDirectoryLoading(false);
+    }
+  };
+
   const reviewPendingPartner = async (partnerUid: string, decision: 'approve_profile' | 'reject') => {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
@@ -473,7 +508,7 @@ export const AdminDashboard: React.FC = () => {
     const verifyAndLoad = async () => {
       const authorized = await checkAdminServerAuthorization();
       if (authorized && !cancelled && activeTab === 'technicians') {
-        await loadPendingPartners();
+        await Promise.all([loadPendingPartners(), loadChannelPartnerDirectory()]);
       }
     };
     void verifyAndLoad();
@@ -1024,6 +1059,57 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </section>
+            <section className="bg-slate-950 border border-emerald-800/50 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white">All Channel Partners</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">Registered partner directory · up to 200 profiles</p>
+                </div>
+                <button onClick={() => void loadChannelPartnerDirectory()} disabled={partnerDirectoryLoading} className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-white disabled:opacity-50">
+                  {partnerDirectoryLoading ? 'Loading…' : 'Refresh list'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', 'All'],
+                  ['approved', 'Approved'],
+                  ['active', 'Dispatch ready'],
+                  ['pending', 'Pending']
+                ] as const).map(([value, label]) => (
+                  <button key={value} onClick={() => setPartnerDirectoryFilter(value)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border ${partnerDirectoryFilter === value ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-300'}`}>
+                    {label} ({channelPartnerDirectory.filter(partner => value === 'all' ||
+                      (value === 'approved' && partner.approvalStatus === 'approved') ||
+                      (value === 'active' && partner.dispatchReady === true) ||
+                      (value === 'pending' && partner.approvalStatus === 'pending_audit')).length})
+                  </button>
+                ))}
+              </div>
+              {partnerDirectoryLoading && channelPartnerDirectory.length === 0 && <p className="text-xs text-slate-400">Loading partner records…</p>}
+              {!partnerDirectoryLoading && channelPartnerDirectory.length === 0 && <p className="text-xs text-slate-400">No registered Channel Partner records found.</p>}
+              {channelPartnerDirectory.filter(partner => partnerDirectoryFilter === 'all' ||
+                (partnerDirectoryFilter === 'approved' && ['approved', 'basic_profile_approved'].includes(partner.approvalStatus || '')) ||
+                (partnerDirectoryFilter === 'active' && partner.dispatchEligible === true) ||
+                (partnerDirectoryFilter === 'pending' && partner.approvalStatus === 'pending_audit')
+              ).map(partner => (
+                <div key={partner.uid} className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{partner.displayName || 'Name not provided'}</p>
+                      <p className="text-[11px] text-slate-400">{partner.phoneNumber || 'Phone not provided'} · {partner.city || 'City not provided'}</p>
+                    </div>
+                    <span className={`text-[10px] rounded-full px-2 py-1 border ${partner.dispatchEligible ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'}`}>
+                      {partner.dispatchReady ? 'Dispatch ready' : partner.approvalStatus || 'Not dispatch ready'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">Category: {(partner.trades || []).join(', ') || 'Not specified'}</p>
+                  <p className="text-[11px] text-slate-400">Area: {[partner.serviceArea?.tehsil, partner.serviceArea?.district, partner.serviceArea?.state].filter(Boolean).join(', ') || partner.city || 'Not provided'}</p>
+                  <p className="text-[11px] text-slate-300">KYC: {partner.kycStatus || 'not submitted'} · Verified: {partner.isVerified ? 'Yes' : 'No'} · Online: {partner.isOnline ? 'Yes' : 'No'}</p>
+                  <p className="text-[11px] text-slate-300">Booking radius: {partner.dispatchRadiusKm ? `${partner.dispatchRadiusKm} km` : 'Not set'} · GPS pin: {partner.dispatchLocationConfigured ? 'Saved' : 'Not saved'}</p>
+                  <p className="text-[10px] text-slate-500">Wallet: {partner.walletBalance === null || partner.walletBalance === undefined ? 'Not available' : `₹${partner.walletBalance}`} · Reserve paid: {partner.securityDepositPaid ? 'Yes' : 'No'} · Account: {partner.role || 'CHANNEL_PARTNER'}</p>
+                </div>
+              ))}
+              <p className="text-[10px] text-slate-500">Dispatch ready means the server eligibility checks pass: approved, KYC verified, online, not suspended, reserve paid and wallet balance at least ₹2,000. GPS is shown separately.</p>
             </section>
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-2">

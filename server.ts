@@ -820,6 +820,56 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
   });
 });
 
+// Admin-only directory for all registered Channel Partners and legacy Technicians.
+app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users')
+      .where('role', 'in', ['CHANNEL_PARTNER', 'TECHNICIAN'])
+      .limit(200)
+      .get();
+    const partners = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const dispatchEligible = isPartnerEligibleForDispatch(data);
+      const dispatchLocation = data.dispatchLocation;
+      const dispatchLocationConfigured = Boolean(dispatchLocation &&
+        typeof dispatchLocation.latitude === 'number' &&
+        typeof dispatchLocation.longitude === 'number');
+      const dispatchRadiusValid = [1, 3, 5, 10, 15].includes(data.dispatchRadiusKm);
+      return {
+        uid: doc.id,
+        displayName: String(data.displayName || ''),
+        phoneNumber: String(data.phoneNumber || ''),
+        email: String(data.email || ''),
+        role: String(data.role || ''),
+        city: String(data.city || ''),
+        serviceArea: {
+          state: String(data.serviceArea?.state || ''),
+          district: String(data.serviceArea?.district || ''),
+          tehsil: String(data.serviceArea?.tehsil || '')
+        },
+        trades: Array.isArray(data.trades) ? data.trades.filter((trade: unknown) => typeof trade === 'string').slice(0, 30) : [],
+        approvalStatus: String(data.approvalStatus || 'unknown'),
+        kycStatus: String(data.kycStatus || 'not_submitted'),
+        isVerified: data.isVerified === true,
+        isOnline: data.isOnline === true,
+        isSuspended: data.isSuspended === true,
+        securityDepositPaid: data.securityDepositPaid === true,
+        walletBalance: typeof data.walletBalance === 'number' && Number.isFinite(data.walletBalance) ? data.walletBalance : null,
+        dispatchEligible,
+        dispatchReady: dispatchEligible && dispatchLocationConfigured && dispatchRadiusValid,
+        dispatchRadiusKm: typeof data.dispatchRadiusKm === 'number' ? data.dispatchRadiusKm : null,
+        dispatchLocationConfigured,
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null
+      };
+    }).sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
+    return res.json({ success: true, partners, limit: 200 });
+  } catch (error) {
+    console.error('Admin Channel Partner directory lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Channel Partner directory could not be loaded.' });
+  }
+});
+
 // Admin-only Channel Partner review API. This approves the basic profile for the next
 // KYC stage only; it never marks a partner verified or enables job acceptance.
 app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
