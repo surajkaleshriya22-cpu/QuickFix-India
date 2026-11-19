@@ -26,7 +26,9 @@ data class Booking(
     val paymentStatus: String = "paid", // "paid", "pending", "refunded"
     val escrowStatus: String = "held_in_admin_escrow", // "held_in_admin_escrow", "released_to_technician", "refunded_to_customer"
     val refundAmount: Int = 0,
-    val refundReason: String? = null
+    val refundReason: String? = null,
+    val customerLatitude: Double? = null,
+    val customerLongitude: Double? = null
 )
 
 data class CommissionSettings(

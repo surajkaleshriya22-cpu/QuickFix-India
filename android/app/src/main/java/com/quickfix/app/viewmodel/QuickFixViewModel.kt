@@ -103,7 +103,9 @@ class QuickFixViewModel : ViewModel() {
                             technicianPayout = (data["technicianPayout"] as? Number)?.toInt() ?: 0,
                             adminCommission = (data["adminCommission"] as? Number)?.toInt() ?: 0,
                             paymentStatus = data["paymentStatus"] as? String ?: "pending",
-                            escrowStatus = data["escrowStatus"] as? String ?: "not_funded"
+                            escrowStatus = data["escrowStatus"] as? String ?: "not_funded",
+                            customerLatitude = ((data["customerLocation"] as? Map<*, *>)?.get("latitude") as? Number)?.toDouble(),
+                            customerLongitude = ((data["customerLocation"] as? Map<*, *>)?.get("longitude") as? Number)?.toDouble()
                         )
                     } ?: emptyList()
                     _firestoreSyncStatus.value = "Bookings loaded from Firestore."
