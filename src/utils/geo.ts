@@ -37,7 +37,7 @@ export function isWithinPartnerDispatchRadius(
 
   const configuredRadius = partner.dispatchRadiusKm;
   if (configuredRadius !== undefined && configuredRadius !== null &&
-      (typeof configuredRadius !== 'number' || !Number.isFinite(configuredRadius) || configuredRadius < 1)) {
+      (typeof configuredRadius !== 'number' || !Number.isFinite(configuredRadius) || ![1, 3, 5, 10, 15].includes(configuredRadius))) {
     return false;
   }
 
