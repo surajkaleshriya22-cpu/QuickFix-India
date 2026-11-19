@@ -35,6 +35,7 @@ fun TechnicianScreen(
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
 
+    var acceptingJobId by remember { mutableStateOf<String?>(null) }
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
@@ -185,7 +186,17 @@ fun TechnicianScreen(
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
-                            Text("यह नया अनुरोध है। स्वीकार करने की सुविधा अभी ऐप में उपलब्ध नहीं है.", fontSize = 10.sp, color = TextSecondary)
+                            Button(
+                                onClick = {
+                                    acceptingJobId = job.id
+                                    viewModel.acceptPartnerJob(job.id) { acceptingJobId = null }
+                                },
+                                enabled = acceptingJobId == null,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                            ) {
+                                Text(if (acceptingJobId == job.id) "Accepting..." else "काम स्वीकार करें / Accept Job")
+                            }
                         }
                     }
                 }
