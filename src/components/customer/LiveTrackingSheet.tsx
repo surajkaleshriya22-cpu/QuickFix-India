@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowLeft,
   Phone,
-  MessageSquare,
+  MapPin,
   Star,
   CheckCircle,
   FileText,
@@ -10,7 +10,6 @@ import {
   Wrench
 } from 'lucide-react';
 import { Booking, BookingStatus } from '../../types';
-import { useQuickFix } from '../../context/QuickFixContext';
 import { NearbyStoresModal } from './NearbyStoresModal';
 
 interface LiveTrackingSheetProps {
@@ -25,7 +24,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
   const steps: { key: BookingStatus; label: string; desc: string }[] = [
     { key: 'requested', label: 'Booking Placed', desc: 'Order received and logged in dispatch system' },
     { key: 'assigned', label: 'Technician Assigned', desc: 'Verified professional designated for your area' },
-    { key: 'technician_en_route', label: 'En Route', desc: `${booking.technicianName || 'Technician'} is riding to your location (${booking.technicianEtaMinutes || 15} mins)` },
+    { key: 'technician_en_route', label: 'En Route', desc: 'Partner travel updates will appear after secure live location sharing is connected.' },
     { key: 'in_progress', label: 'Service In Progress', desc: 'Job started with safety OTP verification' },
     { key: 'completed', label: 'Service Completed', desc: 'Quality checked & post-service warranty activated' }
   ];
@@ -123,21 +122,13 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
 
               {/* Call & Chat shortcuts */}
               <div className="flex items-center gap-2">
-                <a
+                {booking.technicianPhone ? <a
                   href={`tel:${booking.technicianPhone}`}
                   className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-xs"
                   title="Call Technician"
                 >
                   <Phone className="w-4 h-4" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => alert('In-app chat is not connected yet. Please use the call option if available.')}
-                  className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                  title="Chat with Technician"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </button>
+                </a> : null}
               </div>
             </div>
           </div>
@@ -207,7 +198,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
               <span>Service Successfully Completed!</span>
             </div>
             <p className="text-xs text-slate-700">
-              Your 30-Day QuickFix rework guarantee is now active. If you encounter any issues, re-booking is free.
+              The booking is marked completed. Please contact QuickFix support if you need help with this service.
             </p>
 
             {booking.review ? (
