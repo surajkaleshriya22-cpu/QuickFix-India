@@ -3,22 +3,14 @@ import {
   ArrowLeft,
   Phone,
   MessageSquare,
-  ShieldCheck,
-  MapPin,
-  Clock,
   Star,
   CheckCircle,
-  AlertCircle,
   FileText,
-  Navigation,
-  KeyRound,
-  RotateCcw,
   Compass,
   Wrench
 } from 'lucide-react';
 import { Booking, BookingStatus } from '../../types';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from './NearbyStoresModal';
 
 interface LiveTrackingSheetProps {
@@ -28,28 +20,7 @@ interface LiveTrackingSheetProps {
 }
 
 export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, onBack, onOpenReview }) => {
-  const { updateBookingStatus } = useQuickFix();
-  const [copiedOtp, setCopiedOtp] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
-  const [liveRouteInfo, setLiveRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
-
-  const cityBaseCoords: Record<string, { lat: number; lng: number }> = {
-    Indore: { lat: 22.7196, lng: 75.8577 },
-    Bhopal: { lat: 23.2599, lng: 77.4126 },
-    Ujjain: { lat: 23.1765, lng: 75.7885 },
-    Dewas: { lat: 22.9676, lng: 76.0534 },
-  };
-
-  const centerCoords = cityBaseCoords[booking.city] || cityBaseCoords['Indore'];
-  // Technician simulated nearby position ~2-3 km away
-  const technicianCoords = {
-    lat: centerCoords.lat + 0.015,
-    lng: centerCoords.lng - 0.012,
-  };
-  const customerCoords = {
-    lat: centerCoords.lat - 0.008,
-    lng: centerCoords.lng + 0.009,
-  };
 
   const steps: { key: BookingStatus; label: string; desc: string }[] = [
     { key: 'requested', label: 'Booking Placed', desc: 'Order received and logged in dispatch system' },
@@ -72,25 +43,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
 
   const currentStepIdx = getStepIndex(booking.status);
 
-  const handleCopyOtp = () => {
-    navigator.clipboard.writeText(booking.startOtp);
-    setCopiedOtp(true);
-    setTimeout(() => setCopiedOtp(false), 2000);
-  };
-
-  const handleAdvanceSimulation = () => {
-    const nextStates: Record<BookingStatus, BookingStatus> = {
-      requested: 'assigned',
-      assigned: 'technician_en_route',
-      technician_en_route: 'in_progress',
-      in_progress: 'completed',
-      completed: 'completed',
-      cancelled: 'requested'
-    };
-    const next = nextStates[booking.status];
-    updateBookingStatus(booking.id, next, booking.startOtp);
-  };
-
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
       {/* App Bar */}
@@ -111,32 +63,20 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Real Interactive Google Maps Route & Live Tracking */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-              <Navigation className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-              <span>Live Navigation Map ({booking.city})</span>
-            </div>
-            {liveRouteInfo ? (
-              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                {liveRouteInfo.distanceKm} km · ~{liveRouteInfo.durationMins} mins
-              </span>
-            ) : booking.status === 'technician_en_route' ? (
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ETA ~{booking.technicianEtaMinutes || 12} mins
-              </span>
-            ) : null}
+        {/* Do not display fabricated partner/customer coordinates as live tracking. */}
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-900">
+            <MapPin className="h-4 w-4" />
+            <span>Live location sharing is not active</span>
           </div>
-
-          <TechnicianRouteMap
-            originCoords={technicianCoords}
-            destinationCoords={customerCoords}
-            destinationAddress={booking.customerAddress}
-            technicianName={booking.technicianName || 'Technician'}
-            height="210px"
-            onRouteCalculated={(dist, mins) => setLiveRouteInfo({ distanceKm: dist, durationMins: mins })}
-          />
+          <p className="text-xs leading-relaxed text-amber-900">
+            This booking view does not yet receive verified GPS updates from the assigned Channel Partner.
+            No moving marker, route, or arrival time is shown until both sides enable secure location sharing.
+          </p>
+          <div className="rounded-xl bg-white/80 px-3 py-2 text-xs text-slate-700">
+            **Service address:** {booking.customerAddress || 'Not provided'}
+          </div>
+        </div>
 
           {/* Quick link to Nearby Hardware & Spare Parts Stores */}
           <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs shadow-2xs">
@@ -154,25 +94,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
             </button>
           </div>
         </div>
-
-        {/* Safety Start OTP Card */}
-        {booking.status !== 'completed' && booking.status !== 'cancelled' && (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between shadow-xs">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
-                <KeyRound className="w-4 h-4 text-blue-600" />
-                <span>Job Start Security OTP</span>
-              </div>
-              <p className="text-[11px] text-slate-600">Share this code with the technician upon arrival to begin.</p>
-            </div>
-            <button
-              onClick={handleCopyOtp}
-              className="bg-white border-2 border-blue-600 px-3.5 py-1.5 rounded-xl font-mono text-base font-extrabold text-blue-800 tracking-widest shadow-xs hover:bg-blue-50 active:scale-95 transition-all"
-            >
-              {copiedOtp ? 'COPIED!' : booking.startOtp}
-            </button>
-          </div>
-        )}
 
         {/* Assigned Technician Profile */}
         {booking.technicianName && (
@@ -193,9 +114,9 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
                   <div className="flex items-center gap-2 text-xs text-slate-600 mt-0.5">
                     <div className="flex items-center text-amber-500 font-semibold gap-0.5">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      <span>{booking.technicianRating || 4.9}</span>
+                      <span>{booking.technicianRating}</span>
                     </div>
-                    <span>· Verified Partner</span>
+                    <span>· Partner profile</span>
                   </div>
                 </div>
               </div>
@@ -211,7 +132,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
                 </a>
                 <button
                   type="button"
-                  onClick={() => alert(`Messaging ${booking.technicianName}: "Technician is on the way with specialized tools."`)}
+                  onClick={() => alert('In-app chat is not connected yet. Please use the call option if available.')}
                   className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors"
                   title="Chat with Technician"
                 >
@@ -226,7 +147,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="text-xs font-bold text-slate-900 mb-3 flex items-center justify-between">
             <span>Booking Progress</span>
-            <span className="text-[11px] font-normal text-slate-500">Updated in real-time</span>
+            <span className="text-[11px] font-normal text-slate-500">Latest booking record</span>
           </div>
 
           <div className="space-y-4">
@@ -276,21 +197,6 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
               );
             })}
           </div>
-        </div>
-
-        {/* Demo Fast-Forward Controller */}
-        <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
-          <div className="text-xs text-slate-700">
-            <span className="font-bold">Dispatch Simulator:</span>
-            <span className="text-slate-500 block text-[11px]">Advance status to test workflow</span>
-          </div>
-          <button
-            onClick={handleAdvanceSimulation}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5"
-          >
-            <span>Next State</span>
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {/* Completed State: Review & Receipt Section */}
