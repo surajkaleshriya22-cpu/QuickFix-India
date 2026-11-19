@@ -276,7 +276,14 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity } = req.body ?? {};
+    const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity, customerLocation } = req.body ?? {};
+    const validCustomerLocation = customerLocation === undefined || (
+      customerLocation !== null && typeof customerLocation === 'object' && !Array.isArray(customerLocation) &&
+      typeof customerLocation.latitude === 'number' && Number.isFinite(customerLocation.latitude) &&
+      customerLocation.latitude >= -90 && customerLocation.latitude <= 90 &&
+      typeof customerLocation.longitude === 'number' && Number.isFinite(customerLocation.longitude) &&
+      customerLocation.longitude >= -180 && customerLocation.longitude <= 180
+    );
     const validServiceArea = serviceArea === undefined || (
       serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
@@ -285,7 +292,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
 
-    if (!validServiceArea || !serviceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
+    if (!validCustomerLocation || !validServiceArea || !serviceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
         !address.trim() || address.length > 500 ||
         !isValidBookingDate(scheduledDate) ||
@@ -355,6 +362,13 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
         district: serviceArea.district.trim(),
         tehsil: serviceArea.tehsil.trim()
       },
+      ...(customerLocation ? {
+        customerLocation: {
+          latitude: customerLocation.latitude,
+          longitude: customerLocation.longitude,
+          capturedAt: FieldValue.serverTimestamp()
+        }
+      } : {}),
       quantity,
       billingUnit: bookingRateCard?.unit || getBillingProfile(service).unit,
       pricingStatus: approvedQuote ? 'estimated_from_approved_rate_card' : 'quote_required',
