@@ -21,23 +21,23 @@ test('calculates a plausible distance between Indore and Bhopal', () => {
   assert.ok(distance > 170 && distance < 200);
 });
 
-test('allows customer bookings within the 7 km default limit', () => {
+test('allows customer bookings within the 15 km default limit', () => {
   assert.equal(isWithinPartnerDispatchRadius(partner, {
-    customerLocation: { latitude: 22.73, longitude: 75.86 },
+    customerLocation: { latitude: 22.80, longitude: 75.86 },
   }), true);
 });
 
-test('blocks customer bookings beyond 7 km even if partner configured a larger radius', () => {
+test('blocks customer bookings beyond 15 km even if partner configured a larger radius', () => {
   assert.equal(isWithinPartnerDispatchRadius(
     { ...partner, dispatchRadiusKm: 25 },
-    { customerLocation: { latitude: 22.80, longitude: 75.86 } }
+    { customerLocation: { latitude: 22.90, longitude: 75.86 } }
   ), false);
 });
 
-test('honours a partner configured radius smaller than 7 km', () => {
+test('honours a partner configured radius smaller than 15 km', () => {
   assert.equal(isWithinPartnerDispatchRadius(
     { ...partner, dispatchRadiusKm: 2 },
-    { customerLocation: { latitude: 22.73, longitude: 75.86 } }
+    { customerLocation: { latitude: 22.75, longitude: 75.86 } }
   ), false);
 });
 
