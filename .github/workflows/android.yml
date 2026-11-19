@@ -12,6 +12,7 @@ on:
       - "src/lib/firebase.ts"
       - "firebase.json"
       - "firestore.rules"
+      - "src/**"
   push:
     branches:
       - main
@@ -22,6 +23,7 @@ on:
       - "src/lib/firebase.ts"
       - "firebase.json"
       - "firestore.rules"
+      - "src/**"
 
 permissions:
   contents: read
