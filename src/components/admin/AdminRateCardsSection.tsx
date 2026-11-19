@@ -128,9 +128,10 @@ export const AdminRateCardsSection: React.FC = () => {
         { serviceCategory: 'welder', serviceId: '', unit: 'per_kg' as BillingUnit, minimumRate: 40, maximumRate: 90, minimumCharge: 500, sourceName: '2026 welding and fabrication market guide', sourceUrl: 'https://solve24.in/blog/welder-salary-and-welding-charges-india-2026', note: 'Labour-only bulk fabrication benchmark ₹40–₹90/kg; small spot weld ₹150–₹600/job. Not an Indore-specific quote; material, design, transport and installation are extra. Require local fabricator quotations before approval.' },
       ];
       const snapshot = await getDocs(query(collection(db, 'rate_cards')));
-      const existing = new Map(snapshot.docs.map(d => {
+      const existing = new Map<string, { id: string; approvalStatus?: string }>(snapshot.docs.map(d => {
         const x = d.data();
-        return [[x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase(), { id: d.id, ...x }];
+        const key = [x.state,x.district,x.city||'',x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase();
+        return [key, { id: d.id, approvalStatus: typeof x.approvalStatus === 'string' ? x.approvalStatus : undefined }] as const;
       }));
       let published = 0;
       let unchanged = 0;
