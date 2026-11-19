@@ -431,29 +431,6 @@ class QuickFixViewModel : ViewModel() {
             runCatching {
                 val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
                 withContext(Dispatchers.IO) {
-                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/dispatch-settings").openConnection() as java.net.HttpURLConnection
-                    try {
-                        connection.requestMethod = "GET"
-                        connection.setRequestProperty("Authorization", "Bearer $token")
-                        connection.connectTimeout = 15000
-                        connection.readTimeout = 20000
-                        val status = connection.responseCode
-                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                        if (status !in 200..299) error("Partner settings load failed (HTTP $status).")
-                        org.json.JSONObject(body).optInt("dispatchRadiusKm", 5)
-                    } finally { connection.disconnect() }
-                }
-            }.onSuccess { radius -> if (radius in listOf(1, 3, 5, 10, 15)) _partnerDispatchRadiusKm.value = radius }
-        }
-    }
-
-    fun loadPartnerDispatchSettings() {
-        val user = auth.currentUser ?: return
-        viewModelScope.launch {
-            runCatching {
-                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
-                withContext(Dispatchers.IO) {
                     val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/dispatch-settings")
                         .openConnection() as java.net.HttpURLConnection
                     try {
