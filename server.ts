@@ -16,6 +16,7 @@ import { isValidBookingDate } from './src/utils/bookingDate';
 import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
+import { isWithinPartnerDispatchRadius } from './src/utils/geo';
 
 dotenv.config();
 
@@ -491,6 +492,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
         }
         // Backward compatibility for older customer/partner profiles without
         // complete structured area details. City is already Firestore-filtered.
+        if (!isWithinPartnerDispatchRadius(profile, booking)) return false;
         return true;
       })
       .map((document) => {
@@ -568,6 +570,9 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
           !['state', 'district', 'tehsil'].every((key) =>
             normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
+      }
+      if (!isWithinPartnerDispatchRadius(partner, booking)) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
 
