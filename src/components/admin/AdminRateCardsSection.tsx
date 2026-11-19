@@ -126,6 +126,14 @@ export const AdminRateCardsSection: React.FC = () => {
         { serviceCategory: 'gardener', serviceId: '', unit: 'per_job' as BillingUnit, minimumRate: 200, maximumRate: 500, minimumCharge: 200, sourceName: 'ServiceOnWheel Indore gardening + local lawn maintenance guide', sourceUrl: 'https://www.serviceonwheel.com/indore/service/gardening.html', note: 'Proposed basic visit band ₹200–₹500; local gardening service indicates ₹200 inspection/visit floor, while monthly lawn maintenance commonly ₹1,500–₹5,000. Garden size and green-waste removal extra; verify before approval.' },
         { serviceCategory: 'house_shifting', serviceId: '', unit: 'per_trip' as BillingUnit, minimumRate: 3200, maximumRate: 7500, minimumCharge: 3200, sourceName: 'ShiftingApp Indore 2026 rate card', sourceUrl: 'https://shiftingapp.in/packers-and-movers-charges-indore', note: '1BHK local shifting package benchmark ₹3,200–₹7,500. This is a package estimate rather than a literal truck trip rate; require inventory, floor/lift, distance, packing and vehicle quote before approval.' },
         { serviceCategory: 'welder', serviceId: '', unit: 'per_kg' as BillingUnit, minimumRate: 40, maximumRate: 90, minimumCharge: 500, sourceName: '2026 welding and fabrication market guide', sourceUrl: 'https://solve24.in/blog/welder-salary-and-welding-charges-india-2026', note: 'Labour-only bulk fabrication benchmark ₹40–₹90/kg; small spot weld ₹150–₹600/job. Not an Indore-specific quote; material, design, transport and installation are extra. Require local fabricator quotations before approval.' },
+        { serviceCategory: 'technician', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 199, maximumRate: 399, minimumCharge: 199, sourceName: 'GenuineRate Indore appliance repair inspection benchmark', sourceUrl: 'https://genuinerate.com/rates/indore', note: 'Indore appliance repair inspection benchmark ₹179–₹360/visit; QuickFix rounds to ₹199–₹399 for technician diagnosis. Repair labour, gas and spare parts are separately itemised.' },
+        { serviceCategory: 'mechanic', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 199, maximumRate: 499, minimumCharge: 199, sourceName: 'HamaraService Indore mechanic listing', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Local listing starts mechanic visit at ₹149; QuickFix proposed ₹199–₹499 inspection/visit band. Vehicle type, fault, parts, towing and repair labour are confirmed separately.' },
+        { serviceCategory: 'cook', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 249, maximumRate: 450, minimumCharge: 249, sourceName: 'HamaraService Indore cook listing', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Indore cook listing starts at ₹249 per meal. QuickFix indicative ₹249–₹450 per meal/visit; number of people, meals, menu and groceries must be confirmed.' },
+        { serviceCategory: 'laundry', serviceId: '', unit: 'per_kg' as BillingUnit, minimumRate: 40, maximumRate: 120, minimumCharge: 80, sourceName: 'Loknex + Washman + Justdial Indore laundry rates', sourceUrl: 'https://loknex.com/laundry-in-indore/', note: 'Indore wash-and-fold references ₹40–₹100/kg; wash-and-iron listings ₹70–₹120/kg. QuickFix band ₹40–₹120/kg. Dry cleaning, delicate garments, pickup and express delivery priced separately.' },
+        { serviceCategory: 'maid', serviceId: '', unit: 'per_visit' as BillingUnit, minimumRate: 79, maximumRate: 250, minimumCharge: 79, sourceName: 'HamaraService Indore house maid listing', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Local listing starts at ₹79 per visit. QuickFix indicative ₹79–₹250 for a basic visit; home size, task list, duration and frequency determine final quote.' },
+        { serviceCategory: 'kaamkaaj_partner', serviceId: '', unit: 'quote' as BillingUnit, minimumRate: 0, maximumRate: 0, minimumCharge: 0, requiresAdminQuote: true, sourceName: 'QuickFix measured household task quotation', sourceUrl: 'https://hamaraservice.com/services-in-indore', note: 'Draft only: sweeping, mopping, utensils, cooking, laundry and combined daily-help packages vary by home size, hours and frequency. Admin must add locally verified task-wise prices before approval.' },
+        { serviceCategory: 'tourist_guide', serviceId: '', unit: 'quote' as BillingUnit, minimumRate: 0, maximumRate: 0, minimumCharge: 0, requiresAdminQuote: true, sourceName: 'QuickFix guide quotation required', sourceUrl: 'https://www.mptourism.com/', note: 'Draft only: quote by itinerary, duration, language, group size and guide credentials. Entry tickets, transport and meals are separate; obtain local guide quotations before approval.' },
+        { serviceCategory: 'contractor', serviceId: '', unit: 'quote' as BillingUnit, minimumRate: 0, maximumRate: 0, minimumCharge: 0, requiresAdminQuote: true, sourceName: 'Indore measured BOQ quotation required', sourceUrl: 'https://genuinerate.com/rates/indore', note: 'Draft only: civil, renovation and installation work requires site measurement and itemised BOQ. Material grade, labour, transport and taxes must be specified before admin approval.' },
       ];
       const snapshot = await getDocs(query(collection(db, 'rate_cards')));
       const existing = new Map<string, { id: string; approvalStatus?: string }>(snapshot.docs.map(d => {
@@ -134,6 +142,7 @@ export const AdminRateCardsSection: React.FC = () => {
         return [key, { id: d.id, approvalStatus: typeof x.approvalStatus === 'string' ? x.approvalStatus : undefined }] as const;
       }));
       let published = 0;
+      let drafted = 0;
       let unchanged = 0;
       for (const row of rows) {
         const key = ['Madhya Pradesh','Indore','Indore',row.serviceCategory,row.serviceId||'',row.unit,row.sourceName].join('|').toLowerCase();
@@ -142,20 +151,20 @@ export const AdminRateCardsSection: React.FC = () => {
         const payload = {
           state: 'Madhya Pradesh', district: 'Indore', city: 'Indore', tehsil: null,
           serviceCategory: row.serviceCategory, serviceId: row.serviceId || null, unit: row.unit, currency: 'INR',
-          minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: 0, materialsIncluded: false,
-          approvalStatus: 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
+          minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: ('baseFee' in row ? row.baseFee : 0) || 0, materialsIncluded: false,
+          approvalStatus: ('requiresAdminQuote' in row && row.requiresAdminQuote) ? 'draft' as RateApprovalStatus : 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
           sourceName: row.sourceName, sourceUrl: row.sourceUrl, sourceCheckedAt,
           notes: row.note + ' Active Indore market-based QuickFix default. Parts, materials and out-of-scope work are extra and must be itemised before customer confirmation.',
-          approvedBy: user.uid, approvedAt: new Date().toISOString(), updatedBy: user.uid, updatedAt: serverTimestamp()
+          ...(('requiresAdminQuote' in row && row.requiresAdminQuote) ? {} : { approvedBy: user.uid, approvedAt: new Date().toISOString() }), updatedBy: user.uid, updatedAt: serverTimestamp()
         };
         if (prior) {
           await updateDoc(doc(db, 'rate_cards', prior.id), payload);
         } else {
           await addDoc(collection(db, 'rate_cards'), { ...payload, createdBy: user.uid, createdAt: serverTimestamp() });
         }
-        published++;
+        if ('requiresAdminQuote' in row && row.requiresAdminQuote) drafted++; else published++;
       }
-      setMessage(published + ' Indore market rate cards published as active customer quote defaults. ' + unchanged + ' existing approved/retired cards were left unchanged. Admin can edit or retire rates anytime; edited rates return to Draft until re-approved.');
+      setMessage(published + ' Indore market rate cards published as active customer quote defaults; ' + drafted + ' quotation-only category cards saved as Draft for local admin pricing; ' + unchanged + ' existing approved/retired cards left unchanged. Admin can edit or retire rates anytime; edited rates return to Draft until re-approved.');
       await loadCards();
     } catch(e) { setError(e instanceof Error ? e.message : 'Could not add Indore draft cards.'); }
   };
