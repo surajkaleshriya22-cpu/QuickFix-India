@@ -135,8 +135,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       // Log only sanitized diagnostic metadata; never log the user's phone number, OTP, or credentials.
       const rawMessage = typeof error?.message === 'string' ? error.message : '';
       const safeMessage = rawMessage
-        .replace(/\\+?91\\s*\\d{10}/g, '[phone redacted]')
-        .replace(/\\b\\d{10}\\b/g, '[phone redacted]')
+        .replace(/\+?91\s*\d{10}/g, '[phone redacted]')
+        .replace(/\b\d{10}\b/g, '[phone redacted]')
         .replace(/[A-Za-z0-9_-]{40,}/g, '[token redacted]')
         .slice(0, 180);
       console.warn('Firebase phone OTP send failed:', { code: errorCode, message: safeMessage });
