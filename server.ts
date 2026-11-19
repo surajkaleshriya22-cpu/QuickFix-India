@@ -11,6 +11,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -579,6 +580,8 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     const partnerRef = db.collection('users').doc(identity.uid);
     const bookingRef = db.collection('bookings').doc(bookingId);
     const auditRef = db.collection('partner_job_audit_logs').doc();
+    const otpRef = db.collection('booking_start_otps').doc(bookingId);
+    const startOtp = String(randomInt(0, 10000)).padStart(4, '0');
     const acceptedAt = new Date();
     const deadline = new Date(acceptedAt.getTime() + 60 * 60 * 1000);
 
@@ -633,6 +636,14 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
         assignedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       });
+      transaction.create(otpRef, {
+        bookingId,
+        customerUid: booking.customerUid,
+        partnerUid: identity.uid,
+        code: startOtp,
+        expiresAt: new Date(acceptedAt.getTime() + 60 * 60 * 1000).toISOString(),
+        createdAt: FieldValue.serverTimestamp()
+      });
       transaction.create(auditRef, {
         action: 'partner_job_accepted',
         bookingId,
@@ -659,6 +670,103 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     if (code === 'BOOKING_ALREADY_CLAIMED') return res.status(409).json({ success: false, error: 'This job is no longer available.' });
     console.error('Secure partner job acceptance failed:', error);
     return res.status(500).json({ success: false, error: 'Job could not be accepted securely. Please retry.' });
+  }
+});
+
+
+// Customer-only retrieval of the server-issued service-start OTP.
+app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const [bookingSnap, otpSnap] = await Promise.all([
+      bookingRef.get(),
+      db.collection('booking_start_otps').doc(bookingId).get()
+    ]);
+    if (!bookingSnap.exists || bookingSnap.data()?.customerUid !== identity.uid) {
+      return res.status(404).json({ success: false, error: 'Booking was not found for this customer.' });
+    }
+    if (bookingSnap.data()?.status !== 'assigned' || !otpSnap.exists) {
+      return res.status(409).json({ success: false, error: 'The service-start code is not available yet.' });
+    }
+    const otp = otpSnap.data()!;
+    if (otp.customerUid !== identity.uid || Date.parse(String(otp.expiresAt || '')) <= Date.now()) {
+      return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
+    }
+    return res.json({ success: true, startOtp: String(otp.code) });
+  } catch (error) {
+    console.error('Customer start OTP retrieval failed:', error);
+    return res.status(500).json({ success: false, error: 'The service-start code could not be loaded.' });
+  }
+});
+
+// Assigned partner verifies the customer-shared OTP; the transition is atomic and one-time.
+app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
+    if (!/^\d{4}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const otpRef = db.collection('booking_start_otps').doc(bookingId);
+    const auditRef = db.collection('partner_job_audit_logs').doc();
+    await db.runTransaction(async transaction => {
+      const [bookingSnap, otpSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(otpRef)]);
+      if (!bookingSnap.exists || !otpSnap.exists) throw new Error('OTP_NOT_FOUND');
+      const booking = bookingSnap.data()!;
+      const otp = otpSnap.data()!;
+      if (booking.technicianUid !== identity.uid || otp.partnerUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
+      if (booking.status !== 'assigned') throw new Error('INVALID_BOOKING_STATE');
+      if (Date.parse(String(otp.expiresAt || '')) <= Date.now()) throw new Error('OTP_EXPIRED');
+      if (otp.code !== code) throw new Error('OTP_INVALID');
+      transaction.update(bookingRef, { status: 'in_progress', serviceStartedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      transaction.delete(otpRef);
+      transaction.create(auditRef, { action: 'service_started', bookingId, partnerUid: identity.uid, createdAt: FieldValue.serverTimestamp() });
+    });
+    return res.json({ success: true, bookingId, status: 'in_progress' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'OTP_NOT_FOUND') return res.status(404).json({ success: false, error: 'Service-start code was not found.' });
+    if (code === 'NOT_ASSIGNED_PARTNER') return res.status(403).json({ success: false, error: 'Only the assigned Channel Partner can start this job.' });
+    if (code === 'INVALID_BOOKING_STATE') return res.status(409).json({ success: false, error: 'This booking is not waiting to start.' });
+    if (code === 'OTP_EXPIRED') return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
+    if (code === 'OTP_INVALID') return res.status(400).json({ success: false, error: 'The customer OTP is incorrect.' });
+    console.error('Partner service-start verification failed:', error);
+    return res.status(500).json({ success: false, error: 'The service could not be started securely.' });
+  }
+});
+
+// Assigned partner marks a started job complete; payment and wallet settlement remain separate.
+app.post('/api/partners/bookings/:bookingId/complete', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const auditRef = db.collection('partner_job_audit_logs').doc();
+    await db.runTransaction(async transaction => {
+      const bookingSnap = await transaction.get(bookingRef);
+      if (!bookingSnap.exists) throw new Error('BOOKING_NOT_FOUND');
+      const booking = bookingSnap.data()!;
+      if (booking.technicianUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
+      if (booking.status !== 'in_progress') throw new Error('INVALID_BOOKING_STATE');
+      transaction.update(bookingRef, { status: 'completed', completedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(auditRef, { action: 'service_completed', bookingId, partnerUid: identity.uid, createdAt: FieldValue.serverTimestamp() });
+    });
+    return res.json({ success: true, bookingId, status: 'completed', message: 'Service completion recorded. Payment settlement is not implied.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'BOOKING_NOT_FOUND') return res.status(404).json({ success: false, error: 'Booking was not found.' });
+    if (code === 'NOT_ASSIGNED_PARTNER') return res.status(403).json({ success: false, error: 'Only the assigned Channel Partner can complete this job.' });
+    if (code === 'INVALID_BOOKING_STATE') return res.status(409).json({ success: false, error: 'Only an in-progress job can be completed.' });
+    console.error('Partner service completion failed:', error);
+    return res.status(500).json({ success: false, error: 'Service completion could not be recorded securely.' });
   }
 });
 

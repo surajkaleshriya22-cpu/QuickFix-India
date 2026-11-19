@@ -342,12 +342,13 @@ fun TechnicianScreen(
                                 )
                                 Button(
                                     onClick = {
-                                        val valid = viewModel.verifyStartOtp(booking.id, enteredOtp)
-                                        if (valid) {
-                                            enteredOtp = ""
-                                            otpError = null
-                                        } else {
-                                            otpError = "Server-side OTP verification is not configured. No status was changed."
+                                        viewModel.verifyStartOtp(booking.id, enteredOtp) { valid, message ->
+                                            if (valid) {
+                                                enteredOtp = ""
+                                                otpError = null
+                                            } else {
+                                                otpError = message
+                                            }
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
@@ -368,9 +369,9 @@ fun TechnicianScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Request completion (currently unavailable)", fontWeight = FontWeight.Bold)
+                                Text("काम पूरा करें / Complete Job", fontWeight = FontWeight.Bold)
                             }
-                            Text(firestoreStatus, color = Color(0xFFDC2626), fontSize = 11.sp)
+                            Text(firestoreStatus, color = TextSecondary, fontSize = 11.sp)
                         }
                     }
                 }

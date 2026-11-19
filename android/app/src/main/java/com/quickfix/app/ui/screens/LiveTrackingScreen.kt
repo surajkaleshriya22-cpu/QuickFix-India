@@ -38,7 +38,11 @@ fun LiveTrackingScreen(
 ) {
     val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsState()
+    val customerStartOtps by viewModel.customerStartOtps.collectAsState()
     val booking = bookings.find { it.id == bookingId } ?: bookings.firstOrNull()
+    LaunchedEffect(booking?.id, booking?.status) {
+        if (booking?.status == "assigned") viewModel.loadCustomerStartOtp(booking.id)
+    }
 
     Scaffold(
         topBar = {
@@ -82,7 +86,8 @@ fun LiveTrackingScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // A start OTP is shown only after a trusted backend assigns and dispatches a partner.
-                if (booking.startOtp.isNotBlank()) {
+                val customerOtp = customerStartOtps[booking.id].orEmpty()
+                if (booking.status == "assigned" && customerOtp.isNotBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = DeepNavy),
                         shape = RoundedCornerShape(16.dp),
@@ -101,7 +106,7 @@ fun LiveTrackingScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                booking.startOtp,
+                                customerOtp,
                                 color = Color(0xFF60A5FA),
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -123,7 +128,7 @@ fun LiveTrackingScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            "Your request is saved. A start OTP will appear only after a verified technician accepts the job. No technician has been assigned yet.",
+                            if (booking.status == "assigned") "Your partner is assigned. Refreshing your secure service-start code..." else "Your request is saved. A start OTP will appear only after a verified Channel Partner accepts the job.",
                             color = Color(0xFF1E40AF),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(14.dp)
