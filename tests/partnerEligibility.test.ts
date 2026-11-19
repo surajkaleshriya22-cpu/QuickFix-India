@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
+import { canPartnerReceiveBookingCategory, getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
 
 const eligible = {
   role: 'CHANNEL_PARTNER',
@@ -74,4 +74,19 @@ test('keeps legacy AC/fridge and bike rider profiles dispatch-compatible', () =>
 test('ignores malformed and unknown partner trades', () => {
   assert.deepEqual([...getPartnerServiceCategories(null)], []);
   assert.deepEqual([...getPartnerServiceCategories(['unknown', 12, null])], []);
+});
+
+
+test('routes each order only to a partner registered for that service category', () => {
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], 'electrician'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], 'plumber'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], 'ac_repair'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['technician'], 'ac_repair'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['technician'], 'fridge_repair'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['technician'], 'electrician'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['plumber'], 'electrician'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['kaamkaaj_partner'], 'plumber'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['bike_taxi'], 'bike_taxi'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], ''), false);
+  assert.equal(canPartnerReceiveBookingCategory(['electrician'], null), false);
 });
