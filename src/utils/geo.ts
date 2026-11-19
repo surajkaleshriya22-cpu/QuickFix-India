@@ -1,5 +1,7 @@
 export type GeoPoint = { latitude: number; longitude: number };
 
+const MAX_PARTNER_DISTANCE_KM = 7;
+
 function isGeoPoint(value: unknown): value is GeoPoint {
   if (!value || typeof value !== 'object') return false;
   const point = value as Record<string, unknown>;
@@ -22,21 +24,26 @@ export function distanceBetweenPointsKm(a: GeoPoint, b: GeoPoint): number {
 }
 
 /**
- * Enforce a partner's configured dispatch geofence.
- * Legacy profiles without any geofence configuration retain the existing
- * state/district/tehsil matching. Once a radius is configured, malformed or
- * missing coordinates fail closed instead of silently bypassing the fence.
+ * Hard maximum customer-to-partner dispatch distance is 7 km.
+ * A partner may configure a smaller radius, but never a larger one.
+ * Missing/invalid partner or customer GPS coordinates fail closed; area-only
+ * matching is not sufficient to guarantee the 7 km safety limit.
  */
 export function isWithinPartnerDispatchRadius(
   partner: Record<string, unknown>,
   booking: Record<string, unknown>
 ): boolean {
-  const radiusConfigured = partner.dispatchRadiusKm !== undefined && partner.dispatchRadiusKm !== null;
-  const locationConfigured = partner.dispatchLocation !== undefined && partner.dispatchLocation !== null;
-  if (!radiusConfigured && !locationConfigured) return true;
-
-  const radius = partner.dispatchRadiusKm;
-  if (typeof radius !== 'number' || !Number.isFinite(radius) || radius < 1 || radius > 100) return false;
   if (!isGeoPoint(partner.dispatchLocation) || !isGeoPoint(booking.customerLocation)) return false;
-  return distanceBetweenPointsKm(partner.dispatchLocation, booking.customerLocation) <= radius;
+
+  const configuredRadius = partner.dispatchRadiusKm;
+  if (configuredRadius !== undefined && configuredRadius !== null &&
+      (typeof configuredRadius !== 'number' || !Number.isFinite(configuredRadius) || configuredRadius < 1)) {
+    return false;
+  }
+
+  const effectiveRadius = Math.min(
+    typeof configuredRadius === 'number' ? configuredRadius : MAX_PARTNER_DISTANCE_KM,
+    MAX_PARTNER_DISTANCE_KM
+  );
+  return distanceBetweenPointsKm(partner.dispatchLocation, booking.customerLocation) <= effectiveRadius;
 }
