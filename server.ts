@@ -1087,8 +1087,28 @@ app.get('/api/admin/health', authenticateFirebaseUser, requireServerAdmin, (_req
 });
 
 // Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
+// Liveness: the HTTP process is running. Dependency readiness is reported separately.
 app.get('/healthz', (_req: Request, res: Response) => {
-  return res.status(200).json({ success: true, service: 'QuickFix-India', status: 'ok' });
+  return res.status(200).json({
+    success: true,
+    service: 'QuickFix-India',
+    status: 'ok',
+    firebase_admin_init: Boolean(firebaseAdminApp)
+  });
+});
+
+let firestoreStartupProbePassed = false;
+
+// Readiness: protected APIs require Firebase Admin and a successful Firestore startup probe.
+app.get('/readyz', (_req: Request, res: Response) => {
+  const ready = Boolean(firebaseAdminApp) && firestoreStartupProbePassed;
+  return res.status(ready ? 200 : 503).json({
+    success: ready,
+    service: 'QuickFix-India',
+    status: ready ? 'ready' : 'not_ready',
+    firebase_admin_init: Boolean(firebaseAdminApp),
+    firestore_startup_probe: firestoreStartupProbePassed ? 'passed' : 'not_passed'
+  });
 });
 
 async function runFirestoreStartupProbe() {
@@ -1108,8 +1128,10 @@ async function runFirestoreStartupProbe() {
     if (!snapshot.exists || snapshot.data()?.probe !== true) {
       throw new Error('Firestore probe read did not return the written marker.');
     }
+    firestoreStartupProbePassed = true;
     console.info('Firestore startup probe passed: temporary document write and read succeeded.');
   } catch (error) {
+    firestoreStartupProbePassed = false;
     console.error('Firestore startup probe failed:', error);
   } finally {
     if (writeSucceeded) {
