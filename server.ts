@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -92,7 +92,7 @@ const apiRateLimit = rateLimit({
   message: { success: false, error: 'Too many requests. Please try again in one minute.' },
 });
 
-const authenticateFirebaseUser = async (req: Request, res: Response, next: NextFunction) => {
+const authenticateFirebaseUser = async (req: Request, res: Response) => {
   if (!firebaseAdminApp) {
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
@@ -675,15 +675,15 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
 
 
 // Update every active booking for a partner in bounded Firestore batches.
- // Each batch stays below Firestore's 500-write limit, and document-ID cursors
+// Each batch stays below Firestore's 500-write limit, and document-ID cursors
  // ensure bookings beyond the first page are not silently skipped.
 const updateActiveBookingLocations = async (
-  db: FirebaseFirestore.Firestore,
+  db: Firestore,
   partnerUid: string,
-  location: { latitude: number; longitude: number; accuracyMeters?: number; updatedAt: FirebaseFirestore.FieldValue } | null
+  location: { latitude: number; longitude: number; accuracyMeters?: number; updatedAt: FieldValue } | null
 ) => {
   const pageSize = 400;
-  let lastDocument: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  let lastDocument: QueryDocumentSnapshot | undefined;
   let updatedCount = 0;
 
   while (true) {
