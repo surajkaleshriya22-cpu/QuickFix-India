@@ -142,7 +142,7 @@ app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: 
         city.length > 100 || tehsil.length > 100 ||
         !serviceCategory || serviceCategory.length > 80 ||
         serviceId.length > 120 || !validUnits.includes(unit) ||
-        !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) {
       return res.status(400).json({ success: false, error: 'Rate quote inputs are invalid.' });
     }
