@@ -422,6 +422,32 @@ class QuickFixViewModel : ViewModel() {
         return newBooking
     }
 
+    private val _partnerDispatchRadiusKm = MutableStateFlow(5)
+    val partnerDispatchRadiusKm: StateFlow<Int> = _partnerDispatchRadiusKm.asStateFlow()
+
+    fun loadPartnerDispatchSettings() {
+        val user = auth.currentUser ?: return
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/dispatch-settings").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) error("Partner settings load failed (HTTP $status).")
+                        org.json.JSONObject(body).optInt("dispatchRadiusKm", 5)
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { radius -> if (radius in listOf(1, 3, 5, 10, 15)) _partnerDispatchRadiusKm.value = radius }
+        }
+    }
+
     fun savePartnerDispatchSettings(radiusKm: Int, latitude: Double, longitude: Double) {
         val user = auth.currentUser ?: run { _partnerJobsStatus.value = "पहले sign in करें."; return }
         if (radiusKm !in listOf(1, 3, 5, 10, 15) || !latitude.isFinite() || latitude !in -90.0..90.0 || !longitude.isFinite() || longitude !in -180.0..180.0) {
@@ -603,7 +629,7 @@ class QuickFixViewModel : ViewModel() {
 }{radiusKm} km booking distance और GPS location सेव हो गई."
                     } finally { connection.disconnect() }
                 }
-                _partnerJobsStatus.value = message; refreshPartnerJobs()
+                _partnerDispatchRadiusKm.value = radiusKm\n                _partnerJobsStatus.value = message; refreshPartnerJobs()
             } catch (error: Exception) { _partnerJobsStatus.value = error.localizedMessage ?: "दूरी सेटिंग सेव नहीं हुई." }
         }
     }
