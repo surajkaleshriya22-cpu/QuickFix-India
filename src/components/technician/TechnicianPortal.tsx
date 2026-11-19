@@ -391,7 +391,7 @@ export const TechnicianPortal: React.FC = () => {
                       key={id}
                       type="button"
                       onClick={() => setRegTrades(id === 'technician' ? ['ac_repair', 'fridge_repair', 'appliance_repair'] : [id])}
-                      className={`py-2 px-2 rounded-lg border text-left text-xs font-semibold ${regTrades.includes(id) ? 'bg-blue-100 text-blue-900 border-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                      className={`py-2 px-2 rounded-lg border text-left text-xs font-semibold ${(id === 'technician' ? ['ac_repair', 'fridge_repair', 'appliance_repair'].every(trade => regTrades.includes(trade)) : regTrades.includes(id)) ? 'bg-blue-100 text-blue-900 border-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
                     >
                       {label}
                     </button>
