@@ -978,6 +978,43 @@ app.get('/api/admin/health', authenticateFirebaseUser, requireServerAdmin, (_req
   res.json({ success: true, authenticated: true, authorization: 'server_verified_admin_claim' });
 });
 
+// Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
+app.get('/healthz', (_req: Request, res: Response) => {
+  return res.status(200).json({ success: true, service: 'QuickFix-India', status: 'ok' });
+});
+
+async function runFirestoreStartupProbe() {
+  if (!firebaseAdminApp) {
+    console.error('Firestore startup probe skipped: Firebase Admin is not initialized.');
+    return;
+  }
+
+  const db = getFirestore(firebaseAdminApp);
+  const probeId = `render_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  const probeRef = db.collection('_quickfix_health').doc(probeId);
+  let writeSucceeded = false;
+  try {
+    await probeRef.set({ probe: true, createdAt: FieldValue.serverTimestamp() });
+    writeSucceeded = true;
+    const snapshot = await probeRef.get();
+    if (!snapshot.exists || snapshot.data()?.probe !== true) {
+      throw new Error('Firestore probe read did not return the written marker.');
+    }
+    console.info('Firestore startup probe passed: temporary document write and read succeeded.');
+  } catch (error) {
+    console.error('Firestore startup probe failed:', error);
+  } finally {
+    if (writeSucceeded) {
+      try {
+        await probeRef.delete();
+        console.info('Firestore startup probe cleanup succeeded.');
+      } catch (cleanupError) {
+        console.error('Firestore startup probe cleanup failed; inspect the temporary _quickfix_health document:', cleanupError);
+      }
+    }
+  }
+}
+
 // Start Express and attach Vite middleware in dev or static in prod
 async function startServer() {
   const distPath = path.resolve(__dirname, 'dist');
@@ -999,6 +1036,7 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`QuickFix Server active at http://0.0.0.0:${PORT}`);
+    void runFirestoreStartupProbe();
   });
 }
 
