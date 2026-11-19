@@ -710,7 +710,7 @@ app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, as
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    if (!/^\\d{4}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
+    if (!/^\d{4}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
     const bookingRef = db.collection('bookings').doc(bookingId);
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
