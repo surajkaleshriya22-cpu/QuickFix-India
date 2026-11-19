@@ -64,7 +64,7 @@ export const AdminRateCardsSection: React.FC = () => {
       const base = Number(form.baseFee || 0);
       if (!form.state.trim() || !form.district.trim() || !form.serviceCategory || !form.sourceName.trim()) throw new Error('State, district, category and source are required.');
       if (![min, max, charge, base].every(n => Number.isFinite(n) && n >= 0) || max < min) throw new Error('Enter valid rates. Maximum must be at least the minimum.');
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(form.effectiveFrom) || (form.effectiveTo && form.effectiveTo < form.effectiveFrom)) throw new Error('Check the effective dates.');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.effectiveFrom) || (form.effectiveTo && form.effectiveTo < form.effectiveFrom)) throw new Error('Check the effective dates.');
       const payload = {
         state: form.state.trim(), district: form.district.trim(), city: form.city.trim() || null,
         tehsil: form.tehsil.trim() || null, serviceCategory: form.serviceCategory,
