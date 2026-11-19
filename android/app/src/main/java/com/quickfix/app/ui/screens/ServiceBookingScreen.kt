@@ -11,7 +11,21 @@ import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
+import java.util.Locale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,7 +67,65 @@ fun ServiceBookingScreen(
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
+    var locationMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val requestCurrentLocation = {
+        scope.launch {
+            locationMessage = "लोकेशन प्राप्त हो रही है..."
+            try {
+                val fineGranted = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                val coarseGranted = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (!fineGranted && !coarseGranted) {
+                    locationMessage = "लोकेशन अनुमति नहीं मिली। अनुमति दें या पता हाथ से भरें।"
+                } else {
+                    val locationClient = LocationServices.getFusedLocationProviderClient(context)
+                    val currentLocation = locationClient.getCurrentLocation(
+                        Priority.PRIORITY_HIGH_ACCURACY,
+                        CancellationTokenSource().token
+                    ).await() ?: throw IllegalStateException("वर्तमान लोकेशन नहीं मिली। GPS चालू करके फिर कोशिश करें।")
+
+                    val place = withContext(Dispatchers.IO) {
+                        @Suppress("DEPRECATION")
+                        Geocoder(context, Locale.getDefault()).getFromLocation(
+                            currentLocation.latitude, currentLocation.longitude, 1
+                        )?.firstOrNull()
+                    }
+                    if (place == null) {
+                        locationMessage = "GPS मिल गया, लेकिन पता नहीं मिला। कृपया पता हाथ से भरें।"
+                    } else {
+                        val addressParts = listOfNotNull(
+                            place.subLocality, place.thoroughfare, place.featureName, place.postalCode
+                        ).map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                        if (addressParts.isNotEmpty()) address = addressParts.joinToString(", ")
+                        place.adminArea?.takeIf { it.isNotBlank() }?.let { state = it }
+                        place.subAdminArea?.takeIf { it.isNotBlank() }?.let { district = it }
+                        place.locality?.takeIf { it.isNotBlank() }?.let { viewModel.setCity(it) }
+                        locationMessage = "पता भर दिया गया। Tehsil/Taluka सही है या नहीं, कृपया जाँचकर भरें।"
+                    }
+                }
+            } catch (error: Exception) {
+                locationMessage = error.localizedMessage ?: "लोकेशन नहीं मिल सकी। पता हाथ से भरें।"
+            }
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            requestCurrentLocation()
+        } else {
+            locationMessage = "लोकेशन अनुमति अस्वीकार हुई। आप पता हाथ से भर सकते हैं।"
+        }
+    }
 
     val isValidBookingDate = remember(scheduledDate) {
         runCatching {
@@ -211,6 +283,34 @@ fun ServiceBookingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("House / Flat, Landmark, Full Address") }
                     )
+                    OutlinedButton(
+                        onClick = {
+                            val fineGranted = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            val coarseGranted = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (fineGranted || coarseGranted) {
+                                requestCurrentLocation()
+                            } else {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.MyLocation, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("मेरी वर्तमान लोकेशन इस्तेमाल करें")
+                    }
+                    locationMessage?.let { message ->
+                        Text(message, fontSize = 11.sp, color = TextSecondary)
+                    }
                     OutlinedTextField(
                         value = state,
                         onValueChange = { state = it },
