@@ -175,6 +175,9 @@ class QuickFixViewModel : ViewModel() {
     private val _technicians = MutableStateFlow<List<User>>(emptyList())
     val technicians: StateFlow<List<User>> = _technicians.asStateFlow()
 
+    private val _customerStartOtps = MutableStateFlow<Map<String, String>>(emptyMap())
+    val customerStartOtps: StateFlow<Map<String, String>> = _customerStartOtps.asStateFlow()
+
     private val _bookings = MutableStateFlow<List<Booking>>(emptyList())
     val bookings: StateFlow<List<Booking>> = _bookings.asStateFlow()
 
@@ -670,13 +673,106 @@ class QuickFixViewModel : ViewModel() {
         }
     }
 
-    fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
-        _firestoreSyncStatus.value = "OTP not verified: secure server-side OTP workflow is not configured. No booking status changed."
-        return false
+    fun loadCustomerStartOtp(bookingId: String) {
+        val user = auth.currentUser ?: return
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/customer/bookings/$encodedId/start-otp")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "OTP is not available yet." })
+                        json.optString("startOtp")
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { otp ->
+                if (otp.matches(Regex("\\d{4}"))) _customerStartOtps.value = _customerStartOtps.value + (bookingId to otp)
+            }
+        }
     }
 
-    fun completeJob(bookingId: String) {
-        _firestoreSyncStatus.value = "Job not marked complete: trusted server workflow is not configured. No booking status changed."
+    fun verifyStartOtp(bookingId: String, enteredOtp: String, onResult: (Boolean, String) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) { onResult(false, "पहले sign in करें."); return }
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings/$encodedId/start")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write(org.json.JSONObject().put("otp", enteredOtp).toString().toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "OTP verification failed." })
+                        true
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess {
+                _firestoreSyncStatus.value = "OTP verified. Service started."
+                refreshPartnerJobs()
+                onResult(true, "OTP सही है। काम शुरू हो गया.")
+            }.onFailure { error ->
+                _firestoreSyncStatus.value = error.localizedMessage ?: "OTP verification failed."
+                onResult(false, error.localizedMessage ?: "OTP verification failed.")
+            }
+        }
+    }
+
+    fun completeJob(bookingId: String, onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        val user = auth.currentUser
+        if (user == null) { onResult(false, "पहले sign in करें."); return }
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings/$encodedId/complete")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write("{}".toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "Completion failed." })
+                        json.optString("message", "Service completion recorded.")
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { message ->
+                _firestoreSyncStatus.value = message
+                refreshPartnerJobs()
+                onResult(true, message)
+            }.onFailure { error ->
+                _firestoreSyncStatus.value = error.localizedMessage ?: "Completion failed."
+                onResult(false, error.localizedMessage ?: "Completion failed.")
+            }
+        }
     }
 
     fun requestTechnicianPayout(techId: String, techName: String, amount: Int, upiId: String) {
