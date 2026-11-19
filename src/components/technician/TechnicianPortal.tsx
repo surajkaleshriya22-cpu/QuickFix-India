@@ -851,7 +851,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
-                <span className="text-[10px] text-slate-400">Escrow Protected · Real-Time Settled</span>
+                <span className="text-[10px] text-amber-300">Ledger / payment gateway not connected</span>
               </div>
             </div>
 
@@ -859,12 +859,12 @@ export const TechnicianPortal: React.FC = () => {
               {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>₹2,000 Reserve Maintained</span>
+                  <span>Profile balance ≥ ₹2,000 (unverified ledger)</span>
                 </span>
               ) : (
                 <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <AlertCircle className="w-3 h-3 text-rose-400" />
-                  <span>Reserve Deficit</span>
+                  <span>Reserve not confirmed</span>
                 </span>
               )}
             </div>
@@ -874,7 +874,7 @@ export const TechnicianPortal: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
             {/* Total Balance */}
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Wallet</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Profile Balance</span>
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
                 ₹{currentTechnician.walletBalance ?? 0}
               </div>
@@ -898,7 +898,7 @@ export const TechnicianPortal: React.FC = () => {
               <div className="text-lg font-extrabold font-mono text-emerald-400 mt-0.5">
                 ₹{withdrawableAmount}
               </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Amount over ₹2,000</span>
+              <span className="text-[9px] text-slate-500 block leading-tight">Not payout-confirmed</span>
             </div>
           </div>
 
@@ -917,27 +917,23 @@ export const TechnicianPortal: React.FC = () => {
           {/* Wallet Actions */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
-              onClick={() => {
-                setTopupAmount(1000);
-                setShowTopupModal(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+              type="button"
+              disabled
+              title="Wallet top-up will be enabled after verified payment integration."
+              className="bg-slate-800 text-slate-500 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>Top-Up Wallet</span>
+              <span>Top-up unavailable</span>
             </button>
 
             <button
-              onClick={handleWithdrawPayout}
-              disabled={withdrawableAmount <= 0}
-              className={`font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors ${
-                withdrawableAmount > 0
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-98'
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-              }`}
+              type="button"
+              disabled
+              title="Payouts are disabled until a verified server-side ledger and payment provider are configured."
+              className="bg-slate-800 text-slate-500 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
               <IndianRupee className="w-3.5 h-3.5" />
-              <span>Withdraw ₹{withdrawableAmount}</span>
+              <span>Payout unavailable</span>
             </button>
           </div>
 
@@ -946,13 +942,13 @@ export const TechnicianPortal: React.FC = () => {
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Platform Cash Commission Rule:</strong> When customers pay in cash, QuickFix commission is auto-deducted from your wallet. The ₹2,000 security reserve remains locked to guarantee platform settlements.
+                <strong>Wallet status:</strong> This screen currently displays the balance saved on your partner profile. A verified, server-side wallet ledger is not connected yet, so no top-up, commission debit, or reserve movement is confirmed here. Do not transfer money based on this screen.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
               <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Safe Payout Protocol:</strong> Withdrawals reserve funds from your wallet and are reviewed by Admin HQ. Approved payouts are dispatched via payment gateway and marked settled only upon verified webhook confirmation.
+                <strong>Payout status:</strong> Payout requests and transfers are disabled until a payment provider and verified server-side ledger are configured. No payout is being processed or settled from this screen.
               </span>
             </div>
           </div>
