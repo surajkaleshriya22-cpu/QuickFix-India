@@ -723,7 +723,7 @@ fun CommissionsTab(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("Configure the central corporate bank account and payment gateway that captures all customer transactions.", fontSize = 12.sp, color = TextSecondary)
+                    Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
 
                     OutlinedTextField(
                         value = masterUpi,
@@ -748,8 +748,8 @@ fun CommissionsTab(
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Corporate Entity: ${adminConfig.corporateEntity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
                             Text("Account: ${adminConfig.accountNumberMasked} • IFSC: ${adminConfig.ifscCode}", fontSize = 11.sp, color = TextSecondary)
-                            Text("Gateway Escrow Route: ${adminConfig.gatewayProvider}", fontSize = 11.sp, color = BrandBlue, fontWeight = FontWeight.SemiBold)
-                            Text("Strict Manual Admin Clearance: ACTIVE (Technicians cannot withdraw directly)", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.SemiBold)
+                            Text("Payment provider: Not connected", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
+                            Text("Payouts, escrow, and bank transfers are not active. Saving details below does not move money.", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
                         }
                     }
 
@@ -766,7 +766,7 @@ fun CommissionsTab(
                     }
 
                     if (configSavedMsg) {
-                        Text("✓ Master Account configuration updated successfully", color = Color(0xFF16A34A), fontSize = 12.sp)
+                        Text("Admin reference details saved. This does not activate a payment gateway or transfer funds.", color = Color(0xFFB45309), fontSize = 12.sp)
                     }
                 }
             }
@@ -781,76 +781,20 @@ fun CommissionsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Technician Payouts & Escrow Approvals", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("All payouts are held in QuickFix Admin Escrow. Funds are only transferred to technician bank accounts after your review.", fontSize = 11.sp, color = TextSecondary)
-
-                    payouts.forEach { payout ->
-                        val isPending = payout.status == "pending_approval"
-                        val isHeld = payout.status == "held_in_escrow"
-                        val isSettled = payout.status == "settled"
-
-                        Surface(
-                            color = Color(0xFFF8FAFC),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(payout.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
-                                    Surface(
-                                        color = when {
-                                            isSettled -> Color(0xFFDCFCE7)
-                                            isHeld -> Color(0xFFFEE2E2)
-                                            else -> Color(0xFFFEF3C7)
-                                        },
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            when {
-                                                isSettled -> "SETTLED VIA ADMIN A/C"
-                                                isHeld -> "HELD IN ESCROW (AUDIT)"
-                                                else -> "AWAITING ADMIN APPROVAL"
-                                            },
-                                            color = when {
-                                                isSettled -> Color(0xFF166534)
-                                                isHeld -> Color(0xFF991B1B)
-                                                else -> Color(0xFF92400E)
-                                            },
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-
-                                Text(payout.technicianName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary)
-                                Text("Amount: ₹${payout.amount} • UPI: ${payout.upiId}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextSecondary)
-                                Text("Requested: ${payout.requestedAt} • Note: ${payout.adminNote ?: "Awaiting Admin Action"}", fontSize = 11.sp, color = TextSecondary)
-
-                                if (isSettled && payout.bankUtr != null) {
-                                    Text("Bank UTR: ${payout.bankUtr} (Disbursed from Admin HDFC Account)", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.SemiBold)
-                                }
-
-                                if (isPending || isHeld) {
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(
-                                            onClick = { onApprovePayout(payout.id) },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                            modifier = Modifier.weight(1.2f)
-                                        ) {
-                                            Text("Approve & Disburse (IMPS)", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                        OutlinedButton(
-                                            onClick = { onHoldPayout(payout.id, "Customer complaint review") },
-                                            modifier = Modifier.weight(0.8f)
-                                        ) {
-                                            Text(if (isHeld) "Keep On Hold" else "Hold Funds", fontSize = 10.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    Text("Technician Payouts & Escrow", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text("Payout processing is disabled. QuickFix has no connected payment provider or verified server-side payout ledger, so this app cannot approve, hold, reverse, or disburse funds.", fontSize = 12.sp, color = Color(0xFFB45309))
+                    Surface(
+                        color = Color(0xFFFFFBEB),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "No bank transfer, IMPS payment, escrow hold, or settlement can be performed from this screen. Do not treat displayed legacy payout records as proof of payment.",
+                            modifier = Modifier.padding(12.dp),
+                            fontSize = 11.sp,
+                            color = Color(0xFF92400E)
+                        )
                     }
                 }
             }
@@ -879,9 +823,10 @@ fun CommissionsTab(
                     }
 
                     bookings.forEach { b ->
-                        val isPaid = b.status == "completed" || b.id == "QF-84920"
-                        val isRefunded = b.paymentStatus == "refunded"
-                        val stString = if (isPaid) "paid" else "pending"
+                        val paymentState = b.paymentStatus.lowercase()
+                        val isPaid = paymentState == "paid" || paymentState == "captured"
+                        val isRefunded = paymentState == "refunded"
+                        val stString = if (isPaid || isRefunded) "paid" else "pending"
                         if (statusFilter == "all" || statusFilter == stString) {
                             Surface(
                                 color = Color(0xFFF8FAFC),
@@ -918,7 +863,7 @@ fun CommissionsTab(
                                         }
                                     }
                                     Text(b.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
-                                    Text("Customer: ${b.customerName} • Escrow: Held in Admin Account", fontSize = 11.sp, color = TextSecondary)
+                                    Text("Customer: ${b.customerName} • Payment status: ${b.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                         Text("Commission: ₹${b.adminCommission}", fontSize = 11.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.SemiBold)
                                         Text("Tech Payout: ₹${b.technicianPayout}", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.SemiBold)
@@ -926,14 +871,9 @@ fun CommissionsTab(
                                     }
 
                                     if (isPaid && !isRefunded) {
-                                        OutlinedButton(
-                                            onClick = { onIssueRefund(b.id, b.totalAmount, "Admin Direct Customer Satisfaction Refund") },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Issue Full Refund from Admin A/C (₹${b.totalAmount})", fontSize = 10.sp, color = Color(0xFFDC2626))
-                                        }
+                                        Text("Payment is marked paid in the record. Refund processing is unavailable until a verified payment provider and server-side refund workflow are connected.", fontSize = 10.sp, color = Color(0xFFB45309))
                                     } else if (isRefunded) {
-                                        Text("✓ ₹${b.refundAmount} refunded directly to customer from Admin Master Account", fontSize = 10.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Medium)
+                                        Text("Refund status is recorded as refunded. Verify the provider transaction independently; this screen does not prove a bank credit.", fontSize = 10.sp, color = Color(0xFFB45309), fontWeight = FontWeight.Medium)
                                     }
                                 }
                             }
