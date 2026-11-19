@@ -21,6 +21,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
+data class PartnerLiveLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracyMeters: Double? = null,
+    val updatedAt: String = "",
+    val ageSeconds: Int = 0
+)
+
 data class PartnerJob(
     val id: String,
     val serviceTitle: String,
@@ -191,6 +199,9 @@ class QuickFixViewModel : ViewModel() {
 
     private val _partnerLocationStatus = MutableStateFlow("Live location sharing is off.")
     val partnerLocationStatus: StateFlow<String> = _partnerLocationStatus.asStateFlow()
+
+    private val _partnerLiveLocations = MutableStateFlow<Map<String, PartnerLiveLocation>>(emptyMap())
+    val partnerLiveLocations: StateFlow<Map<String, PartnerLiveLocation>> = _partnerLiveLocations.asStateFlow()
 
     private val _partnerJobsCursor = MutableStateFlow<String?>(null)
     private val _partnerJobsHasMore = MutableStateFlow(false)
@@ -823,6 +834,48 @@ class QuickFixViewModel : ViewModel() {
                 _partnerLocationStatus.value = "Live location customer के साथ साझा है ($count active booking)."
             }.onFailure { error ->
                 _partnerLocationStatus.value = error.localizedMessage ?: "Live location update नहीं हो सका."
+            }
+        }
+    }
+
+    fun refreshCustomerPartnerLocation(bookingId: String) {
+        val user = auth.currentUser ?: return
+        if (!bookingId.matches(Regex("[A-Za-z0-9_-]{1,150}"))) return
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/customer/bookings/$encodedId/partner-location")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) {
+                            error(json.optString("error").ifBlank { "Partner location unavailable (HTTP $status)." })
+                        }
+                        if (!json.optBoolean("available")) return@withContext null
+                        val point = json.optJSONObject("location") ?: return@withContext null
+                        PartnerLiveLocation(
+                            latitude = point.getDouble("latitude"),
+                            longitude = point.getDouble("longitude"),
+                            accuracyMeters = if (point.has("accuracyMeters")) point.optDouble("accuracyMeters") else null,
+                            updatedAt = point.optString("updatedAt"),
+                            ageSeconds = json.optInt("ageSeconds", 0)
+                        )
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { location ->
+                _partnerLiveLocations.value = if (location == null) _partnerLiveLocations.value - bookingId
+                    else _partnerLiveLocations.value + (bookingId to location)
+            }.onFailure {
+                _partnerLiveLocations.value = _partnerLiveLocations.value - bookingId
             }
         }
     }
