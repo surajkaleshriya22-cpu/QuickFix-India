@@ -331,7 +331,9 @@ class QuickFixViewModel : ViewModel() {
         district: String,
         tehsil: String,
         notes: String = "",
-        quantity: Double = 1.0
+        quantity: Double = 1.0,
+        customerLatitude: Double? = null,
+        customerLongitude: Double? = null
     ): Booking {
         val firebaseUser = auth.currentUser
             ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
@@ -371,6 +373,11 @@ class QuickFixViewModel : ViewModel() {
                         .put("district", district.trim())
                         .put("tehsil", tehsil.trim()))
                     .put("notes", notes.trim())
+                if (customerLatitude != null && customerLongitude != null) {
+                    payload.put("customerLocation", org.json.JSONObject()
+                        .put("latitude", customerLatitude)
+                        .put("longitude", customerLongitude))
+                }
                 connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                 val status = connection.responseCode
                 val stream = if (status in 200..299) connection.inputStream else connection.errorStream
