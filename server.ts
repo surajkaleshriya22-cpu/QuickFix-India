@@ -842,7 +842,11 @@ app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAd
         experienceYears: Number(data.experienceYears || 0),
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
         approvalStatus: data.approvalStatus,
-        kycStatus: data.kycStatus || 'not_submitted'
+        kycStatus: data.kycStatus || 'not_submitted',
+        dispatchRadiusKm: typeof data.dispatchRadiusKm === 'number' ? data.dispatchRadiusKm : null,
+        dispatchLocationConfigured: Boolean(data.dispatchLocation &&
+          typeof data.dispatchLocation.latitude === 'number' &&
+          typeof data.dispatchLocation.longitude === 'number')
       };
     });
     return res.json({ success: true, partners });
