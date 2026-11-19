@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { distanceBetweenPointsKm, isWithinPartnerDispatchRadius } from '../src/utils/geo';
 
+const partner = {
+  dispatchLocation: { latitude: 22.7196, longitude: 75.8577 },
+};
+
 test('calculates zero distance for the same coordinates', () => {
   assert.equal(distanceBetweenPointsKm(
     { latitude: 22.7196, longitude: 75.8577 },
@@ -9,7 +13,7 @@ test('calculates zero distance for the same coordinates', () => {
   ), 0);
 });
 
-test('calculates a plausible distance between two cities', () => {
+test('calculates a plausible distance between Indore and Bhopal', () => {
   const distance = distanceBetweenPointsKm(
     { latitude: 22.7196, longitude: 75.8577 },
     { latitude: 23.2599, longitude: 77.4126 }
@@ -17,29 +21,31 @@ test('calculates a plausible distance between two cities', () => {
   assert.ok(distance > 170 && distance < 200);
 });
 
-test('allows bookings inside a configured partner radius', () => {
-  assert.equal(isWithinPartnerDispatchRadius(
-    { dispatchLocation: { latitude: 22.7196, longitude: 75.8577 }, dispatchRadiusKm: 15 },
-    { customerLocation: { latitude: 22.73, longitude: 75.86 } }
-  ), true);
+test('allows customer bookings within the 7 km default limit', () => {
+  assert.equal(isWithinPartnerDispatchRadius(partner, {
+    customerLocation: { latitude: 22.73, longitude: 75.86 },
+  }), true);
 });
 
-test('blocks bookings outside a configured partner radius', () => {
+test('blocks customer bookings beyond 7 km even if partner configured a larger radius', () => {
   assert.equal(isWithinPartnerDispatchRadius(
-    { dispatchLocation: { latitude: 22.7196, longitude: 75.8577 }, dispatchRadiusKm: 15 },
-    { customerLocation: { latitude: 23.2599, longitude: 77.4126 } }
+    { ...partner, dispatchRadiusKm: 25 },
+    { customerLocation: { latitude: 22.80, longitude: 75.86 } }
   ), false);
 });
 
-test('fails closed when a configured geofence has missing or invalid coordinates', () => {
-  const partner = { dispatchLocation: { latitude: 22.7196, longitude: 75.8577 }, dispatchRadiusKm: 15 };
+test('honours a partner configured radius smaller than 7 km', () => {
+  assert.equal(isWithinPartnerDispatchRadius(
+    { ...partner, dispatchRadiusKm: 2 },
+    { customerLocation: { latitude: 22.73, longitude: 75.86 } }
+  ), false);
+});
+
+test('fails closed when partner or customer GPS coordinates are missing or invalid', () => {
+  assert.equal(isWithinPartnerDispatchRadius({}, {}), false);
   assert.equal(isWithinPartnerDispatchRadius(partner, {}), false);
   assert.equal(isWithinPartnerDispatchRadius(
     { ...partner, dispatchRadiusKm: 0 },
     { customerLocation: { latitude: 22.72, longitude: 75.86 } }
   ), false);
-});
-
-test('preserves legacy area-only matching when no geofence is configured', () => {
-  assert.equal(isWithinPartnerDispatchRadius({}, {}), true);
 });
