@@ -41,8 +41,7 @@ fun CustomerHomeScreen(
 
     var selectedCategory by remember { mutableStateOf("all") }
     var showCityMenu by remember { mutableStateOf(false) }
-
-    val cities = listOf("Indore", "Bhopal", "Dewas", "Ujjain", "Bengaluru")
+    var cityInput by remember(currentCity) { mutableStateOf(currentCity) }
     val filteredServices = if (selectedCategory == "all") {
         services
     } else {
@@ -106,7 +105,7 @@ fun CustomerHomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // City Dropdown if active
+            // Customers can enter any city instead of being limited to a five-city demo list.
             if (showCityMenu) {
                 item {
                     Card(
@@ -114,27 +113,44 @@ fun CustomerHomeScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                "Select Service City",
+                                "अपना शहर लिखें / Enter your city",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                fontSize = 13.sp,
+                                color = TextPrimary
                             )
-                            cities.forEach { city ->
-                                Text(
-                                    city,
-                                    color = if (city == currentCity) BrandBlue else TextPrimary,
-                                    fontWeight = if (city == currentCity) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            viewModel.setCity(city)
+                            OutlinedTextField(
+                                value = cityInput,
+                                onValueChange = { cityInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("City / शहर") },
+                                supportingText = { Text("भारत के किसी भी शहर का नाम लिख सकते हैं। सेवा उपलब्धता की पुष्टि बुकिंग के समय होगी।") }
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(onClick = { cityInput = currentCity; showCityMenu = false }) {
+                                    Text("Cancel")
+                                }
+                                Button(
+                                    onClick = {
+                                        val selectedCity = cityInput.trim()
+                                        if (selectedCity.length in 2..60) {
+                                            viewModel.setCity(selectedCity)
                                             showCityMenu = false
                                         }
-                                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                                )
+                                    },
+                                    enabled = cityInput.trim().length in 2..60,
+                                    colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                                ) {
+                                    Text("Save City")
+                                }
                             }
                         }
                     }
