@@ -25,6 +25,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.ui.viewinterop.AndroidView
 import com.quickfix.app.viewmodel.QuickFixViewModel
+import kotlinx.coroutines.delay
 
 private val BrandBlue = Color(0xFF2563EB)
 private val DeepNavy = Color(0xFF0F172A)
@@ -42,9 +43,18 @@ fun LiveTrackingScreen(
     val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsState()
     val customerStartOtps by viewModel.customerStartOtps.collectAsState()
+    val partnerLiveLocations by viewModel.partnerLiveLocations.collectAsState()
     val booking = bookings.find { it.id == bookingId }
     LaunchedEffect(booking?.id, booking?.status) {
         if (booking?.status == "assigned") viewModel.loadCustomerStartOtp(booking.id)
+    }
+    LaunchedEffect(bookingId, booking?.status) {
+        if (booking?.status in listOf("assigned", "technician_en_route", "in_progress")) {
+            while (true) {
+                viewModel.refreshCustomerPartnerLocation(bookingId)
+                delay(30_000)
+            }
+        }
     }
 
     Scaffold(
@@ -281,6 +291,31 @@ fun LiveTrackingScreen(
                                 )
                             }
                         }
+                        val partnerLocation = partnerLiveLocations[booking.id]
+                        if (booking.status in listOf("assigned", "technician_en_route", "in_progress")) {
+                            if (partnerLocation != null) {
+                                val partnerLatitude = partnerLocation.latitude
+                                val partnerLongitude = partnerLocation.longitude
+                                val partnerMapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=${partnerLongitude - 0.008}%2C${partnerLatitude - 0.008}%2C${partnerLongitude + 0.008}%2C${partnerLatitude + 0.008}&layer=mapnik&marker=$partnerLatitude%2C$partnerLongitude"
+                                Text("Channel Partner की live location", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                AndroidView(
+                                    factory = { viewContext ->
+                                        WebView(viewContext).apply {
+                                            settings.javaScriptEnabled = false
+                                            settings.domStorageEnabled = false
+                                            webViewClient = WebViewClient()
+                                            loadUrl(partnerMapUrl)
+                                        }
+                                    },
+                                    update = { webView -> if (webView.url != partnerMapUrl) webView.loadUrl(partnerMapUrl) },
+                                    modifier = Modifier.fillMaxWidth().height(210.dp)
+                                )
+                                Text("अंतिम GPS अपडेट ${partnerLocation.ageSeconds} सेकंड पहले मिला। अपडेट हर 30 सेकंड में जाँचा जाता है।", fontSize = 10.sp, color = TextSecondary)
+                            } else {
+                                Text("Channel Partner ने अभी live GPS साझा नहीं किया है, या पिछला GPS अपडेट 5 मिनट से पुराना है।", fontSize = 11.sp, color = TextSecondary)
+                            }
+                        }
+
                         OutlinedButton(
                             onClick = {
                                 val mapUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(booking.customerAddress))
