@@ -368,7 +368,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ['pest_control','Pest Control','कीट नियंत्रण','Cockroach, termite and mosquito treatment',499,60],
     ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120]
   ] as const).map(([category,title,hindiTitle,description,startingPrice,durationMinutes]) => ({
-    id: 'partner-' + category,
+    id: 'partner-' + category + '-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
     category,
     title,
     hindiTitle,
