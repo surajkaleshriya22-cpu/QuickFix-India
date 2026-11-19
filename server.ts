@@ -832,6 +832,10 @@ app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, asy
       const data = doc.data();
       const dispatchEligible = isPartnerEligibleForDispatch(data);
       const dispatchLocation = data.dispatchLocation;
+      const dispatchLocationConfigured = Boolean(dispatchLocation &&
+        typeof dispatchLocation.latitude === 'number' &&
+        typeof dispatchLocation.longitude === 'number');
+      const dispatchRadiusValid = [1, 3, 5, 10, 15].includes(data.dispatchRadiusKm);
       return {
         uid: doc.id,
         displayName: String(data.displayName || ''),
@@ -853,10 +857,9 @@ app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, asy
         securityDepositPaid: data.securityDepositPaid === true,
         walletBalance: typeof data.walletBalance === 'number' && Number.isFinite(data.walletBalance) ? data.walletBalance : null,
         dispatchEligible,
+        dispatchReady: dispatchEligible && dispatchLocationConfigured && dispatchRadiusValid,
         dispatchRadiusKm: typeof data.dispatchRadiusKm === 'number' ? data.dispatchRadiusKm : null,
-        dispatchLocationConfigured: Boolean(dispatchLocation &&
-          typeof dispatchLocation.latitude === 'number' &&
-          typeof dispatchLocation.longitude === 'number'),
+        dispatchLocationConfigured,
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null
       };
     }).sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
