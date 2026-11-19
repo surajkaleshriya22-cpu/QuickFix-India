@@ -176,7 +176,7 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
           <span>Secure Payout Protocol & Webhook Settlement Gate</span>
         </div>
         <p className="text-[11px] text-blue-200 leading-relaxed">
-          Admin approval queues requests in <strong>Processing</strong> state. In accordance with zero-fake-settlement security rules, payouts are never marked <strong>Settled</strong> until a verified payment-provider webhook confirmation arrives. Rejection immediately restores the reserved funds to the partner’s wallet.
+          Payout approval, hold, rejection, wallet reversal and settlement are currently unavailable in this dashboard because the secure server-side ledger and payment-provider integration are not deployed. No action here can move funds or change payout status. A payout may be marked <strong>Settled</strong> only after a verified provider webhook.
         </p>
       </div>
 
@@ -417,40 +417,8 @@ export const PendingPayoutsSection: React.FC<PendingPayoutsSectionProps> = ({ on
                     Master Source: <strong className="text-slate-200">{adminPaymentConfig.merchantName}</strong> ({adminPaymentConfig.merchantVpa})
                   </span>
 
-                  <div className="flex items-center gap-2">
-                    {/* Approve Button (Visible if pending or on_hold) */}
-                    {(isPending || isHeld) && (
-                      <button
-                        onClick={() => handleApprove(p.id)}
-                        disabled={isProcessingId === p.id}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Approve (Move to Processing)</span>
-                      </button>
-                    )}{/* Hold Button (Visible if pending) */}
-                    {isPending && (
-                      <button
-                        onClick={() => handleHold(p.id)}
-                        disabled={isProcessingId === p.id}
-                        className="px-3 py-1.5 bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                      >
-                        <Lock className="w-3.5 h-3.5 text-orange-400" />
-                        <span>Put on Hold</span>
-                      </button>
-                    )}
-
-                    {/* Reject Button (Visible if not settled and not already rejected) */}
-                    {!isSettled && !isRejected && (
-                      <button
-                        onClick={() => handleReject(p.id, p.amount)}
-                        disabled={isProcessingId === p.id}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                      >
-                        <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                        <span>Reject & Restore Funds</span>
-                      </button>
-                    )}
+                  <div className="rounded-xl border border-amber-900/70 bg-amber-950/30 px-3 py-2 text-[11px] text-amber-200">
+                    Admin payout actions are disabled until secure server-side ledger operations are available.
                   </div>
                 </div>
               </div>
