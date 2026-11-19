@@ -173,6 +173,7 @@ export const AdminDashboard: React.FC = () => {
     uid: string; displayName?: string; email?: string; phoneNumber?: string;
     city?: string; trades?: string[]; experienceYears?: number;
     createdAt?: string; approvalStatus?: string; kycStatus?: string;
+    dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
   }>>([]);
   const [partnerReviewLoading, setPartnerReviewLoading] = useState(false);
   const [partnerReviewBusyUid, setPartnerReviewBusyUid] = useState<string | null>(null);
@@ -1007,6 +1008,11 @@ export const AdminDashboard: React.FC = () => {
                     <span className="text-[10px] rounded-full px-2 py-1 bg-amber-950 text-amber-300 border border-amber-800">Pending review</span>
                   </div>
                   <p className="text-[11px] text-slate-300">Trades: {(partner.trades || []).join(', ') || 'Not provided'}</p>
+                  <p className="text-[11px] text-slate-300">
+                    Booking radius: {partner.dispatchRadiusKm ? `${partner.dispatchRadiusKm} km` : 'Not set'}
+                    {' · '}
+                    GPS pin: {partner.dispatchLocationConfigured ? 'Saved' : 'Not saved'}
+                  </p>
                   <p className="text-[10px] text-slate-500">KYC status: {partner.kycStatus || 'not submitted'}</p>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button disabled={partnerReviewBusyUid === partner.uid} onClick={() => void reviewPendingPartner(partner.uid, 'approve_profile')} className="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-bold text-white disabled:opacity-50">

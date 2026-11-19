@@ -1,5 +1,12 @@
 package com.quickfix.app.ui.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,12 +41,38 @@ fun TechnicianScreen(
     val partnerJobs by viewModel.partnerJobs.collectAsState()
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
+    val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
+    val context = LocalContext.current
+    var selectedDispatchRadius by remember(savedDispatchRadius) { mutableIntStateOf(savedDispatchRadius) }
+    var locationSaveMessage by remember { mutableStateOf("") }
 
     var acceptingJobId by remember { mutableStateOf<String?>(null) }
     var enteredOtp by remember { mutableStateOf("") }
     var otpError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.refreshPartnerJobs() }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            try {
+                LocationServices.getFusedLocationProviderClient(context)
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
+                    .addOnSuccessListener { location ->
+                        if (location != null) {
+                            viewModel.savePartnerDispatchSettings(selectedDispatchRadius, location.latitude, location.longitude)
+                            locationSaveMessage = "GPS मिली; आपकी दूरी सेव हो रही है."
+                        } else locationSaveMessage = "GPS location नहीं मिली. फोन की Location चालू करके फिर कोशिश करें."
+                    }
+                    .addOnFailureListener { locationSaveMessage = "GPS location नहीं मिल सकी." }
+            } catch (_: SecurityException) {
+                locationSaveMessage = "Location permission नहीं मिली."
+            }
+        } else locationSaveMessage = "Booking distance सेव करने के लिए location permission जरूरी है."
+    }
+
+    LaunchedEffect(Unit) { viewModel.loadPartnerDispatchSettings(); viewModel.refreshPartnerJobs() }
 
     val myBookings = bookings
 
@@ -94,6 +127,28 @@ fun TechnicianScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("मेरी बुकिंग की दूरी चुनें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text("आपकी चुनी हुई दूरी के अंदर के काम दिखेंगे. अधिकतम 15 km.", fontSize = 12.sp, color = TextSecondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf(1, 3, 5, 10, 15).forEach { radius ->
+                            FilterChip(selected = selectedDispatchRadius == radius, onClick = { selectedDispatchRadius = radius }, label = { Text("$radius km") })
+                        }
+                    }
+                    Button(
+                        onClick = { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                    ) { Text("दूरी और मेरी लोकेशन सेव करें") }
+                    if (locationSaveMessage.isNotBlank()) Text(locationSaveMessage, fontSize = 11.sp, color = TextSecondary)
+                }
+            }
             // Trade Qualification Certificate Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),

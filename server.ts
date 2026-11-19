@@ -16,6 +16,7 @@ import { isValidBookingDate } from './src/utils/bookingDate';
 import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
+import { isWithinPartnerDispatchRadius } from './src/utils/geo';
 
 dotenv.config();
 
@@ -396,6 +397,41 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
 // Channel Partner job feed. It reveals only eligible, unassigned requests and never
 // exposes customer contact details, notes, OTPs, payment data or the full address.
+// Partner-controlled dispatch radius and GPS pin. Updates are scoped to the authenticated partner.
+app.get('/api/partners/dispatch-settings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner settings are temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users').doc(identity.uid).get();
+    if (!snapshot.exists) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const profile = snapshot.data()!;
+    return res.json({ success: true, dispatchRadiusKm: typeof profile.dispatchRadiusKm === 'number' ? profile.dispatchRadiusKm : 5, locationConfigured: Boolean(profile.dispatchLocation) });
+  } catch (error) {
+    console.error('Partner dispatch settings read failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner settings could not be loaded.' });
+  }
+});
+
+app.put('/api/partners/dispatch-settings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner settings are temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { dispatchRadiusKm, dispatchLocation } = req.body ?? {};
+    const validPoint = dispatchLocation && typeof dispatchLocation === 'object' && !Array.isArray(dispatchLocation) &&
+      typeof dispatchLocation.latitude === 'number' && Number.isFinite(dispatchLocation.latitude) && dispatchLocation.latitude >= -90 && dispatchLocation.latitude <= 90 &&
+      typeof dispatchLocation.longitude === 'number' && Number.isFinite(dispatchLocation.longitude) && dispatchLocation.longitude >= -180 && dispatchLocation.longitude <= 180;
+    if (![1, 3, 5, 10, 15].includes(dispatchRadiusKm) || !validPoint) return res.status(400).json({ success: false, error: 'Choose 1, 3, 5, 10 or 15 km and share a valid GPS location.' });
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const profile = await userRef.get();
+    if (!profile.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    await userRef.update({ dispatchRadiusKm, dispatchLocation: { latitude: dispatchLocation.latitude, longitude: dispatchLocation.longitude }, dispatchLocationUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    return res.json({ success: true, dispatchRadiusKm, locationConfigured: true });
+  } catch (error) {
+    console.error('Partner dispatch settings update failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner dispatch settings could not be saved.' });
+  }
+});
 app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) {
@@ -479,6 +515,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       .filter((document) => {
         const booking = document.data();
         if (!categories.has(String(booking.category || ''))) return false;
+        if (!isWithinPartnerDispatchRadius(profile, booking)) return false;
         const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
           ? booking.serviceArea as Record<string, unknown>
           : null;
@@ -489,8 +526,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
             normalizeAreaValue(partnerArea![key]) === normalizeAreaValue(bookingArea![key])
           );
         }
-        // Backward compatibility for older customer/partner profiles without
-        // complete structured area details. City is already Firestore-filtered.
+        // GPS radius is always enforced; city and structured area are additional filters.
         return true;
       })
       .map((document) => {
@@ -568,6 +604,9 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
           !['state', 'district', 'tehsil'].every((key) =>
             normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
+      }
+      if (!isWithinPartnerDispatchRadius(partner, booking)) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
 
@@ -803,7 +842,11 @@ app.get('/api/admin/partners/pending', authenticateFirebaseUser, requireServerAd
         experienceYears: Number(data.experienceYears || 0),
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
         approvalStatus: data.approvalStatus,
-        kycStatus: data.kycStatus || 'not_submitted'
+        kycStatus: data.kycStatus || 'not_submitted',
+        dispatchRadiusKm: typeof data.dispatchRadiusKm === 'number' ? data.dispatchRadiusKm : null,
+        dispatchLocationConfigured: Boolean(data.dispatchLocation &&
+          typeof data.dispatchLocation.latitude === 'number' &&
+          typeof data.dispatchLocation.longitude === 'number')
       };
     });
     return res.json({ success: true, partners });
