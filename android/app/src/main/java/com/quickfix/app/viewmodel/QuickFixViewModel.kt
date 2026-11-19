@@ -422,6 +422,191 @@ class QuickFixViewModel : ViewModel() {
         return newBooking
     }
 
+    fun savePartnerDispatchSettings(radiusKm: Int, latitude: Double, longitude: Double) {
+        val user = auth.currentUser ?: run { _partnerJobsStatus.value = "पहले sign in करें."; return }
+        if (radiusKm !in listOf(1, 3, 5, 10, 15) || !latitude.isFinite() || latitude !in -90.0..90.0 || !longitude.isFinite() || longitude !in -180.0..180.0) {
+            _partnerJobsStatus.value = "दूरी या GPS location सही नहीं है."; return
+        }
+        viewModelScope.launch {
+            try {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                val payload = org.json.JSONObject().put("dispatchRadiusKm", radiusKm).put("dispatchLocation", org.json.JSONObject().put("latitude", latitude).put("longitude", longitude))
+                val message = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/dispatch-settings").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "PUT"; connection.connectTimeout = 15000; connection.readTimeout = 20000; connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token"); connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode; val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty(); val result = org.json.JSONObject(body)
+                        if (status !in 200..299 || !result.optBoolean("success")) error(result.optString("error").ifBlank { "Settings save failed (HTTP $status)." })
+                        "आपकी ${'
+        val user = auth.currentUser
+        if (user == null) {
+            _partnerJobs.value = emptyList()
+            _partnerJobsStatus.value = "Available jobs देखने के लिए पहले sign in करें."
+            return
+        }
+        _partnerJobsStatus.value = "Available jobs लोड हो रहे हैं..."
+        viewModelScope.launch {
+            try {
+                val token = user.getIdToken(true).await().token
+                    ?: throw SecurityException("Secure sign-in token unavailable.")
+                val body = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Accept", "application/json")
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(response).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Job feed returned HTTP $status.")
+                        }
+                        response
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                val json = org.json.JSONObject(body)
+                if (!json.optBoolean("success")) throw IllegalStateException("Server did not confirm the job feed.")
+                val items = json.optJSONArray("bookings")
+                val assignedItems = json.optJSONArray("assignedBookings")
+                val jobs = buildList {
+                    if (items != null) for (index in 0 until items.length()) {
+                        val item = items.optJSONObject(index) ?: continue
+                        val id = item.optString("id")
+                        if (id.isBlank()) continue
+                        add(PartnerJob(
+                            id = id,
+                            serviceTitle = item.optString("serviceTitle", "Service request"),
+                            category = item.optString("category", ""),
+                            customerName = item.optString("customerName", "Customer"),
+                            price = item.optInt("price", 0),
+                            totalAmount = item.optInt("totalAmount", 0),
+                            status = "requested"
+                        ))
+                    }
+                    if (assignedItems != null) for (index in 0 until assignedItems.length()) {
+                        val item = assignedItems.optJSONObject(index) ?: continue
+                        val id = item.optString("id")
+                        if (id.isBlank()) continue
+                        add(PartnerJob(
+                            id = id,
+                            serviceTitle = item.optString("serviceTitle", "Service request"),
+                            category = item.optString("category", ""),
+                            customerName = item.optString("customerName", "Customer"),
+                            price = item.optInt("price", 0),
+                            totalAmount = item.optInt("totalAmount", 0),
+                            status = item.optString("status", "assigned")
+                        ))
+                    }
+                }
+                _partnerJobs.value = jobs
+                val availableCount = jobs.count { it.status == "requested" }
+                val assignedCount = jobs.size - availableCount
+                _partnerJobsStatus.value = "$availableCount नए काम · $assignedCount पहले से assigned काम."
+            } catch (error: Exception) {
+                _partnerJobs.value = emptyList()
+                _partnerJobsStatus.value = error.localizedMessage ?: "Available jobs लोड नहीं हो सके."
+            }
+        }
+    }
+
+    /** Accepts a requested job through the authenticated, server-side atomic claim endpoint. */
+    fun acceptPartnerJob(bookingId: String, onFinished: () -> Unit = {}) {
+        val user = auth.currentUser
+        if (user == null) {
+            _partnerJobsStatus.value = "Booking accept karne ke liye pehle sign in karein."
+            onFinished()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val token = user.getIdToken(true).await().token
+                    ?: throw SecurityException("Secure sign-in token unavailable.")
+                val responseBody = withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bookings/$encodedId/accept")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write("{}".toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (status !in 200..299) {
+                            val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                            throw IllegalStateException(message?.takeIf { it.isNotBlank() }
+                                ?: "Job acceptance failed (HTTP $status).")
+                        }
+                        body
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                val result = org.json.JSONObject(responseBody)
+                if (!result.optBoolean("success") || result.optString("status") != "assigned") {
+                    throw IllegalStateException("Server did not confirm job assignment.")
+                }
+                _partnerJobsStatus.value = "काम स्वीकार हो गया। 1 घंटे की service SLA शुरू हो गई है."
+                refreshPartnerJobs()
+            } catch (error: Exception) {
+                _partnerJobsStatus.value = error.localizedMessage ?: "काम स्वीकार नहीं हो सका. दोबारा कोशिश करें."
+                refreshPartnerJobs()
+            } finally {
+                onFinished()
+            }
+        }
+    }
+
+    fun verifyStartOtp(bookingId: String, enteredOtp: String): Boolean {
+        _firestoreSyncStatus.value = "OTP not verified: secure server-side OTP workflow is not configured. No booking status changed."
+        return false
+    }
+
+    fun completeJob(bookingId: String) {
+        _firestoreSyncStatus.value = "Job not marked complete: trusted server workflow is not configured. No booking status changed."
+    }
+
+    fun requestTechnicianPayout(techId: String, techName: String, amount: Int, upiId: String) {
+        // Deliberately fail closed: a client must not create a payout or debit a
+        // wallet without the trusted backend ledger and payment-provider workflow.
+        _firestoreSyncStatus.value = "Payouts unavailable: secure payment backend is not configured."
+    }
+
+    fun triggerFirestoreSync() {
+        _firestoreSyncStatus.value = "Checking Firestore connection..."
+        viewModelScope.launch {
+            val startedAt = System.nanoTime()
+            try {
+                firestore.collection("_quickfix_health").document("ping").get().await()
+                val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+                _firestoreSyncStatus.value = "Firestore reachable (" + elapsedMs + "ms)."
+            } catch (error: Exception) {
+                val reason = error.localizedMessage ?: "Unknown connection or permission error"
+                _firestoreSyncStatus.value = "Firestore check failed: " + reason
+            }
+        }
+    }
+}
+}{radiusKm} km booking distance और GPS location सेव हो गई."
+                    } finally { connection.disconnect() }
+                }
+                _partnerJobsStatus.value = message; refreshPartnerJobs()
+            } catch (error: Exception) { _partnerJobsStatus.value = error.localizedMessage ?: "दूरी सेटिंग सेव नहीं हुई." }
+        }
+    }
     fun refreshPartnerJobs() {
         val user = auth.currentUser
         if (user == null) {
