@@ -13,7 +13,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
-import { getPartnerServiceCategories, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
@@ -493,7 +493,6 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
     }
 
-    const categories = getPartnerServiceCategories(trades);
 
     const normalizeAreaValue = (value: unknown) =>
       typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
@@ -514,7 +513,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const bookings = snapshot.docs
       .filter((document) => {
         const booking = document.data();
-        if (!categories.has(String(booking.category || ''))) return false;
+        if (!canPartnerReceiveBookingCategory(trades, booking.category)) return false;
         if (!isWithinPartnerDispatchRadius(profile, booking)) return false;
         const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
           ? booking.serviceArea as Record<string, unknown>
@@ -588,8 +587,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      const categories = getPartnerServiceCategories(trades);
-      if (!city || booking.city !== city || !categories.has(String(booking.category || ''))) {
+      if (!city || booking.city !== city || !canPartnerReceiveBookingCategory(trades, booking.category)) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
 
