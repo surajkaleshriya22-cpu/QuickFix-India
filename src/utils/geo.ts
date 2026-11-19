@@ -1,6 +1,6 @@
 export type GeoPoint = { latitude: number; longitude: number };
 
-const MAX_PARTNER_DISTANCE_KM = 7;
+const MAX_PARTNER_DISTANCE_KM = 15;
 
 function isGeoPoint(value: unknown): value is GeoPoint {
   if (!value || typeof value !== 'object') return false;
@@ -24,10 +24,10 @@ export function distanceBetweenPointsKm(a: GeoPoint, b: GeoPoint): number {
 }
 
 /**
- * Hard maximum customer-to-partner dispatch distance is 7 km.
+ * Hard maximum customer-to-partner dispatch distance is 15 km.
  * A partner may configure a smaller radius, but never a larger one.
  * Missing/invalid partner or customer GPS coordinates fail closed; area-only
- * matching is not sufficient to guarantee the 7 km safety limit.
+ * matching is not sufficient to guarantee the 15 km safety limit.
  */
 export function isWithinPartnerDispatchRadius(
   partner: Record<string, unknown>,
