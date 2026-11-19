@@ -2,7 +2,7 @@ package com.quickfix.app.data.model
 
 data class ServiceItem(
     val id: String,
-    val category: String, // "electrician" | "plumber"
+    val category: String, // Canonical ServiceCategoryType used by customer booking and partner dispatch
     val title: String,
     val hindiTitle: String? = null,
     val startingPrice: Int,
