@@ -46,3 +46,10 @@ export function getPartnerServiceCategories(trades: unknown): Set<string> {
   }
   return categories;
 }
+
+
+/** A partner can receive a booking only when its exact service category is covered by their registered trades. */
+export function canPartnerReceiveBookingCategory(trades: unknown, bookingCategory: unknown): boolean {
+  if (typeof bookingCategory !== 'string' || !bookingCategory.trim()) return false;
+  return getPartnerServiceCategories(trades).has(bookingCategory.trim());
+}
