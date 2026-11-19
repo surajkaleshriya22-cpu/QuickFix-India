@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
 import com.quickfix.app.viewmodel.QuickFixViewModel
 
 private val BrandBlue = Color(0xFF2563EB)
@@ -39,7 +42,7 @@ fun LiveTrackingScreen(
     val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsState()
     val customerStartOtps by viewModel.customerStartOtps.collectAsState()
-    val booking = bookings.find { it.id == bookingId } ?: bookings.firstOrNull()
+    val booking = bookings.find { it.id == bookingId }
     LaunchedEffect(booking?.id, booking?.status) {
         if (booking?.status == "assigned") viewModel.loadCustomerStartOtp(booking.id)
     }
@@ -242,6 +245,42 @@ fun LiveTrackingScreen(
                         Text("Service Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = BrandBlue)
                         Text("Service address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.customerLatitude != null && booking.customerLongitude != null) {
+                            val latitude = booking.customerLatitude
+                            val longitude = booking.customerLongitude
+                            val mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.008}%2C${latitude - 0.008}%2C${longitude + 0.008}%2C${latitude + 0.008}&layer=mapnik&marker=$latitude%2C$longitude"
+                            Text("ग्राहक द्वारा साझा की गई सेवा लोकेशन", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            AndroidView(
+                                factory = { viewContext ->
+                                    WebView(viewContext).apply {
+                                        settings.javaScriptEnabled = false
+                                        settings.domStorageEnabled = false
+                                        webViewClient = WebViewClient()
+                                        loadUrl(mapUrl)
+                                    }
+                                },
+                                update = { webView ->
+                                    if (webView.url != mapUrl) webView.loadUrl(mapUrl)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(210.dp)
+                            )
+                            Text("यह ग्राहक का सेव किया गया GPS पिन है, पार्टनर की live location नहीं।", fontSize = 10.sp, color = TextSecondary)
+                        } else {
+                            Surface(
+                                color = Color(0xFFFFF7ED),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    "इस बुकिंग में GPS coordinates सेव नहीं हैं। पता नीचे नक्शे में खोला जा सकता है।",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF9A3412),
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+                        }
                         OutlinedButton(
                             onClick = {
                                 val mapUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(booking.customerAddress))
