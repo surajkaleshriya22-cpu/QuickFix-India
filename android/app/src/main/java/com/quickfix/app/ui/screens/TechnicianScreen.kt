@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quickfix.app.viewmodel.QuickFixViewModel
+import kotlinx.coroutines.delay
 
 private val BrandBlue = Color(0xFF2563EB)
 private val DeepNavy = Color(0xFF0F172A)
@@ -46,6 +47,25 @@ fun TechnicianScreen(
     val context = LocalContext.current
     var selectedDispatchRadius by remember(savedDispatchRadius) { mutableIntStateOf(savedDispatchRadius) }
     var locationSaveMessage by remember { mutableStateOf("") }
+    var isLiveLocationSharing by remember { mutableStateOf(false) }
+    var requestingLiveShare by remember { mutableStateOf(false) }
+    val liveLocationStatus by viewModel.partnerLocationStatus.collectAsState()
+    val hasActiveAssignedJob = partnerJobs.any { it.status in listOf("assigned", "technician_en_route", "in_progress") }
+
+    fun captureAndSendLiveLocation() {
+        try {
+            LocationServices.getFusedLocationProviderClient(context)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
+                .addOnSuccessListener { location ->
+                    if (location != null) viewModel.updatePartnerLiveLocation(location.latitude, location.longitude, location.accuracy)
+                    else locationSaveMessage = "GPS location नहीं मिली. फोन की Location चालू रखें."
+                }
+                .addOnFailureListener { locationSaveMessage = "GPS update नहीं हो सका." }
+        } catch (_: SecurityException) {
+            isLiveLocationSharing = false
+            locationSaveMessage = "Location permission हट गई है. दोबारा अनुमति दें."
+        }
+    }
 
     var acceptingJobId by remember { mutableStateOf<String?>(null) }
     var enteredOtp by remember { mutableStateOf("") }
@@ -57,23 +77,45 @@ fun TechnicianScreen(
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
-            try {
-                LocationServices.getFusedLocationProviderClient(context)
-                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
-                    .addOnSuccessListener { location ->
-                        if (location != null) {
-                            viewModel.savePartnerDispatchSettings(selectedDispatchRadius, location.latitude, location.longitude)
-                            locationSaveMessage = "GPS मिली; आपकी दूरी सेव हो रही है."
-                        } else locationSaveMessage = "GPS location नहीं मिली. फोन की Location चालू करके फिर कोशिश करें."
-                    }
-                    .addOnFailureListener { locationSaveMessage = "GPS location नहीं मिल सकी." }
-            } catch (_: SecurityException) {
-                locationSaveMessage = "Location permission नहीं मिली."
+            if (requestingLiveShare) {
+                requestingLiveShare = false
+                isLiveLocationSharing = true
+                locationSaveMessage = "Live location sharing शुरू हो रही है."
+                captureAndSendLiveLocation()
+            } else {
+                try {
+                    LocationServices.getFusedLocationProviderClient(context)
+                        .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
+                        .addOnSuccessListener { location ->
+                            if (location != null) {
+                                viewModel.savePartnerDispatchSettings(selectedDispatchRadius, location.latitude, location.longitude)
+                                locationSaveMessage = "GPS मिली; आपकी दूरी सेव हो रही है."
+                            } else locationSaveMessage = "GPS location नहीं मिली. फोन की Location चालू करके फिर कोशिश करें."
+                        }
+                        .addOnFailureListener { locationSaveMessage = "GPS location नहीं मिल सकी." }
+                } catch (_: SecurityException) {
+                    locationSaveMessage = "Location permission नहीं मिली."
+                }
             }
-        } else locationSaveMessage = "Booking distance सेव करने के लिए location permission जरूरी है."
+        } else {
+            requestingLiveShare = false
+            locationSaveMessage = "Location permission नहीं मिली."
+        }
     }
 
     LaunchedEffect(Unit) { viewModel.loadPartnerDispatchSettings(); viewModel.refreshPartnerJobs() }
+
+    LaunchedEffect(isLiveLocationSharing, hasActiveAssignedJob) {
+        if (isLiveLocationSharing && hasActiveAssignedJob) {
+            while (true) {
+                delay(30_000)
+                captureAndSendLiveLocation()
+            }
+        } else if (isLiveLocationSharing && !hasActiveAssignedJob) {
+            isLiveLocationSharing = false
+            viewModel.stopPartnerLiveLocation()
+        }
+    }
 
     val myBookings = bookings
 
@@ -148,6 +190,37 @@ fun TechnicianScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                     ) { Text("दूरी और मेरी लोकेशन सेव करें") }
                     if (locationSaveMessage.isNotBlank()) Text(locationSaveMessage, fontSize = 11.sp, color = TextSecondary)
+                }
+            }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("ग्राहक के साथ Live GPS साझा करें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text("यह सुविधा केवल आपकी सक्रिय assigned booking के ग्राहक को आपकी लोकेशन दिखाती है। GPS हर 30 सेकंड में अपडेट होगा, जब तक Partner Portal खुला है।", fontSize = 11.sp, color = TextSecondary)
+                    Text(if (hasActiveAssignedJob) "Active booking मिली है." else "Live sharing शुरू करने के लिए पहले कोई active assigned booking होनी चाहिए.", fontSize = 11.sp, color = if (hasActiveAssignedJob) Color(0xFF166534) else Color(0xFF9A3412))
+                    Button(
+                        onClick = {
+                            requestingLiveShare = true
+                            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                        },
+                        enabled = hasActiveAssignedJob && !isLiveLocationSharing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                    ) { Text("मैं Live Location साझा करने की अनुमति देता/देती हूँ") }
+                    OutlinedButton(
+                        onClick = {
+                            isLiveLocationSharing = false
+                            requestingLiveShare = false
+                            viewModel.stopPartnerLiveLocation()
+                        },
+                        enabled = isLiveLocationSharing,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Live Location साझा करना बंद करें") }
+                    Text(liveLocationStatus, fontSize = 11.sp, color = TextSecondary)
                 }
             }
             // Trade Qualification Certificate Card
