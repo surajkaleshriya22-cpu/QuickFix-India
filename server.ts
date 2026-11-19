@@ -92,7 +92,7 @@ const apiRateLimit = rateLimit({
   message: { success: false, error: 'Too many requests. Please try again in one minute.' },
 });
 
-const authenticateFirebaseUser = async (req: Request, res: Response) => {
+const authenticateFirebaseUser = async (req: Request, res: Response, next: NextFunction) => {
   if (!firebaseAdminApp) {
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
@@ -676,7 +676,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
 
 // Update every active booking for a partner in bounded Firestore batches.
 // Each batch stays below Firestore's 500-write limit, and document-ID cursors
- // ensure bookings beyond the first page are not silently skipped.
+// ensure bookings beyond the first page are not silently skipped.
 const updateActiveBookingLocations = async (
   db: Firestore,
   partnerUid: string,
@@ -721,7 +721,7 @@ const updateActiveBookingLocations = async (
 };
 
 // Partner live-location sharing is opt-in and limited to the partner's active assigned jobs.
-app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request, res: Response, next: NextFunction) => {
+app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure location service is temporarily unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
