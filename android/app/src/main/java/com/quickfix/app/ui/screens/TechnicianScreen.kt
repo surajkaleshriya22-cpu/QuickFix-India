@@ -43,9 +43,9 @@ fun TechnicianScreen(
     val bookings by viewModel.bookings.collectAsState()
     val partnerJobs by viewModel.partnerJobs.collectAsState()
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
-    val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
+    val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()\n    val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
-    var selectedDispatchRadius by remember { mutableIntStateOf(5) }
+    var selectedDispatchRadius by remember(savedDispatchRadius) { mutableIntStateOf(savedDispatchRadius) }
     var locationSaveMessage by remember { mutableStateOf("") }
 
     var acceptingJobId by remember { mutableStateOf<String?>(null) }
@@ -69,7 +69,7 @@ fun TechnicianScreen(
         } else locationSaveMessage = "Booking distance सेव करने के लिए location permission जरूरी है."
     }
 
-    LaunchedEffect(Unit) { viewModel.refreshPartnerJobs() }
+    LaunchedEffect(Unit) { viewModel.loadPartnerDispatchSettings(); viewModel.refreshPartnerJobs() }
 
     val myBookings = bookings
 
