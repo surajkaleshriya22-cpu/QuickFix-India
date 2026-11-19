@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -504,11 +504,16 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
 
     // Query only the partner's city. Structured area matching is then applied
     // before returning requests; legacy records without complete area data use city.
-    const snapshot = await db.collection('bookings')
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : '';
+    if (cursor && !/^[A-Za-z0-9_-]{1,150}$/.test(cursor)) {
+      return res.status(400).json({ success: false, error: 'Job feed cursor is invalid.' });
+    }
+    let bookingQuery = db.collection('bookings')
       .where('status', '==', 'requested')
       .where('city', '==', city)
-      .limit(200)
-      .get();
+      .orderBy(FieldPath.documentId());
+    if (cursor) bookingQuery = bookingQuery.startAfter(cursor);
+    const snapshot = await bookingQuery.limit(200).get();
 
     const bookings = snapshot.docs
       .filter((document) => {
@@ -543,7 +548,13 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
         };
       });
 
-    return res.json({ success: true, bookings, assignedBookings });
+    return res.json({
+      success: true,
+      bookings,
+      assignedBookings,
+      nextCursor: snapshot.size === 200 ? snapshot.docs[snapshot.docs.length - 1].id : null,
+      hasMore: snapshot.size === 200
+    });
   } catch (error) {
     console.error('Secure Channel Partner job feed failed:', error);
     return res.status(500).json({ success: false, error: 'Available jobs could not be loaded securely. Please retry.' });

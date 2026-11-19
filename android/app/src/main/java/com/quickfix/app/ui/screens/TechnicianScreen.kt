@@ -40,6 +40,7 @@ fun TechnicianScreen(
     val bookings by viewModel.bookings.collectAsState()
     val partnerJobs by viewModel.partnerJobs.collectAsState()
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
+    val partnerJobsHasMore by viewModel.partnerJobsHasMore.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
@@ -252,6 +253,14 @@ fun TechnicianScreen(
                             ) {
                                 Text(if (acceptingJobId == job.id) "Accepting..." else "काम स्वीकार करें / Accept Job")
                             }
+                        }
+                    }
+                    if (partnerJobsHasMore) {
+                        TextButton(
+                            onClick = { viewModel.loadMorePartnerJobs() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("और काम देखें / Load more jobs")
                         }
                     }
                 }
