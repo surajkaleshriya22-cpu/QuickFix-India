@@ -786,7 +786,7 @@ const getAI = () => {
 };
 
 // 1. Maps Grounding API with gemini-3.8-flash & googleMaps tool
-app.post('/api/places/grounding', async (req: Request, res: Response) => {
+app.post('/api/places/grounding', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const { query, city, lat, lng } = req.body;
     const prompt = query || `List the top real verified electrical hardware shops, plumbing spare parts dealers, AC refrigeration parts stores, and tool suppliers near ${city || 'Indore, Madhya Pradesh'}. Provide specific store names, known localities, what spare parts they stock, and practical advice for home repair technicians and customers.`;
