@@ -1070,6 +1070,34 @@ export const AdminDashboard: React.FC = () => {
                   {partnerDirectoryLoading ? 'Loading…' : 'Refresh list'}
                 </button>
               </div>
+              {channelPartnerDirectory.length > 0 && (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+                    <h4 className="text-xs font-bold text-slate-200">Category-wise partner count</h4>
+                    <p className="text-[10px] text-slate-500">Loaded profiles only · a partner may appear in more than one category</p>
+                    <div className="space-y-1.5">
+                      {partnerCoverageByCategory.slice(0, 10).map(([category, count]) => (
+                        <div key={category} className="flex items-center justify-between gap-3 text-[11px]">
+                          <span className="text-slate-300 truncate">{category}</span>
+                          <span className="font-bold text-white tabular-nums">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+                    <h4 className="text-xs font-bold text-slate-200">District / city-wise partner count</h4>
+                    <p className="text-[10px] text-slate-500">Top 12 areas in the loaded directory · missing districts fall back to city</p>
+                    <div className="space-y-1.5">
+                      {partnerCoverageByDistrict.map(([area, count]) => (
+                        <div key={area} className="flex items-center justify-between gap-3 text-[11px]">
+                          <span className="text-slate-300 truncate">{area}</span>
+                          <span className="font-bold text-white tabular-nums">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 {([
                   ['all', 'All'],
@@ -3300,6 +3328,27 @@ export const AdminDashboard: React.FC = () => {
 
 // Activity Pulse icon helper
 function ActivityPulse(props: { className?: string }) {
+  // Coverage summaries are derived only from the profiles returned by the secure
+  // admin directory API. They are not estimates of total market/provider coverage.
+  const partnerCoverageByCategory = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
+    const categories = Array.isArray(partner.trades) && partner.trades.length > 0
+      ? partner.trades : ['Category not specified'];
+    categories.forEach((category) => {
+      const label = String(category || '').trim() || 'Category not specified';
+      counts[label] = (counts[label] || 0) + 1;
+    });
+    return counts;
+  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  const partnerCoverageByDistrict = Object.entries(channelPartnerDirectory.reduce<Record<string, number>>((counts, partner) => {
+    const area = partner.serviceArea;
+    const district = area?.district?.trim();
+    const state = area?.state?.trim();
+    const label = district ? `${district}${state ? `, ${state}` : ''}` : (partner.city?.trim() || 'Area not specified');
+    counts[label] = (counts[label] || 0) + 1;
+    return counts;
+  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 12);
+
   return (
     <svg className={props.className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
