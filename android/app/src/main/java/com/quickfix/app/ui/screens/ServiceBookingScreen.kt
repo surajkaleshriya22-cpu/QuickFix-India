@@ -337,7 +337,7 @@ fun ServiceBookingScreen(
                         AndroidView(
                             factory = { viewContext ->
                                 WebView(viewContext).apply {
-                                    settings.javaScriptEnabled = false
+                                    settings.javaScriptEnabled = true
                                     settings.domStorageEnabled = false
                                     webViewClient = WebViewClient()
                                     loadUrl(mapUrl)
