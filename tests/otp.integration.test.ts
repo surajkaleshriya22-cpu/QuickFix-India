@@ -96,20 +96,42 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   const partner = await createEmulatorUser('partner-otp@example.test');
   const otherPartner = await createEmulatorUser('other-partner-otp@example.test');
 
-  await seedBooking('otp-valid', customer.uid, partner.uid, '042681', new Date(Date.now() + 30 * 60_000).toISOString());
+  await db.collection('users').doc(partner.uid).set({
+    uid: partner.uid, role: 'CHANNEL_PARTNER', approvalStatus: 'approved', isVerified: true,
+    isOnline: true, isSuspended: false, securityDepositPaid: true, walletBalance: 2000,
+    city: 'Indore', trades: ['electrician'], dispatchRadiusKm: 5,
+    dispatchLocation: { latitude: 22.7196, longitude: 75.8577 }
+  });
+  await db.collection('bookings').doc('otp-valid').set({
+    id: 'otp-valid', customerUid: customer.uid, status: 'requested', serviceTitle: 'OTP integration test',
+    category: 'electrician', customerAddress: 'Test address', city: 'Indore',
+    customerLocation: { latitude: 22.7196, longitude: 75.8577 },
+    createdAt: new Date().toISOString()
+  });
+
+  const accepted = await request('/api/partners/bookings/otp-valid/accept', partner.token, 'POST', {});
+  assert.equal(accepted.status, 200, 'eligible partner must be able to accept the test booking');
+  assert.equal(accepted.body.status, 'assigned');
+
   const ownOtp = await request('/api/customer/bookings/otp-valid/start-otp', customer.token);
   assert.equal(ownOtp.status, 200);
-  assert.equal(ownOtp.body.startOtp, '042681');
+  const issuedOtp = String(ownOtp.body.startOtp || '');
+  assert.match(issuedOtp, /^\\d{6}$/, 'acceptance must issue a six-digit OTP');
 
   const otherCustomerRead = await request('/api/customer/bookings/otp-valid/start-otp', otherCustomer.token);
   assert.equal(otherCustomerRead.status, 404, 'another customer must not read the OTP');
 
-  const wrongOtp = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: '999999' });
+  await db.collection('bookings').doc('otp-valid').update({ status: 'technician_en_route' });
+  const enRouteOtp = await request('/api/customer/bookings/otp-valid/start-otp', customer.token);
+  assert.equal(enRouteOtp.status, 200, 'customer must retain OTP access while partner is en route');
+
+  const wrongCode = issuedOtp === '000000' ? '000001' : '000000';
+  const wrongOtp = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: wrongCode });
   assert.equal(wrongOtp.status, 400);
   assert.equal((await db.collection('bookings').doc('otp-valid').get()).data()?.status, 'assigned');
   assert.equal((await db.collection('booking_start_otps').doc('otp-valid').get()).exists, true);
 
-  const wrongPartner = await request('/api/partners/bookings/otp-valid/start', otherPartner.token, 'POST', { otp: '042681' });
+  const wrongPartner = await request('/api/partners/bookings/otp-valid/start', otherPartner.token, 'POST', { otp: issuedOtp });
   assert.equal(wrongPartner.status, 403);
 
   const started = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: '042681' });
