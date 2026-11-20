@@ -47,6 +47,8 @@ class AuthViewModel(
     }
 
     fun sendOtp(phoneNumber: String, activity: Activity, pendingUser: User) {
+        // Invalidate the previous session before requesting a fresh SMS code.
+        currentVerificationId = ""
         _authState.value = AuthState.Loading
         repository.sendPhoneOtp(
             phoneNumber = phoneNumber,
