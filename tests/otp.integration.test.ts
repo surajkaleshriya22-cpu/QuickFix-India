@@ -128,13 +128,13 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   const wrongCode = issuedOtp === '000000' ? '000001' : '000000';
   const wrongOtp = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: wrongCode });
   assert.equal(wrongOtp.status, 400);
-  assert.equal((await db.collection('bookings').doc('otp-valid').get()).data()?.status, 'assigned');
+  assert.equal((await db.collection('bookings').doc('otp-valid').get()).data()?.status, 'technician_en_route');
   assert.equal((await db.collection('booking_start_otps').doc('otp-valid').get()).exists, true);
 
   const wrongPartner = await request('/api/partners/bookings/otp-valid/start', otherPartner.token, 'POST', { otp: issuedOtp });
   assert.equal(wrongPartner.status, 403);
 
-  const started = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: '042681' });
+  const started = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: issuedOtp });
   assert.equal(started.status, 200);
   assert.equal(started.body.status, 'in_progress');
   const persistedBooking = await db.collection('bookings').doc('otp-valid').get();
@@ -142,7 +142,7 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   assert.ok(persistedBooking.data()?.serviceStartedAt);
   assert.equal((await db.collection('booking_start_otps').doc('otp-valid').get()).exists, false);
 
-  const replay = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: '042681' });
+  const replay = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: issuedOtp });
   assert.equal(replay.status, 404, 'consumed OTP must not be reusable');
 
   await seedBooking('otp-expired', customer.uid, partner.uid, '123456', new Date(Date.now() - 60_000).toISOString());
