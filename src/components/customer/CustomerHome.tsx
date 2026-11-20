@@ -104,7 +104,7 @@ export const CustomerHome: React.FC = () => {
           try {
             const otpResponse = await fetch('/api/customer/bookings/' + encodeURIComponent(active.id) + '/start-otp', { headers: { Authorization: 'Bearer ' + token } });
             const otpResult = await otpResponse.json();
-            if (otpResponse.ok && otpResult.success && /^\\d{6}$/.test(String(otpResult.startOtp || ''))) active.startOtp = String(otpResult.startOtp);
+            if (otpResponse.ok && otpResult.success && /^\d{6}$/.test(String(otpResult.startOtp || ''))) active.startOtp = String(otpResult.startOtp);
           } catch { /* Never expose a locally stored OTP when secure retrieval fails. */ }
         }
         setServerBookings(mapped);
