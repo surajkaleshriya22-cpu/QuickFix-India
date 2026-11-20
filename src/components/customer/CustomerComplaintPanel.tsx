@@ -15,9 +15,20 @@ const categories = [
   ['other', 'Other / अन्य']
 ] as const;
 
+type ComplaintBooking = {
+  id: string;
+  serviceTitle: string;
+  category?: string;
+  scheduledDate?: string;
+  scheduledTimeSlot?: string;
+  status: string;
+};
+
 export const CustomerComplaintPanel: React.FC = () => {
   const { currentUser } = useQuickFix();
   const [bookingId, setBookingId] = useState('');
+  const [bookings, setBookings] = useState<ComplaintBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
   const [category, setCategory] = useState<string>('non_payment');
   const [description, setDescription] = useState('');
   const [cases, setCases] = useState<any[]>([]);
@@ -34,7 +45,39 @@ export const CustomerComplaintPanel: React.FC = () => {
     if (!response.ok || !result.success) throw new Error(result.error || 'Complaint history unavailable.');
     setCases(Array.isArray(result.complaints) ? result.complaints : []);
   };
-  useEffect(() => { void loadCases().catch(() => setError('शिकायत इतिहास अभी उपलब्ध नहीं है।')); }, [currentUser?.uid]);
+
+  const loadBookings = async () => {
+    const user = auth.currentUser;
+    if (!user || currentUser?.uid !== user.uid) {
+      setBookings([]);
+      setBookingId('');
+      return;
+    }
+    setBookingsLoading(true);
+    try {
+      const isPartner = currentUser?.role === 'technician' || currentUser?.role === 'channel_partner';
+      const endpoint = isPartner ? '/api/partners/bookings/mine' : '/api/customer/bookings';
+      const token = await user.getIdToken();
+      const response = await fetch(endpoint, { headers: { Authorization: 'Bearer ' + token } });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Booking list unavailable.');
+      const ownBookings = Array.isArray(result.bookings) ? result.bookings as ComplaintBooking[] : [];
+      setBookings(ownBookings);
+      setBookingId(previous => ownBookings.some(item => item.id === previous) ? previous : '');
+    } catch (e) {
+      setBookings([]);
+      setBookingId('');
+      setError(e instanceof Error ? e.message : 'बुकिंग सूची अभी उपलब्ध नहीं है।');
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setError('');
+    void loadBookings();
+    void loadCases().catch(() => setError('शिकायत इतिहास अभी उपलब्ध नहीं है।'));
+  }, [currentUser?.uid, currentUser?.role]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -42,11 +85,12 @@ export const CustomerComplaintPanel: React.FC = () => {
     try {
       const user = auth.currentUser;
       if (!user || currentUser?.uid !== user.uid) throw new Error('शिकायत दर्ज करने के लिए पहले Firebase OTP से लॉगिन करें।');
+      if (!bookings.some(item => item.id === bookingId)) throw new Error('कृपया अपनी सूची से संबंधित बुकिंग चुनें।');
       const token = await user.getIdToken();
       const response = await fetch('/api/complaints', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: bookingId.trim(), category, description: description.trim() })
+        body: JSON.stringify({ bookingId, category, description: description.trim() })
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'शिकायत दर्ज नहीं हो सकी।');
@@ -60,13 +104,16 @@ export const CustomerComplaintPanel: React.FC = () => {
   return <section className="bg-white border border-amber-200 rounded-2xl p-4 space-y-3">
     <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-amber-600"/><div><h3 className="font-bold text-sm text-slate-900">Customer & Partner Safety / शिकायत सहायता</h3><p className="text-xs text-slate-500">Payment, abuse, harassment या service dispute की रिपोर्ट करें</p></div></div>
     <form onSubmit={submit} className="space-y-2">
-      <label className="block text-xs font-semibold text-slate-700">Booking ID / बुकिंग नंबर</label>
-      <input required value={bookingId} onChange={e=>setBookingId(e.target.value)} maxLength={150} placeholder="अपनी booking ID लिखें" className="w-full border rounded-xl px-3 py-2 text-sm"/>
+      <label className="block text-xs font-semibold text-slate-700">अपनी बुकिंग चुनें / Select your booking</label>
+      <select required value={bookingId} onChange={e=>setBookingId(e.target.value)} disabled={bookingsLoading || bookings.length===0} className="w-full border rounded-xl px-3 py-2 text-sm disabled:bg-slate-100">
+        <option value="">{bookingsLoading ? 'बुकिंग लोड हो रही है…' : bookings.length ? 'बुकिंग चुनें' : 'आपकी कोई बुकिंग उपलब्ध नहीं है'}</option>
+        {bookings.map(item=><option key={item.id} value={item.id}>{item.serviceTitle} · {item.scheduledDate || 'तारीख नहीं'} {item.scheduledTimeSlot || ''} · {item.status} · #{item.id.slice(0,8)}</option>)}
+      </select>
       <label className="block text-xs font-semibold text-slate-700">Complaint type / शिकायत का कारण</label>
       <select value={category} onChange={e=>setCategory(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm">{categories.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select>
       <label className="block text-xs font-semibold text-slate-700">Details / पूरी जानकारी (10–3000 अक्षर)</label>
       <textarea required minLength={10} maxLength={3000} rows={3} value={description} onChange={e=>setDescription(e.target.value)} placeholder="क्या हुआ, कब हुआ और किस तरह की मदद चाहिए?" className="w-full border rounded-xl px-3 py-2 text-sm"/>
-      <button disabled={busy} className="w-full rounded-xl bg-blue-700 text-white py-2.5 text-sm font-bold disabled:opacity-50"><Send className="inline w-4 h-4 mr-1"/>{busy?'Submitting…':'Submit complaint / शिकायत दर्ज करें'}</button>
+      <button disabled={busy || bookingsLoading || !bookingId} className="w-full rounded-xl bg-blue-700 text-white py-2.5 text-sm font-bold disabled:opacity-50"><Send className="inline w-4 h-4 mr-1"/>{busy?'Submitting…':'Submit complaint / शिकायत दर्ज करें'}</button>
     </form>
     {message && <p role="status" className="text-xs text-emerald-700">{message}</p>}
     {error && <p role="alert" className="text-xs text-red-600 flex gap-1"><AlertCircle className="w-4 h-4 shrink-0"/>{error}</p>}
