@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Zap,
   Wrench,
@@ -24,7 +24,8 @@ import {
   Music
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { ServiceItem, ServiceCategoryType } from '../../types';
+import { Booking, ServiceItem, ServiceCategoryType } from '../../types';
+import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { ServiceBookingSheet } from './ServiceBookingSheet';
 import { LiveTrackingSheet } from './LiveTrackingSheet';
 import { ReviewModal } from './ReviewModal';
@@ -56,9 +57,75 @@ export const CustomerHome: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showBookingsList, setShowBookingsList] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
+  const [serverBookings, setServerBookings] = useState<Booking[]>([]);
+  const [serverBookingsLoaded, setServerBookingsLoaded] = useState(false);
+  const [bookingFeedError, setBookingFeedError] = useState('');
 
-  // Active in-progress booking for quick access
-  const activeBooking = bookings.find(b => b.id === activeBookingId) || bookings[0];
+  // Load the signed-in customer's own bookings and private start OTP from the server.
+  useEffect(() => {
+    let cancelled = false;
+    const loadCustomerBookings = async () => {
+      const firebaseUser = auth.currentUser;
+      if (!isFirebaseConfigured || !firebaseUser || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
+        setServerBookings([]);
+        setServerBookingsLoaded(false);
+        setBookingFeedError('');
+        return;
+      }
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/customer/bookings', { headers: { Authorization: 'Bearer ' + token } });
+        const result = await response.json();
+        if (!response.ok || !result.success || !Array.isArray(result.bookings)) throw new Error(result.error || 'Bookings could not be loaded.');
+        if (cancelled) return;
+        const mapped: Booking[] = (result.bookings as unknown[]).map((item: any): Booking => ({
+          id: String(item.id || ''),
+          serviceId: '',
+          serviceTitle: String(item.serviceTitle || 'QuickFix Service'),
+          category: item.category as ServiceCategoryType,
+          customerName: currentUser.displayName,
+          customerPhone: currentUser.phoneNumber,
+          customerAddress: String(item.customerAddress || ''),
+          city: currentUser.city || currentCity,
+          pincode: currentUser.pincode || '',
+          scheduledDate: String(item.scheduledDate || ''),
+          scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
+          status: item.status as Booking['status'],
+          technicianName: String(item.technicianName || ''),
+          startOtp: '',
+          price: 0, visitingCharges: 0, discount: 0, taxes: 0, totalAmount: 0,
+          commissionRate: 0, adminCommission: 0, technicianPayout: 0,
+          paymentMethod: 'cash', paymentStatus: 'pending',
+          serviceDeadline: String(item.serviceDeadline || ''),
+          createdAt: String(item.createdAt || '')
+        }));
+        const active = mapped.find((booking) => booking.id === activeBookingId) || mapped.find((booking) => !['completed', 'cancelled'].includes(booking.status)) || mapped[0];
+        if (active && ['assigned', 'technician_en_route'].includes(active.status)) {
+          try {
+            const otpResponse = await fetch('/api/customer/bookings/' + encodeURIComponent(active.id) + '/start-otp', { headers: { Authorization: 'Bearer ' + token } });
+            const otpResult = await otpResponse.json();
+            if (otpResponse.ok && otpResult.success && /^\d{6}$/.test(String(otpResult.startOtp || ''))) active.startOtp = String(otpResult.startOtp);
+          } catch { /* Never expose a locally stored OTP when secure retrieval fails. */ }
+        }
+        setServerBookings(mapped);
+        setServerBookingsLoaded(true);
+        setBookingFeedError('');
+      } catch (error) {
+        if (!cancelled) {
+          setServerBookings([]);
+          setServerBookingsLoaded(true);
+          setBookingFeedError(error instanceof Error ? error.message : 'Bookings could not be loaded.');
+        }
+      }
+    };
+    void loadCustomerBookings();
+    const refreshTimer = window.setInterval(() => { void loadCustomerBookings(); }, 20000);
+    return () => { cancelled = true; window.clearInterval(refreshTimer); };
+  }, [currentUser?.uid, currentUser?.role, currentCity, bookings.length, activeBookingId]);
+
+
+  const customerBookings = serverBookingsLoaded ? serverBookings : bookings;
+  const activeBooking = customerBookings.find(b => b.id === activeBookingId) || customerBookings.find(b => b.status !== 'completed' && b.status !== 'cancelled') || customerBookings[0];
 
   const filteredServices = services.filter(service => {
     const matchesCat = selectedCategory === 'all' || service.category === selectedCategory || (selectedCategory === 'technician' && (service.category === 'ac_repair' || service.category === 'fridge_repair' || service.category === 'appliance_repair'));
@@ -143,9 +210,7 @@ export const CustomerHome: React.FC = () => {
                   <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">
                     {activeBooking.status.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">
-                    OTP: {activeBooking.startOtp}
-                  </span>
+                  {serverBookingsLoaded && activeBooking.startOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {activeBooking.startOtp}</span>}
                 </div>
                 <h4 className="text-xs font-bold truncate max-w-[190px]">{activeBooking.serviceTitle}</h4>
                 <p className="text-[11px] text-blue-200">{activeBooking.technicianName} is on the way</p>
@@ -389,7 +454,7 @@ export const CustomerHome: React.FC = () => {
           className="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors"
         >
           <CalendarCheck className="w-4 h-4" />
-          <span className="text-[10px]">Bookings ({bookings.length})</span>
+          <span className="text-[10px]">Bookings ({customerBookings.length})</span>
         </button>
 
         <button
@@ -433,7 +498,7 @@ export const CustomerHome: React.FC = () => {
             </div>
 
             <div className="overflow-y-auto p-4 space-y-3">
-              {bookings.map(b => (
+              {customerBookings.map(b => (
                 <div
                   key={b.id}
                   onClick={() => {

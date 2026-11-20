@@ -54,6 +54,18 @@ jobs:
           npm explain @grpc/grpc-js || true
           exit "${audit_exit:-0}"
 
+      - name: Run regression tests
+        run: npm test
+
+      - name: Set up Java for Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Run authenticated OTP API integration tests on Firebase Emulators
+        run: npx --yes firebase-tools@14.22.0 emulators:exec --project quickfix-india --only auth,firestore "npm run test:otp-integration"
+
       - name: TypeScript check
         run: npm run lint
 

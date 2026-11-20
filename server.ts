@@ -18,6 +18,7 @@ import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from '
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
+import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
 
@@ -581,7 +582,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     const bookingRef = db.collection('bookings').doc(bookingId);
     const auditRef = db.collection('partner_job_audit_logs').doc();
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
-    const startOtp = String(randomInt(0, 10000)).padStart(4, '0');
+    const startOtp = String(randomInt(0, 1000000)).padStart(6, '0');
     const acceptedAt = new Date();
     const deadline = new Date(acceptedAt.getTime() + 60 * 60 * 1000);
 
@@ -777,6 +778,40 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
   }
 });
 
+// Return only the authenticated customer's own bookings; private OTPs are fetched separately.
+app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('bookings')
+      .where('customerUid', '==', identity.uid)
+      .limit(50)
+      .get();
+    const bookings = snapshot.docs.map((doc) => {
+      const booking = doc.data();
+      const createdAt = booking.createdAt && typeof booking.createdAt.toDate === 'function'
+        ? booking.createdAt.toDate().toISOString()
+        : String(booking.createdAt || '');
+      return {
+        id: doc.id,
+        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
+        category: String(booking.category || ''),
+        customerAddress: String(booking.customerAddress || booking.address || ''),
+        scheduledDate: String(booking.scheduledDate || ''),
+        scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
+        status: String(booking.status || 'requested'),
+        technicianName: String(booking.technicianName || ''),
+        serviceDeadline: String(booking.serviceDeadline || ''),
+        createdAt
+      };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Customer booking feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Customer bookings could not be loaded securely.' });
+  }
+});
+
 // Customers can read only the live location attached to their own active booking.
 // Locations older than five minutes are deliberately reported as stale, not presented as live.
 app.get('/api/customer/bookings/:bookingId/partner-location', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -834,11 +869,13 @@ app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser,
     if (!bookingSnap.exists || bookingSnap.data()?.customerUid !== identity.uid) {
       return res.status(404).json({ success: false, error: 'Booking was not found for this customer.' });
     }
-    if (bookingSnap.data()?.status !== 'assigned' || !otpSnap.exists) {
+    if (!isStartOtpBookingStatus(bookingSnap.data()?.status) || !otpSnap.exists) {
       return res.status(409).json({ success: false, error: 'The service-start code is not available yet.' });
     }
     const otp = otpSnap.data()!;
-    if (otp.customerUid !== identity.uid || Date.parse(String(otp.expiresAt || '')) <= Date.now()) {
+    if (otp.customerUid !== identity.uid || otp.partnerUid !== bookingSnap.data()?.technicianUid ||
+        !isStartOtpBookingStatus(bookingSnap.data()?.status) ||
+        isStartOtpExpired(otp.expiresAt)) {
       return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
     }
     return res.json({ success: true, startOtp: String(otp.code) });
@@ -848,14 +885,17 @@ app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser,
   }
 });
 
+// Limit OTP guesses per client before Firebase authentication and transaction work.
+const partnerOtpStartLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many OTP attempts. Please wait 15 minutes and try again.' } });
+
 // Assigned partner verifies the customer-shared OTP; the transition is atomic and one-time.
-app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, async (req: Request, res: Response) => {
+app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    if (!/^\d{4}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !isValidStartOtp(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
     const bookingRef = db.collection('bookings').doc(bookingId);
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
@@ -866,8 +906,8 @@ app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, as
       const booking = bookingSnap.data()!;
       const otp = otpSnap.data()!;
       if (booking.technicianUid !== identity.uid || otp.partnerUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
-      if (booking.status !== 'assigned') throw new Error('INVALID_BOOKING_STATE');
-      if (Date.parse(String(otp.expiresAt || '')) <= Date.now()) throw new Error('OTP_EXPIRED');
+      if (!['assigned', 'technician_en_route'].includes(String(booking.status || ''))) throw new Error('INVALID_BOOKING_STATE');
+      if (isStartOtpExpired(otp.expiresAt)) throw new Error('OTP_EXPIRED');
       if (otp.code !== code) throw new Error('OTP_INVALID');
       transaction.update(bookingRef, { status: 'in_progress', serviceStartedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       transaction.delete(otpRef);
