@@ -220,6 +220,29 @@ fun AuthScreen(
                         ) {
                             Text("Verify OTP & Login", fontWeight = FontWeight.Bold)
                         }
+                        TextButton(
+                            enabled = activity != null && phone.filter { it.isDigit() }.length == 10,
+                            onClick = {
+                                otpCode = ""
+                                val pendingUser = User(
+                                    phoneNumber = "+91 $phone",
+                                    displayName = displayName,
+                                    email = email,
+                                    role = selectedRole,
+                                    address = address,
+                                    city = city,
+                                    trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
+                                    experienceYears = experienceYears.toIntOrNull() ?: 5,
+                                )
+                                activity?.let { act ->
+                                    authViewModel.sendOtp("+91 $phone", act, pendingUser)
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Resend OTP", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                        }
+
                     } else if (selectedRole == UserRole.ADMIN) {
                         // Admin access is based only on an existing Firebase session
                         // carrying an Admin SDK-issued custom claim. No client passcode is accepted.
