@@ -77,3 +77,16 @@ This policy is not implemented merely by adding this document. Before claiming e
 - tests proving a customer cannot alter payment status, erase a complaint, or access another user's case.
 
 **Important:** This is a product-policy draft, not legal advice. Have the final terms, consumer disclosures, privacy notice, and grievance process reviewed for applicable Indian law before production launch.
+
+
+## Implementation status (20 November 2026)
+
+The current pull request adds server-side complaint endpoints:
+- `POST /api/complaints`: a verified Firebase user who is the customer or Channel Partner on the referenced booking can open a case.
+- `GET /api/complaints/mine`: returns only cases opened by the signed-in user.
+- `GET /api/admin/complaints`: requires the server-verified Firebase admin claim.
+- `POST /api/admin/complaints/:complaintId/review`: requires the server-verified admin claim and records a review status, decision, note, reviewer, and timestamps.
+
+Complaint documents are written through the server Admin SDK; Firestore client rules continue to deny direct client access. The API does not automatically suspend, ban, debit, refund, or penalize anyone.
+
+**Still not implemented/verified:** customer and partner report screens, admin complaint-review UI, evidence upload/storage and access controls, user notifications, appeal workflow, automated tests for these endpoints, production deployment, and end-to-end testing against a live Firebase project. Until those are complete, this feature must not be described as fully available in the installed app.
