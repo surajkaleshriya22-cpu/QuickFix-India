@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Zap,
   Wrench,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { ServiceItem, ServiceCategoryType } from '../../types';
+import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { ServiceBookingSheet } from './ServiceBookingSheet';
 import { LiveTrackingSheet } from './LiveTrackingSheet';
 import { ReviewModal } from './ReviewModal';
@@ -56,9 +57,27 @@ export const CustomerHome: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showBookingsList, setShowBookingsList] = useState(false);
   const [showNearbyStores, setShowNearbyStores] = useState(false);
+  const [serverStartOtp, setServerStartOtp] = useState('');
 
   // Active in-progress booking for quick access
   const activeBooking = bookings.find(b => b.id === activeBookingId) || bookings[0];
+
+  useEffect(() => {
+    let cancelled = false;
+    setServerStartOtp('');
+    const loadStartOtp = async () => {
+      const user = auth.currentUser;
+      if (!activeBooking || !['assigned', 'technician_en_route'].includes(activeBooking.status) || !isFirebaseConfigured || !user || currentUser?.uid !== user.uid || currentUser?.role !== 'customer') return;
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/customer/bookings/' + encodeURIComponent(activeBooking.id) + '/start-otp', { headers: { Authorization: 'Bearer ' + token } });
+        const result = await response.json();
+        if (!cancelled && response.ok && result.success && /^\\d{6}$/.test(String(result.startOtp || ''))) setServerStartOtp(String(result.startOtp));
+      } catch { if (!cancelled) setServerStartOtp(''); }
+    };
+    void loadStartOtp();
+    return () => { cancelled = true; };
+  }, [activeBooking?.id, activeBooking?.status, currentUser?.uid, currentUser?.role]);
 
   const filteredServices = services.filter(service => {
     const matchesCat = selectedCategory === 'all' || service.category === selectedCategory || (selectedCategory === 'technician' && (service.category === 'ac_repair' || service.category === 'fridge_repair' || service.category === 'appliance_repair'));
@@ -144,7 +163,7 @@ export const CustomerHome: React.FC = () => {
                     {activeBooking.status.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">
-                    OTP: {activeBooking.startOtp}
+                    {serverStartOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {serverStartOtp}</span>}
                   </span>
                 </div>
                 <h4 className="text-xs font-bold truncate max-w-[190px]">{activeBooking.serviceTitle}</h4>
