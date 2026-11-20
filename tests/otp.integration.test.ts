@@ -116,7 +116,7 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   const ownOtp = await request('/api/customer/bookings/otp-valid/start-otp', customer.token);
   assert.equal(ownOtp.status, 200);
   const issuedOtp = String(ownOtp.body.startOtp || '');
-  assert.match(issuedOtp, /^\\d{6}$/, 'acceptance must issue a six-digit OTP');
+  assert.match(issuedOtp, /^\d{6}$/, 'acceptance must issue a six-digit OTP');
 
   const otherCustomerRead = await request('/api/customer/bookings/otp-valid/start-otp', otherCustomer.token);
   assert.equal(otherCustomerRead.status, 404, 'another customer must not read the OTP');
