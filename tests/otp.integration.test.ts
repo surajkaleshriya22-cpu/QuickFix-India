@@ -48,7 +48,7 @@ const seedBooking = async (id: string, customerUid: string, partnerUid: string, 
   });
 };
 
-test('Firebase Emulator verifies customer OTP ownership and atomic partner start lifecycle', async (t) => {
+test('Firebase Emulator verifies customer OTP ownership and atomic partner start lifecycle', { skip: !process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST }, async (t) => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Run this test inside Firebase Firestore Emulator');
   assert.ok(process.env.FIREBASE_AUTH_EMULATOR_HOST, 'Run this test inside Firebase Auth Emulator');
 
@@ -101,8 +101,8 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   assert.equal(ownOtp.status, 200);
   assert.equal(ownOtp.body.startOtp, '042681');
 
-  const чужой = await request('/api/customer/bookings/otp-valid/start-otp', otherCustomer.token);
-  assert.equal(чужой.status, 404, 'another customer must not read the OTP');
+  const otherCustomerRead = await request('/api/customer/bookings/otp-valid/start-otp', otherCustomer.token);
+  assert.equal(otherCustomerRead.status, 404, 'another customer must not read the OTP');
 
   const wrongOtp = await request('/api/partners/bookings/otp-valid/start', partner.token, 'POST', { otp: '999999' });
   assert.equal(wrongOtp.status, 400);
