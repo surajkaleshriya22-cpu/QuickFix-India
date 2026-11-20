@@ -113,6 +113,13 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   assert.equal(accepted.status, 200, 'eligible partner must be able to accept the test booking');
   assert.equal(accepted.body.status, 'assigned');
 
+  const customerFeed = await request('/api/customer/bookings', customer.token);
+  assert.equal(customerFeed.status, 200);
+  assert.ok(customerFeed.body.bookings.some((booking: Record<string, unknown>) => booking.id === 'otp-valid'));
+  const feedBooking = customerFeed.body.bookings.find((booking: Record<string, unknown>) => booking.id === 'otp-valid');
+  assert.equal('technicianUid' in feedBooking, false, 'customer feed must not expose partner UID');
+  assert.equal('startOtp' in feedBooking, false, 'customer feed must not expose private OTP in the general feed');
+
   const ownOtp = await request('/api/customer/bookings/otp-valid/start-otp', customer.token);
   assert.equal(ownOtp.status, 200);
   const issuedOtp = String(ownOtp.body.startOtp || '');
