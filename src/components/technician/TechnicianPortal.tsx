@@ -113,7 +113,6 @@ export const TechnicianPortal: React.FC = () => {
     toggleTechnicianOnline,
     validateAndSetTechnicianOnline,
     bookings,
-    updateBookingStatus,
     requestPayout,
     payouts,
     walletTransactions,
