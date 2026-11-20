@@ -50,7 +50,9 @@ fun CustomerHomeScreen(
         services.filter { it.category == selectedCategory }
     }
 
-    val activeBooking = bookings.firstOrNull { it.status !in listOf("completed", "cancelled") }
+    val activeBooking = bookings.firstOrNull { it.status in listOf("assigned", "technician_en_route") }
+        ?: bookings.firstOrNull { it.status == "in_progress" }
+        ?: bookings.firstOrNull { it.status !in listOf("completed", "cancelled") }
 
     LaunchedEffect(activeBooking?.id, activeBooking?.status) {
         if (activeBooking != null && activeBooking.status in listOf("assigned", "technician_en_route")) {
