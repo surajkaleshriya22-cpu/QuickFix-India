@@ -721,7 +721,7 @@ class QuickFixViewModel : ViewModel() {
                     } finally { connection.disconnect() }
                 }
             }.onSuccess { otp ->
-                if (otp.length == 6 && otp.all { it.isDigit() }) {
+                if (otp.length == 6 && otp.all { it in '0'..'9' }) {
                     _customerStartOtps.value = _customerStartOtps.value + (bookingId to otp)
                     _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "OTP उपलब्ध है")
                 } else {
@@ -736,7 +736,7 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String, onResult: (Boolean, String) -> Unit) {
-        if (enteredOtp.length != 6 || !enteredOtp.all { it.isDigit() }) {
+        if (enteredOtp.length != 6 || !enteredOtp.all { it in '0'..'9' }) {
             onResult(false, "कृपया ग्राहक से मिला 6 अंकों का OTP दर्ज करें.")
             return
         }
