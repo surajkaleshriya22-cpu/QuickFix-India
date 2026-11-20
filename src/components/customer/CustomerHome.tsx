@@ -24,7 +24,7 @@ import {
   Music
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
-import { ServiceItem, ServiceCategoryType } from '../../types';
+import { Booking, ServiceItem, ServiceCategoryType } from '../../types';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { ServiceBookingSheet } from './ServiceBookingSheet';
 import { LiveTrackingSheet } from './LiveTrackingSheet';
