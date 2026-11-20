@@ -800,7 +800,6 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
         status: String(booking.status || 'requested'),
         technicianName: String(booking.technicianName || ''),
-        technicianUid: String(booking.technicianUid || ''),
         serviceDeadline: String(booking.serviceDeadline || ''),
         createdAt
       };
@@ -906,7 +905,7 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
       const booking = bookingSnap.data()!;
       const otp = otpSnap.data()!;
       if (booking.technicianUid !== identity.uid || otp.partnerUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
-      if (booking.status !== 'assigned') throw new Error('INVALID_BOOKING_STATE');
+      if (!['assigned', 'technician_en_route'].includes(String(booking.status || ''))) throw new Error('INVALID_BOOKING_STATE');
       if (Date.parse(String(otp.expiresAt || '')) <= Date.now()) throw new Error('OTP_EXPIRED');
       if (otp.code !== code) throw new Error('OTP_INVALID');
       transaction.update(bookingRef, { status: 'in_progress', serviceStartedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
