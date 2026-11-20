@@ -56,9 +56,11 @@ fun ServiceBookingScreen(
 
     val service = services.find { it.id == serviceId } ?: services.first()
 
-    val defaultAddress = ""
-
-    var address by remember { mutableStateOf(defaultAddress) }
+    var houseFlat by remember { mutableStateOf("") }
+    var locality by remember { mutableStateOf("") }
+    var landmark by remember { mutableStateOf("") }
+    var pincode by remember { mutableStateOf("") }
+    val address = listOf(houseFlat, locality, landmark, pincode).filter { it.isNotBlank() }.joinToString(", ")
     var state by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
     var tehsil by remember { mutableStateOf("") }
@@ -224,7 +226,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && houseFlat.isNotBlank() && locality.isNotBlank() && landmark.isNotBlank() && pincode.matches(Regex("^\\d{6}$")) && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
