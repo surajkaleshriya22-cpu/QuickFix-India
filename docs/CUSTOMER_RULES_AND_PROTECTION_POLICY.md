@@ -61,12 +61,41 @@ Except where an urgent safety risk requires immediate protective action, notify 
 - Restrict complaint evidence to authorized staff and retain it only under the published privacy/retention policy and applicable law.
 - Never expose a customer's or partner's identity documents, phone number, or live location in public reviews or unrelated account screens.
 
-## 9. Grievance handling
+## 9. Two-sided identity, address, and visit-safety verification
+
+QuickFix must verify both sides of every service booking, with stronger safeguards for in-person visits:
+
+### Customer / service-location record
+- Before a booking is dispatched, collect and verify the customer's mobile number by OTP and record the customer's name and the complete service address: house/flat, street/locality, landmark, city, district, state, PIN code, and service-location contact instructions.
+- Capture the exact visit location only for the active booking and show it only to the assigned, verified partner and authorized operations staff who need it.
+- Keep booking-specific contact details and access instructions current. Record customer confirmation of the service address before dispatch.
+- Collect government identity documents from customers only where a documented legal, fraud-prevention, or risk-based need exists. Do not make Aadhaar or other sensitive ID collection a default condition for an ordinary home-service booking. Prefer OTP and proportionate verification.
+- Do not show customer ID images, full identity numbers, or unrelated personal documents to a partner. A partner receives only the minimum information needed to safely complete the assigned booking.
+
+### Channel Partner verification
+- Before a partner can accept or travel to an in-person booking, verify their mobile number, legal name, profile photograph/selfie, current address, and identity through a lawful KYC process.
+- Where legally available and appropriate for the service/risk level, complete police/background verification and validate relevant skill certificates or licences. Do not represent a check as completed unless evidence and verification status are recorded.
+- Record the partner's emergency contact with their consent, training/verification status, service categories, and account/duty history. Keep payout/bank verification separate from customer-facing profile data.
+- Do not expose partner identity documents, full ID numbers, home address, or emergency-contact details to customers. Show customers the partner's verified display name, photo, relevant verification badges, and booking-relevant status only.
+
+### Visit accountability and female-partner safety
+- Keep an auditable booking trail: assignment, partner acceptance, customer address confirmation, arrival/check-in, work start, approved scope/price changes, completion, and customer confirmation or dispute.
+- Provide an in-app SOS/help action and a trusted emergency-contact option for partners, including female partners; allow the partner to share the active booking and live trip location with designated safety staff/emergency contacts while on duty.
+- Provide customer and partner with a clear way to report harassment, threats, unsafe conditions, impersonation, or an address mismatch. Allow a partner to decline or leave an unsafe visit without retaliation; flag the booking for human review.
+- Use masked/in-app calling where technically supported so personal phone numbers are not unnecessarily disclosed.
+- Do not use gender as a reason to deny work or service. Offer safety controls consistently and let partners choose duty/visit preferences without discriminatory assignment.
+
+### Access, retention, and accountability
+- Encrypt sensitive records in transit and at rest; enforce server-side role- and booking-scoped access, audit every staff access to identity documents, and prevent public/client-side document URLs.
+- Separate verification status from the underlying document. Store only the minimum document fields and retain/delete documents according to a published, legally reviewed retention schedule.
+- Never treat possession of an ID document as proof that a person is safe. Verification reduces risk but cannot guarantee personal safety.
+
+## 10. Grievance handling
 - Provide an in-app Help/Report issue path with a complaint reference number and status.
 - Acknowledge grievances within 48 hours and aim to resolve them within 30 days, subject to applicable law and the complexity of the matter.
 - Publish a grievance contact and escalation route before production launch.
 
-## 10. Product and backend requirements before enforcement
+## 11. Product and backend requirements before enforcement
 This policy is not implemented merely by adding this document. Before claiming enforcement, QuickFix must implement and test:
 - customer-facing policy acknowledgement and accessible Hindi/English policy screens;
 - itemized estimate, approval of extra work, invoice, receipt, and payment status;
@@ -74,6 +103,11 @@ This policy is not implemented merely by adding this document. Before claiming e
 - admin review tools with reason codes, response/appeal handling, and role-based access;
 - server-side payment verification and idempotent booking/payment state transitions;
 - privacy, retention, abuse-prevention, and security rules;
+- OTP-verified customer mobile and complete booking service-address confirmation before dispatch;
+- lawful, risk-proportionate Channel Partner KYC and recorded verification status before duty/booking acceptance;
+- booking-scoped access to customer address/contact details and strict denial of access to raw ID documents for the other party;
+- auditable assignment/arrival/work/completion events, SOS/escalation, and unsafe-visit reporting for every partner;
+- encryption, staff-access audit logs, document retention/deletion controls, and no public identity-document URLs;
 - tests proving a customer cannot alter payment status, erase a complaint, or access another user's case.
 
 **Important:** This is a product-policy draft, not legal advice. Have the final terms, consumer disclosures, privacy notice, and grievance process reviewed for applicable Indian law before production launch.
