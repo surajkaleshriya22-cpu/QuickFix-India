@@ -1,0 +1,79 @@
+# QuickFix India — Customer Rules & Protection Policy (Draft)
+
+**Status:** Proposed product policy for review; not yet enforced by the app or backend.
+**Applies to:** Customers using QuickFix India to request services from Channel Partners.
+**Principle:** Fair treatment, transparent pricing, safe service, and evidence-based dispute resolution for both customers and partners.
+
+## 1. Booking and price transparency
+- Before confirming a booking, show the service requested, available price or estimate, visit/inspection charge (if any), applicable taxes/fees, and cancellation terms.
+- An estimate is not a final price where inspection is required. The partner must explain the reason and obtain the customer's recorded approval before doing additional or higher-cost work.
+- No partner or customer may demand unlisted charges, free extra work, or a change to the agreed scope without mutual consent recorded in the booking.
+- Keep a booking record of the accepted estimate, approved changes, timestamps, and payment status.
+
+## 2. Customer payment obligations
+- The customer must pay the amount shown as due for work actually authorized and completed, subject to any active complaint, refund, or payment dispute.
+- Offer clear payment methods and issue a receipt or in-app payment confirmation.
+- If payment is not received, send a reminder and provide a way to report a payment failure or dispute.
+- Do not automatically treat a failed payment, network error, or good-faith price dispute as fraud.
+- After notice and a fair opportunity to respond, QuickFix may temporarily restrict new bookings for an overdue, undisputed amount. Restore access when payment is confirmed or the dispute is resolved.
+- Never debit a customer's saved payment method or impose a penalty without valid authorization and clear prior disclosure.
+
+## 3. Respectful and safe conduct
+Customers must not:
+- abuse, threaten, harass, intimidate, or physically harm a partner;
+- use caste, religion, sex, disability, language, or other personal characteristics to demean or discriminate;
+- pressure a partner into unpaid work, unrelated personal tasks, or unauthorized work;
+- request illegal, unsafe, or out-of-scope services;
+- misuse, publish, or share a partner's private phone number, identity documents, images, or location without permission.
+
+Partners are also required to treat customers respectfully, follow the agreed scope and price, protect customer data, and not threaten, harass, discriminate against, or pressure customers.
+
+## 4. Complaints, evidence, and fair review
+- Both customer and partner may report non-payment, misconduct, unsafe conduct, property damage, overcharging, poor service, or a false booking.
+- Allow both sides to submit a description and relevant evidence such as booking messages, invoice, payment receipt, and permitted photos. Do not encourage recording or sharing private material unlawfully.
+- A complaint is an allegation until reviewed. Give each affected party a reasonable chance to respond.
+- Consider severity, evidence, prior substantiated incidents, and any immediate safety risk. Keep an auditable decision record and explain the outcome where appropriate.
+- For immediate danger, users should contact local emergency services/police first; in-app reporting is not an emergency response service.
+
+## 5. False complaints, ratings, and retaliation
+- Reviews must reflect a genuine service experience and must not contain threats, hate, personal data, or knowingly false claims.
+- Retaliatory ratings, fabricated complaints, extortion, and deliberate misuse of the dispute process may lead to moderation after review.
+- A negative review or complaint alone is not grounds to punish a user or partner.
+
+## 6. Proportionate enforcement
+Depending on verified facts and severity, actions may include:
+1. guidance or warning;
+2. request for payment or correction;
+3. temporary restriction while a specific safety or payment issue is reviewed;
+4. suspension for repeated or serious substantiated violations; or
+5. permanent account restriction for severe or repeated misconduct, fraud, violence, or credible threats.
+
+Except where an urgent safety risk requires immediate protective action, notify the affected account of the reason and provide a review/appeal route. Do not impose a permanent ban solely on an unverified allegation. Apply rules consistently to customers and partners.
+
+## 7. Refunds, cancellations, and payment disputes
+- Show cancellation charges and refund eligibility before booking confirmation.
+- Review disputes against the booking scope, approved price changes, service status, and payment records.
+- Do not mark a refund or payout complete until the payment provider confirms settlement.
+- The detailed cancellation windows, refund matrix, and payment-provider workflow must be separately approved and published before launch; this draft does not invent rates or deadlines.
+
+## 8. Privacy and records
+- Collect only information needed to investigate and resolve a booking issue.
+- Restrict complaint evidence to authorized staff and retain it only under the published privacy/retention policy and applicable law.
+- Never expose a customer's or partner's identity documents, phone number, or live location in public reviews or unrelated account screens.
+
+## 9. Grievance handling
+- Provide an in-app Help/Report issue path with a complaint reference number and status.
+- Acknowledge grievances within 48 hours and aim to resolve them within 30 days, subject to applicable law and the complexity of the matter.
+- Publish a grievance contact and escalation route before production launch.
+
+## 10. Product and backend requirements before enforcement
+This policy is not implemented merely by adding this document. Before claiming enforcement, QuickFix must implement and test:
+- customer-facing policy acknowledgement and accessible Hindi/English policy screens;
+- itemized estimate, approval of extra work, invoice, receipt, and payment status;
+- complaint/report flow for both parties, evidence access controls, case status, and audit log;
+- admin review tools with reason codes, response/appeal handling, and role-based access;
+- server-side payment verification and idempotent booking/payment state transitions;
+- privacy, retention, abuse-prevention, and security rules;
+- tests proving a customer cannot alter payment status, erase a complaint, or access another user's case.
+
+**Important:** This is a product-policy draft, not legal advice. Have the final terms, consumer disclosures, privacy notice, and grievance process reviewed for applicable Indian law before production launch.
