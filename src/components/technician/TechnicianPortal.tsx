@@ -37,6 +37,7 @@ import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
+import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -597,6 +598,7 @@ export const TechnicianPortal: React.FC = () => {
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
+      <div className="p-4 pb-0"><CustomerComplaintPanel /></div>
       {/* Top Bar with Online Switch & Profile */}
       <header className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5">
