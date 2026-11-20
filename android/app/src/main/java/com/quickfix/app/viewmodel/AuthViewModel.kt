@@ -46,7 +46,7 @@ class AuthViewModel(
         }
     }
 
-    fun sendOtp(phoneNumber: String, activity: Activity) {
+    fun sendOtp(phoneNumber: String, activity: Activity, pendingUser: User) {
         _authState.value = AuthState.Loading
         repository.sendPhoneOtp(
             phoneNumber = phoneNumber,
@@ -71,14 +71,24 @@ class AuthViewModel(
                 _authState.value = AuthState.Error(errorMsg)
             },
             onAutoVerified = { credential ->
-                // Instant SMS auto retrieval
+                // Instant SMS auto-retrieval follows the same profile-creation path as manual OTP entry.
                 viewModelScope.launch {
                     try {
                         val uid = repository.signInWithCredential(credential)
                         val existing = repository.getUserProfile(uid)
-                        if (existing != null) {
-                            _authState.value = AuthState.Authenticated(existing)
+                        val verifiedUser = when {
+                            existing != null -> existing
+                            pendingUser.role == UserRole.CHANNEL_PARTNER -> {
+                                repository.registerChannelPartner(pendingUser.copy(uid = uid))
+                                repository.getUserProfile(uid)
+                                    ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
+                            }
+                            pendingUser.role == UserRole.CUSTOMER -> {
+                                pendingUser.copy(uid = uid).also { repository.saveUserProfile(it) }
+                            }
+                            else -> throw SecurityException("This account type cannot be registered from this screen.")
                         }
+                        _authState.value = AuthState.Authenticated(verifiedUser)
                     } catch (e: Exception) {
                         _authState.value = AuthState.Error(e.localizedMessage ?: "Verification error")
                     }
