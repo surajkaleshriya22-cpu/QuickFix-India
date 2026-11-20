@@ -71,6 +71,8 @@ class QuickFixViewModel : ViewModel() {
         _bookings.value = emptyList()
         _customers.value = emptyList()
         _technicians.value = emptyList()
+        _customerStartOtps.value = emptyMap()
+        _customerStartOtpStatus.value = emptyMap()
 
         if (firebaseUser == null) {
             _firestoreSyncStatus.value = "Sign in to load account data."
@@ -719,7 +721,7 @@ class QuickFixViewModel : ViewModel() {
                     } finally { connection.disconnect() }
                 }
             }.onSuccess { otp ->
-                if (otp.length == 6 && otp.all(Char::isDigit)) {
+                if (otp.length == 6 && otp.all { it.isDigit() }) {
                     _customerStartOtps.value = _customerStartOtps.value + (bookingId to otp)
                     _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "OTP उपलब्ध है")
                 } else {
@@ -734,7 +736,7 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String, onResult: (Boolean, String) -> Unit) {
-        if (enteredOtp.length != 6 || !enteredOtp.all(Char::isDigit)) {
+        if (enteredOtp.length != 6 || !enteredOtp.all { it.isDigit() }) {
             onResult(false, "कृपया ग्राहक से मिला 6 अंकों का OTP दर्ज करें.")
             return
         }
