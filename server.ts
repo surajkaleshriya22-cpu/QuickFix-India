@@ -18,6 +18,7 @@ import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from '
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
+import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
 
@@ -868,13 +869,13 @@ app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser,
     if (!bookingSnap.exists || bookingSnap.data()?.customerUid !== identity.uid) {
       return res.status(404).json({ success: false, error: 'Booking was not found for this customer.' });
     }
-    if (bookingSnap.data()?.status !== 'assigned' || !otpSnap.exists) {
+    if (!isStartOtpBookingStatus(bookingSnap.data()?.status) || !otpSnap.exists) {
       return res.status(409).json({ success: false, error: 'The service-start code is not available yet.' });
     }
     const otp = otpSnap.data()!;
     if (otp.customerUid !== identity.uid || otp.partnerUid !== bookingSnap.data()?.technicianUid ||
-        !['assigned', 'technician_en_route'].includes(String(bookingSnap.data()?.status || '')) ||
-        Date.parse(String(otp.expiresAt || '')) <= Date.now()) {
+        !isStartOtpBookingStatus(bookingSnap.data()?.status) ||
+        isStartOtpExpired(otp.expiresAt)) {
       return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
     }
     return res.json({ success: true, startOtp: String(otp.code) });
@@ -894,7 +895,7 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !/^\d{6}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !isValidStartOtp(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
     const bookingRef = db.collection('bookings').doc(bookingId);
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
@@ -906,7 +907,7 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
       const otp = otpSnap.data()!;
       if (booking.technicianUid !== identity.uid || otp.partnerUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
       if (!['assigned', 'technician_en_route'].includes(String(booking.status || ''))) throw new Error('INVALID_BOOKING_STATE');
-      if (Date.parse(String(otp.expiresAt || '')) <= Date.now()) throw new Error('OTP_EXPIRED');
+      if (isStartOtpExpired(otp.expiresAt)) throw new Error('OTP_EXPIRED');
       if (otp.code !== code) throw new Error('OTP_INVALID');
       transaction.update(bookingRef, { status: 'in_progress', serviceStartedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       transaction.delete(otpRef);
