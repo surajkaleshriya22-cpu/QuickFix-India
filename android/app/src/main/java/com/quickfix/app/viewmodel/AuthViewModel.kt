@@ -102,10 +102,19 @@ class AuthViewModel(
         pendingUser: User,
         onSuccess: (User) -> Unit
     ) {
+        val cleanOtp = otpCode.filter { it.isDigit() }
+        if (currentVerificationId.isBlank()) {
+            _authState.value = AuthState.Error("OTP session expired. Please request a new SMS code.")
+            return
+        }
+        if (cleanOtp.length != 6) {
+            _authState.value = AuthState.Error("Enter the complete 6-digit SMS OTP.")
+            return
+        }
         viewModelScope.launch {
             try {
                 _authState.value = AuthState.Loading
-                val credential = PhoneAuthProvider.getCredential(currentVerificationId, otpCode)
+                val credential = PhoneAuthProvider.getCredential(currentVerificationId, cleanOtp)
                 val uid = repository.signInWithCredential(credential)
 
                 // Check if profile exists, otherwise save new profile
