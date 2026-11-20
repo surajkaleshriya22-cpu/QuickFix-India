@@ -88,6 +88,17 @@ jobs:
       - name: Build debug APK
         run: gradle -p android assembleDebug --no-daemon
 
+      - name: Print APK signing certificate fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find android/app/build/outputs/apk/debug -name '*.apk' -print -quit)"
+          if [ -z "$apk" ]; then
+            echo "::error::Debug APK not found"
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
