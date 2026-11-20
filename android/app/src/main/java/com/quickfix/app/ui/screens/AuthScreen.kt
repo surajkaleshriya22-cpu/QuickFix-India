@@ -371,7 +371,17 @@ fun AuthScreen(
                                     (selectedRole != UserRole.CHANNEL_PARTNER || selectedTrades.isNotEmpty()))),
                             onClick = {
                                 activity?.let { act ->
-                                    authViewModel.sendOtp("+91 $phone", act)
+                                    val pendingUser = User(
+                                        phoneNumber = "+91 $phone",
+                                        displayName = displayName,
+                                        email = email,
+                                        role = selectedRole,
+                                        address = address,
+                                        city = city,
+                                        trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
+                                        experienceYears = experienceYears.toIntOrNull() ?: 5,
+                                    )
+                                    authViewModel.sendOtp("+91 $phone", act, pendingUser)
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
