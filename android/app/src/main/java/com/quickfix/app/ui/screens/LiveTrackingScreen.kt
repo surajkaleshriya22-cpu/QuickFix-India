@@ -46,7 +46,7 @@ fun LiveTrackingScreen(
     val partnerLiveLocations by viewModel.partnerLiveLocations.collectAsState()
     val booking = bookings.find { it.id == bookingId }
     LaunchedEffect(booking?.id, booking?.status) {
-        if (booking?.status in listOf("assigned", "technician_en_route")) viewModel.loadCustomerStartOtp(booking.id)
+        if (booking != null && booking.status in listOf("assigned", "technician_en_route")) viewModel.loadCustomerStartOtp(booking.id)
     }
     LaunchedEffect(bookingId, booking?.status) {
         if (booking?.status in listOf("assigned", "technician_en_route", "in_progress")) {
