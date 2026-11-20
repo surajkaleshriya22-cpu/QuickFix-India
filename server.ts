@@ -941,7 +941,7 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const db = getFirestore(firebaseAdminApp);
     const profileSnap = await db.collection('users').doc(identity.uid).get();
-    if (!profileSnap.exists || profileSnap.data()?.role !== 'CHANNEL_PARTNER') {
+    if (!profileSnap.exists || profileSnap.data()?.role !== 'technician') {
       return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
     }
     const [ownedByUid, ownedByLegacyId] = await Promise.all([
