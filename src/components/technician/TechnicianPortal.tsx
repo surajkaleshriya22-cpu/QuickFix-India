@@ -126,6 +126,8 @@ export const TechnicianPortal: React.FC = () => {
   const [loginPhone, setLoginPhone] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [jobActionLoading, setJobActionLoading] = useState(false);
+  const [jobActionError, setJobActionError] = useState('');
   const [acceptError, setAcceptError] = useState('');
   const [availableJobs, setAvailableJobs] = useState<Array<{
     id: string; serviceTitle: string; category: string; customerName: string;
