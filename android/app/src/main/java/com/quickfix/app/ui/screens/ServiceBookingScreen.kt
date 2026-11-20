@@ -190,8 +190,8 @@ fun ServiceBookingScreen(
                                 bookingError = "Please choose a valid date today or later."
                             } else if (!isValidQuantity) {
                                 bookingError = "Please enter a valid quantity greater than zero."
-                            } else if (address.isBlank()) {
-                                bookingError = "Please enter your complete service address."
+                            } else if (houseFlat.isBlank() || locality.isBlank() || landmark.isBlank() || !pincode.matches(Regex("^\\d{6}$"))) {
+                                bookingError = "Please enter house/flat, area/locality, landmark and a valid 6-digit PIN code."
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
                                 bookingError = "Please enter State, District and Tehsil."
                             } else {
