@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -405,16 +408,17 @@ fun TechnicianScreen(
                         // OTP Verification when assigned
                         if (booking.status != "in_progress" && booking.status != "completed") {
                             Divider(color = Color(0xFFE2E8F0))
-                            Text("Ask customer for 4-digit start OTP:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                            Text("ग्राहक से मिला 6-digit Start OTP दर्ज करें:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = enteredOtp,
                                     onValueChange = {
-                                        enteredOtp = it
+                                        enteredOtp = it.filter(Char::isDigit).take(6)
                                         otpError = null
                                     },
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Enter OTP shared by customer") },
+                                    placeholder = { Text("6-digit OTP") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                                     singleLine = true
                                 )
                                 Button(
@@ -428,6 +432,7 @@ fun TechnicianScreen(
                                             }
                                         }
                                     },
+                                    enabled = enteredOtp.length == 6,
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                                 ) {
                                     Text("Verify OTP")
