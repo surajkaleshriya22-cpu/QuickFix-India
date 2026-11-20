@@ -71,8 +71,8 @@ fun TechnicianScreen(
     }
 
     var acceptingJobId by remember { mutableStateOf<String?>(null) }
-    var enteredOtp by remember { mutableStateOf("") }
-    var otpError by remember { mutableStateOf<String?>(null) }
+    var enteredOtps by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var otpErrors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -369,6 +369,8 @@ fun TechnicianScreen(
             }
 
             myBookings.forEach { booking ->
+                val enteredOtp = enteredOtps[booking.id].orEmpty()
+                val otpError = otpErrors[booking.id]
                 Card(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
@@ -406,15 +408,15 @@ fun TechnicianScreen(
                         Text("Partner payout details unavailable until server-side settlement is enabled.", fontSize = 11.sp, color = TextSecondary)
 
                         // OTP Verification when assigned
-                        if (booking.status != "in_progress" && booking.status != "completed") {
+                        if (booking.status in listOf("assigned", "technician_en_route")) {
                             Divider(color = Color(0xFFE2E8F0))
                             Text("ग्राहक से मिला 6-digit Start OTP दर्ज करें:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = enteredOtp,
                                     onValueChange = {
-                                        enteredOtp = it.filter(Char::isDigit).take(6)
-                                        otpError = null
+                                        enteredOtps = enteredOtps + (booking.id to it.filter { char -> char.isDigit() }.take(6))
+                                        otpErrors = otpErrors - booking.id
                                     },
                                     modifier = Modifier.weight(1f),
                                     placeholder = { Text("6-digit OTP") },
@@ -425,10 +427,10 @@ fun TechnicianScreen(
                                     onClick = {
                                         viewModel.verifyStartOtp(booking.id, enteredOtp) { valid, message ->
                                             if (valid) {
-                                                enteredOtp = ""
-                                                otpError = null
+                                                enteredOtps = enteredOtps - booking.id
+                                                otpErrors = otpErrors - booking.id
                                             } else {
-                                                otpError = message
+                                                otpErrors = otpErrors + (booking.id to message)
                                             }
                                         }
                                     },
@@ -439,7 +441,7 @@ fun TechnicianScreen(
                                 }
                             }
                             if (otpError != null) {
-                                Text(otpError ?: "", color = Color(0xFFDC2626), fontSize = 11.sp)
+                                Text(otpError, color = Color(0xFFDC2626), fontSize = 11.sp)
                             }
                         }
 
