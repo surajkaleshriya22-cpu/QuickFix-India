@@ -777,6 +777,41 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
   }
 });
 
+// Return only the authenticated customer's own bookings; private OTPs are fetched separately.
+app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('bookings')
+      .where('customerUid', '==', identity.uid)
+      .limit(50)
+      .get();
+    const bookings = snapshot.docs.map((doc) => {
+      const booking = doc.data();
+      const createdAt = booking.createdAt && typeof booking.createdAt.toDate === 'function'
+        ? booking.createdAt.toDate().toISOString()
+        : String(booking.createdAt || '');
+      return {
+        id: doc.id,
+        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
+        category: String(booking.category || ''),
+        customerAddress: String(booking.customerAddress || booking.address || ''),
+        scheduledDate: String(booking.scheduledDate || ''),
+        scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
+        status: String(booking.status || 'requested'),
+        technicianName: String(booking.technicianName || ''),
+        technicianUid: String(booking.technicianUid || ''),
+        serviceDeadline: String(booking.serviceDeadline || ''),
+        createdAt
+      };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Customer booking feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Customer bookings could not be loaded securely.' });
+  }
+});
+
 // Customers can read only the live location attached to their own active booking.
 // Locations older than five minutes are deliberately reported as stale, not presented as live.
 app.get('/api/customer/bookings/:bookingId/partner-location', authenticateFirebaseUser, async (req: Request, res: Response) => {
