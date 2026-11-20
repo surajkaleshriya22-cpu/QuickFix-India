@@ -188,13 +188,14 @@ fun AuthScreen(
 
                         OutlinedTextField(
                             value = otpCode,
-                            onValueChange = { if (it.length <= 6) otpCode = it },
+                            onValueChange = { value -> otpCode = value.filter { it.isDigit() }.take(6) },
                             label = { Text("Verification OTP") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Button(
+                            enabled = otpCode.length == 6,
                             onClick = {
                                 val pendingUser = User(
                                     phoneNumber = "+91 $phone",
@@ -350,7 +351,7 @@ fun AuthScreen(
 
                         OutlinedTextField(
                             value = phone,
-                            onValueChange = { phone = it },
+                            onValueChange = { value -> phone = value.filter { it.isDigit() }.take(10) },
                             label = { Text("Mobile Number for Firebase OTP (+91)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth()
