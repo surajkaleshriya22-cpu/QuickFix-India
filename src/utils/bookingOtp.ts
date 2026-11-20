@@ -7,4 +7,4 @@ export const isStartOtpExpired = (expiresAt: unknown, nowMs = Date.now()): boole
 };
 
 export const isValidStartOtp = (value: unknown): value is string =>
-  typeof value === 'string' && /^\\d{6}$/.test(value);
+  typeof value === 'string' && /^\d{6}$/.test(value);
