@@ -78,7 +78,7 @@ export const CustomerHome: React.FC = () => {
         const result = await response.json();
         if (!response.ok || !result.success || !Array.isArray(result.bookings)) throw new Error(result.error || 'Bookings could not be loaded.');
         if (cancelled) return;
-        const mapped = result.bookings.map((item: any): Booking => ({
+        const mapped: Booking[] = (result.bookings as unknown[]).map((item: any): Booking => ({
           id: String(item.id || ''),
           serviceId: '',
           serviceTitle: String(item.serviceTitle || 'QuickFix Service'),
