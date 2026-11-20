@@ -46,7 +46,7 @@ fun LiveTrackingScreen(
     val partnerLiveLocations by viewModel.partnerLiveLocations.collectAsState()
     val booking = bookings.find { it.id == bookingId }
     LaunchedEffect(booking?.id, booking?.status) {
-        if (booking?.status == "assigned") viewModel.loadCustomerStartOtp(booking.id)
+        if (booking != null && booking.status in listOf("assigned", "technician_en_route")) viewModel.loadCustomerStartOtp(booking.id)
     }
     LaunchedEffect(bookingId, booking?.status) {
         if (booking?.status in listOf("assigned", "technician_en_route", "in_progress")) {
@@ -100,7 +100,7 @@ fun LiveTrackingScreen(
             ) {
                 // A start OTP is shown only after a trusted backend assigns and dispatches a partner.
                 val customerOtp = customerStartOtps[booking.id].orEmpty()
-                if (booking.status == "assigned" && customerOtp.isNotBlank()) {
+                if (booking.status in listOf("assigned", "technician_en_route") && customerOtp.isNotBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = DeepNavy),
                         shape = RoundedCornerShape(16.dp),
@@ -141,7 +141,11 @@ fun LiveTrackingScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            if (booking.status == "assigned") "Your partner is assigned. Refreshing your secure service-start code..." else "Your request is saved. A start OTP will appear only after a verified Channel Partner accepts the job.",
+                            when (booking.status) {
+                                "assigned", "technician_en_route" -> "Your partner is assigned / on the way. Loading your secure 6-digit service-start code..."
+                                "in_progress" -> "Service started. The start OTP has already been used."
+                                else -> "Your request is saved. A start OTP will appear only after a verified Channel Partner accepts the job."
+                            },
                             color = Color(0xFF1E40AF),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(14.dp)

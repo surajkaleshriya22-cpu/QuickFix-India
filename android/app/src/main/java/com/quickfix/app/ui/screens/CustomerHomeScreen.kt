@@ -38,6 +38,8 @@ fun CustomerHomeScreen(
     val currentCity by viewModel.currentCity.collectAsState()
     val services by viewModel.services.collectAsState()
     val bookings by viewModel.bookings.collectAsState()
+    val customerStartOtps by viewModel.customerStartOtps.collectAsState()
+    val customerStartOtpStatus by viewModel.customerStartOtpStatus.collectAsState()
 
     var selectedCategory by remember { mutableStateOf("all") }
     var showCityMenu by remember { mutableStateOf(false) }
@@ -48,7 +50,15 @@ fun CustomerHomeScreen(
         services.filter { it.category == selectedCategory }
     }
 
-    val activeBooking = bookings.firstOrNull { it.status != "completed" }
+    val activeBooking = bookings.firstOrNull { it.status in listOf("assigned", "technician_en_route") }
+        ?: bookings.firstOrNull { it.status == "in_progress" }
+        ?: bookings.firstOrNull { it.status !in listOf("completed", "cancelled") }
+
+    LaunchedEffect(activeBooking?.id, activeBooking?.status) {
+        if (activeBooking != null && activeBooking.status in listOf("assigned", "technician_en_route")) {
+            viewModel.loadCustomerStartOtp(activeBooking.id)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -234,10 +244,20 @@ fun CustomerHomeScreen(
                                     color = TextPrimary
                                 )
                                 Text(
-                                    "Technician: ${activeBooking.technicianName ?: "Allocating"} • Start OTP: ${activeBooking.startOtp}",
+                                    "Technician: ${activeBooking.technicianName ?: "Allocating"}",
                                     fontSize = 11.sp,
                                     color = TextSecondary
                                 )
+                                if (activeBooking.status in listOf("assigned", "technician_en_route")) {
+                                    val customerOtp = customerStartOtps[activeBooking.id]
+                                    Text(
+                                        if (customerOtp != null) "Service Start OTP: $customerOtp"
+                                        else customerStartOtpStatus[activeBooking.id] ?: "Service Start OTP लोड हो रहा है...",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BrandBlue
+                                    )
+                                }
                             }
                             Icon(
                                 Icons.Default.ChevronRight,

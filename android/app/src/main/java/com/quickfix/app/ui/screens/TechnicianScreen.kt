@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -68,8 +71,8 @@ fun TechnicianScreen(
     }
 
     var acceptingJobId by remember { mutableStateOf<String?>(null) }
-    var enteredOtp by remember { mutableStateOf("") }
-    var otpError by remember { mutableStateOf<String?>(null) }
+    var enteredOtps by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var otpErrors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -366,6 +369,8 @@ fun TechnicianScreen(
             }
 
             myBookings.forEach { booking ->
+                val enteredOtp = enteredOtps[booking.id].orEmpty()
+                val otpError = otpErrors[booking.id]
                 Card(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
@@ -403,38 +408,40 @@ fun TechnicianScreen(
                         Text("Partner payout details unavailable until server-side settlement is enabled.", fontSize = 11.sp, color = TextSecondary)
 
                         // OTP Verification when assigned
-                        if (booking.status != "in_progress" && booking.status != "completed") {
+                        if (booking.status in listOf("assigned", "technician_en_route")) {
                             Divider(color = Color(0xFFE2E8F0))
-                            Text("Ask customer for 4-digit start OTP:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                            Text("ग्राहक से मिला 6-digit Start OTP दर्ज करें:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = enteredOtp,
                                     onValueChange = {
-                                        enteredOtp = it
-                                        otpError = null
+                                        enteredOtps = enteredOtps + (booking.id to it.filter { char -> char in '0'..'9' }.take(6))
+                                        otpErrors = otpErrors - booking.id
                                     },
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Enter OTP shared by customer") },
+                                    placeholder = { Text("6-digit OTP") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                                     singleLine = true
                                 )
                                 Button(
                                     onClick = {
                                         viewModel.verifyStartOtp(booking.id, enteredOtp) { valid, message ->
                                             if (valid) {
-                                                enteredOtp = ""
-                                                otpError = null
+                                                enteredOtps = enteredOtps - booking.id
+                                                otpErrors = otpErrors - booking.id
                                             } else {
-                                                otpError = message
+                                                otpErrors = otpErrors + (booking.id to message)
                                             }
                                         }
                                     },
+                                    enabled = enteredOtp.length == 6,
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                                 ) {
                                     Text("Verify OTP")
                                 }
                             }
                             if (otpError != null) {
-                                Text(otpError ?: "", color = Color(0xFFDC2626), fontSize = 11.sp)
+                                Text(otpError, color = Color(0xFFDC2626), fontSize = 11.sp)
                             }
                         }
 
