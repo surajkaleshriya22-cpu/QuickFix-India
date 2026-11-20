@@ -415,7 +415,7 @@ fun TechnicianScreen(
                                 OutlinedTextField(
                                     value = enteredOtp,
                                     onValueChange = {
-                                        enteredOtps = enteredOtps + (booking.id to it.filter { char -> char.isDigit() }.take(6))
+                                        enteredOtps = enteredOtps + (booking.id to it.filter { char -> char in '0'..'9' }.take(6))
                                         otpErrors = otpErrors - booking.id
                                     },
                                     modifier = Modifier.weight(1f),
