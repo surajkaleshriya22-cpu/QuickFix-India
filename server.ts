@@ -581,7 +581,7 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     const bookingRef = db.collection('bookings').doc(bookingId);
     const auditRef = db.collection('partner_job_audit_logs').doc();
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
-    const startOtp = String(randomInt(0, 10000)).padStart(4, '0');
+    const startOtp = String(randomInt(0, 1000000)).padStart(6, '0');
     const acceptedAt = new Date();
     const deadline = new Date(acceptedAt.getTime() + 60 * 60 * 1000);
 
@@ -838,7 +838,9 @@ app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser,
       return res.status(409).json({ success: false, error: 'The service-start code is not available yet.' });
     }
     const otp = otpSnap.data()!;
-    if (otp.customerUid !== identity.uid || Date.parse(String(otp.expiresAt || '')) <= Date.now()) {
+    if (otp.customerUid !== identity.uid || otp.partnerUid !== bookingSnap.data()?.technicianUid ||
+        !['assigned', 'technician_en_route'].includes(String(bookingSnap.data()?.status || '')) ||
+        Date.parse(String(otp.expiresAt || '')) <= Date.now()) {
       return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
     }
     return res.json({ success: true, startOtp: String(otp.code) });
@@ -848,14 +850,17 @@ app.get('/api/customer/bookings/:bookingId/start-otp', authenticateFirebaseUser,
   }
 });
 
+// Limit OTP guesses per client before Firebase authentication and transaction work.
+const partnerOtpStartLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many OTP attempts. Please wait 15 minutes and try again.' } });
+
 // Assigned partner verifies the customer-shared OTP; the transition is atomic and one-time.
-app.post('/api/partners/bookings/:bookingId/start', authenticateFirebaseUser, async (req: Request, res: Response) => {
+app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    if (!/^\d{4}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the 4-digit customer OTP.' });
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !/^\d{6}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
     const bookingRef = db.collection('bookings').doc(bookingId);
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
