@@ -72,7 +72,7 @@ export const CustomerHome: React.FC = () => {
         const token = await user.getIdToken();
         const response = await fetch('/api/customer/bookings/' + encodeURIComponent(activeBooking.id) + '/start-otp', { headers: { Authorization: 'Bearer ' + token } });
         const result = await response.json();
-        if (!cancelled && response.ok && result.success && /^\\d{6}$/.test(String(result.startOtp || ''))) setServerStartOtp(String(result.startOtp));
+        if (!cancelled && response.ok && result.success && /^\d{6}$/.test(String(result.startOtp || ''))) setServerStartOtp(String(result.startOtp));
       } catch { if (!cancelled) setServerStartOtp(''); }
     };
     void loadStartOtp();
@@ -162,9 +162,7 @@ export const CustomerHome: React.FC = () => {
                   <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">
                     {activeBooking.status.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">
-                    {serverStartOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {serverStartOtp}</span>}
-                  </span>
+                  {serverStartOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {serverStartOtp}</span>}
                 </div>
                 <h4 className="text-xs font-bold truncate max-w-[190px]">{activeBooking.serviceTitle}</h4>
                 <p className="text-[11px] text-blue-200">{activeBooking.technicianName} is on the way</p>
