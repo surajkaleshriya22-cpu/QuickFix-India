@@ -933,6 +933,45 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
 
 // Customers can read only the live location attached to their own active booking.
 // Locations older than five minutes are deliberately reported as stale, not presented as live.
+// Return the authenticated Channel Partner's own assigned booking history for complaint selection.
+// Query by both current UID and legacy technicianId, then deduplicate and expose only safe display fields.
+app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    if (!profileSnap.exists || profileSnap.data()?.role !== 'CHANNEL_PARTNER') {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
+    }
+    const [ownedByUid, ownedByLegacyId] = await Promise.all([
+      db.collection('bookings').where('technicianUid', '==', identity.uid).limit(50).get(),
+      db.collection('bookings').where('technicianId', '==', identity.uid).limit(50).get()
+    ]);
+    const unique = new Map<string, QueryDocumentSnapshot>();
+    [...ownedByUid.docs, ...ownedByLegacyId.docs].forEach(document => unique.set(document.id, document));
+    const bookings = [...unique.values()].map(document => {
+      const booking = document.data();
+      const createdAt = booking.createdAt && typeof booking.createdAt.toDate === 'function'
+        ? booking.createdAt.toDate().toISOString()
+        : String(booking.createdAt || '');
+      return {
+        id: document.id,
+        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
+        category: String(booking.category || ''),
+        scheduledDate: String(booking.scheduledDate || ''),
+        scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
+        status: String(booking.status || 'requested'),
+        createdAt
+      };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Partner complaint booking feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner booking history could not be loaded securely.' });
+  }
+});
+
 app.get('/api/customer/bookings/:bookingId/partner-location', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure location service is temporarily unavailable.' });
