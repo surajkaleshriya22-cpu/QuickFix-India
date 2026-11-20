@@ -210,7 +210,7 @@ export const CustomerHome: React.FC = () => {
                   <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">
                     {activeBooking.status.replace(/_/g, ' ')}
                   </span>
-                  {activeBooking.startOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {activeBooking.startOtp}</span>}
+                  {serverBookingsLoaded && activeBooking.startOtp && <span className="text-[10px] bg-blue-800 text-blue-200 px-1.5 py-0.2 rounded font-mono">OTP: {activeBooking.startOtp}</span>}
                 </div>
                 <h4 className="text-xs font-bold truncate max-w-[190px]">{activeBooking.serviceTitle}</h4>
                 <p className="text-[11px] text-blue-200">{activeBooking.technicianName} is on the way</p>
