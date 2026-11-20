@@ -34,6 +34,7 @@ class AuthRepository(
         get() = auth.currentUser != null
 
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
+    private var resendTokenPhoneNumber: String? = null
 
     /**
      * Ensures strict E.164 phone format (+[countryCode][number]) without spaces or symbols.
@@ -75,11 +76,19 @@ class AuthRepository(
                     token: PhoneAuthProvider.ForceResendingToken
                 ) {
                     resendToken = token
+                    resendTokenPhoneNumber = formattedNumber
                     onCodeSent(verificationId)
                 }
             })
 
-        resendToken?.let { builder.setForceResendingToken(it) }
+        // A Firebase resend token is tied to the phone number that received it.
+        // Never reuse it after the user switches to a different number.
+        if (resendTokenPhoneNumber == formattedNumber) {
+            resendToken?.let { builder.setForceResendingToken(it) }
+        } else {
+            resendToken = null
+            resendTokenPhoneNumber = null
+        }
         PhoneAuthProvider.verifyPhoneNumber(builder.build())
     }
 
