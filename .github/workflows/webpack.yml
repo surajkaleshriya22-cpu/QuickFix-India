@@ -54,6 +54,9 @@ jobs:
           npm explain @grpc/grpc-js || true
           exit "${audit_exit:-0}"
 
+      - name: Run regression tests
+        run: npm test
+
       - name: TypeScript check
         run: npm run lint
 
