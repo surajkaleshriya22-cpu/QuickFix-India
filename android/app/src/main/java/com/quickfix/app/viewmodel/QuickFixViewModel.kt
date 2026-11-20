@@ -187,6 +187,8 @@ class QuickFixViewModel : ViewModel() {
 
     private val _customerStartOtps = MutableStateFlow<Map<String, String>>(emptyMap())
     val customerStartOtps: StateFlow<Map<String, String>> = _customerStartOtps.asStateFlow()
+    private val _customerStartOtpStatus = MutableStateFlow<Map<String, String>>(emptyMap())
+    val customerStartOtpStatus: StateFlow<Map<String, String>> = _customerStartOtpStatus.asStateFlow()
 
     private val _bookings = MutableStateFlow<List<Booking>>(emptyList())
     val bookings: StateFlow<List<Booking>> = _bookings.asStateFlow()
@@ -690,7 +692,12 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun loadCustomerStartOtp(bookingId: String) {
-        val user = auth.currentUser ?: return
+        val user = auth.currentUser
+        if (user == null) {
+            _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "पहले sign in करें.")
+            return
+        }
+        _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "OTP लोड हो रहा है...")
         viewModelScope.launch {
             runCatching {
                 val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
@@ -707,17 +714,30 @@ class QuickFixViewModel : ViewModel() {
                         val stream = if (status in 200..299) connection.inputStream else connection.errorStream
                         val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
                         val json = org.json.JSONObject(body)
-                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "OTP is not available yet." })
+                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "OTP अभी उपलब्ध नहीं है." })
                         json.optString("startOtp")
                     } finally { connection.disconnect() }
                 }
             }.onSuccess { otp ->
-                if (otp.matches(Regex("\\d{4}"))) _customerStartOtps.value = _customerStartOtps.value + (bookingId to otp)
+                if (otp.length == 6 && otp.all(Char::isDigit)) {
+                    _customerStartOtps.value = _customerStartOtps.value + (bookingId to otp)
+                    _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "OTP उपलब्ध है")
+                } else {
+                    _customerStartOtps.value = _customerStartOtps.value - bookingId
+                    _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to "सर्वर से सही 6-digit OTP नहीं मिला.")
+                }
+            }.onFailure { error ->
+                _customerStartOtps.value = _customerStartOtps.value - bookingId
+                _customerStartOtpStatus.value = _customerStartOtpStatus.value + (bookingId to (error.localizedMessage ?: "OTP लोड नहीं हो सका."))
             }
         }
     }
 
     fun verifyStartOtp(bookingId: String, enteredOtp: String, onResult: (Boolean, String) -> Unit) {
+        if (enteredOtp.length != 6 || !enteredOtp.all(Char::isDigit)) {
+            onResult(false, "कृपया ग्राहक से मिला 6 अंकों का OTP दर्ज करें.")
+            return
+        }
         val user = auth.currentUser
         if (user == null) { onResult(false, "पहले sign in करें."); return }
         viewModelScope.launch {
