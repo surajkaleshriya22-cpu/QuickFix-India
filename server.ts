@@ -1114,6 +1114,33 @@ app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, asyn
   }
 });
 
+const dispatchPartnerSafetySms = async (to: string, partnerName: string, incidentId: string): Promise<boolean> => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  if (!accountSid || !authToken || !fromNumber) return false;
+  if (!/^\+?[1-9]\d{9,14}$/.test(to) || !/^\+[1-9]\d{7,14}$/.test(fromNumber)) return false;
+  const body = new URLSearchParams({
+    To: to,
+    From: fromNumber,
+    Body: 'QuickFix safety alert: ' + partnerName + ' has requested urgent assistance during a service booking. Incident ID: ' + incidentId + '. Please contact them directly. If there is immediate danger, contact local emergency services.'
+  });
+  const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error('Partner safety SMS provider rejected the request:', response.status, detail.slice(0, 500));
+    return false;
+  }
+  return true;
+};
+
 app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
@@ -1131,11 +1158,19 @@ app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Reque
     const bookingRef = db.collection('bookings').doc(bookingId);
     const partnerRef = db.collection('users').doc(identity.uid);
     const incidentRef = db.collection('partner_safety_incidents').doc();
+    let emergencyContact: { name: string; phone: string; consentConfirmed: boolean } | null = null;
+    let partnerDisplayName = 'QuickFix Channel Partner';
     await db.runTransaction(async transaction => {
       const [bookingSnap, partnerSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(partnerRef)]);
       if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(partnerSnap.data()?.role || ''))) {
         throw new Error('PARTNER_PROFILE_REQUIRED');
       }
+      const partnerData = partnerSnap.data()!;
+      const contact = partnerData.emergencyContact;
+      if (contact && contact.consentConfirmed === true && typeof contact.phone === 'string' && typeof contact.name === 'string') {
+        emergencyContact = { name: contact.name, phone: contact.phone, consentConfirmed: true };
+      }
+      partnerDisplayName = String(partnerData.displayName || partnerData.name || 'QuickFix Channel Partner').slice(0, 80);
       if (!bookingSnap.exists ||
           (bookingSnap.data()?.technicianUid !== identity.uid && bookingSnap.data()?.technicianId !== identity.uid) ||
           !['assigned', 'technician_en_route', 'in_progress'].includes(String(bookingSnap.data()?.status || ''))) {
@@ -1158,10 +1193,30 @@ app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Reque
         incidentId: incidentRef.id, createdAt: FieldValue.serverTimestamp()
       });
     });
+    let alertDispatched = false;
+    let alertStatus = 'not_configured_or_no_consented_emergency_contact';
+    if (emergencyContact?.consentConfirmed) {
+      try {
+        alertDispatched = await dispatchPartnerSafetySms(emergencyContact.phone, partnerDisplayName, incidentRef.id);
+        alertStatus = alertDispatched ? 'sms_accepted_by_provider' : 'provider_not_configured_or_rejected';
+      } catch (smsError) {
+        console.error('Partner safety SMS dispatch failed:', smsError);
+        alertStatus = 'provider_request_failed';
+      }
+    }
+    await incidentRef.update({
+      alertDispatched,
+      alertChannel: alertDispatched ? 'sms' : null,
+      alertStatus,
+      alertAttemptedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
     return res.status(201).json({
       success: true, incidentId: incidentRef.id, status: 'open',
-      alertDispatched: false,
-      message: 'SOS incident recorded for the QuickFix safety dashboard. Emergency calling/SMS is not yet connected.'
+      alertDispatched,
+      message: alertDispatched
+        ? 'SOS incident recorded. SMS request was accepted by the configured messaging provider; delivery is not guaranteed.'
+        : 'SOS incident recorded for the QuickFix safety dashboard. SMS was not sent; check provider configuration and the partner emergency contact.'
     });
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
