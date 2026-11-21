@@ -17,12 +17,12 @@ export const PartnerSafetyPanel: React.FC<Props> = ({ bookingId }) => {
       const token=await user.getIdToken();
       const response=await fetch('/api/partners/safety/emergency-contact',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name,phone,consentConfirmed:consent})});
       const result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'Emergency contact save नहीं हुआ।');
-      setFeedback('Emergency contact सुरक्षित रूप से सेव हो गया। अभी कोई SMS या कॉल नहीं भेजी जाती।');
+      setFeedback('Emergency contact सुरक्षित रूप से सेव हो गया। SOS पर SMS तभी भेजा जा सकता है जब provider और emergency contact सेट हों।');
     }catch(e){setError(e instanceof Error?e.message:'Contact save नहीं हुआ।');}finally{setBusy(false);}
   };
   const sendSos=async()=>{
     if(!bookingId){setError('SOS दर्ज करने के लिए आपकी active assigned booking उपलब्ध नहीं है। तत्काल खतरे में स्थानीय emergency services/police को सीधे कॉल करें।');return;}
-    if(!window.confirm('क्या आप इस active booking के लिए QuickFix safety incident दर्ज करना चाहते हैं? यह अपने-आप पुलिस या emergency contact को कॉल/SMS नहीं करता।'))return;
+    if(!window.confirm('क्या आप इस active booking के लिए SOS दर्ज करना चाहते हैं? यदि emergency contact और SMS provider सेट हैं, तो उन्हें SMS भेजने की कोशिश होगी। यह पुलिस या emergency services को कॉल नहीं करता।'))return;
     setBusy(true);setError('');setFeedback('');
     try{
       const user=auth.currentUser;if(!user)throw new Error('Partner login session नहीं मिला।');
