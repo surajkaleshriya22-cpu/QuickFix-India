@@ -1379,22 +1379,79 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
         incidentType,
         message: typeof message === 'string' ? message.trim().slice(0, 500) : '',
         status: 'received_pending_review',
+        adminSmsStatus: 'pending',
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       });
-      return { status: 'created' as const, incidentId: incidentRef.id };
+      return { status: 'created' as const, incidentId: incidentRef.id, reporterRole: isCustomer ? 'CUSTOMER' : 'CHANNEL_PARTNER' };
     });
 
     if (result.status === 'not_found') return res.status(404).json({ success: false, error: 'Booking not found.' });
     if (result.status === 'forbidden') return res.status(403).json({ success: false, error: 'Only the customer or assigned Channel Partner can report an incident for this booking.' });
     if (result.status === 'inactive') return res.status(409).json({ success: false, error: 'Emergency reporting is available only during an active assigned booking.' });
+
+    let adminSmsStatus: 'sent' | 'failed' | 'not_configured' = 'not_configured';
+    if (result.status === 'created') {
+      const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+      const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+      const fromNumber = process.env.TWILIO_FROM_NUMBER?.trim();
+      const adminNumber = process.env.SOS_ADMIN_ALERT_TO?.trim();
+      const validE164 = (value: string | undefined) => Boolean(value && /^\\+[1-9]\\d{7,14}$/.test(value));
+      if (accountSid && authToken && validE164(fromNumber) && validE164(adminNumber)) {
+        try {
+          const form = new URLSearchParams({
+            To: adminNumber!,
+            From: fromNumber!,
+            Body: `QuickFix SOS report received. Incident: ${result.incidentId}. Booking: ${bookingId}. Reporter: ${result.reporterRole}. Type: ${incidentType}. Review in the secured QuickFix admin system. This is an admin alert, not emergency dispatch.`
+          });
+          const twilioResponse = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: form,
+              signal: AbortSignal.timeout(8000)
+            }
+          );
+          if (!twilioResponse.ok) {
+            const providerError = await twilioResponse.json().catch(() => ({})) as { code?: number };
+            console.error('SOS admin SMS provider rejected the alert:', providerError.code ?? twilioResponse.status);
+            adminSmsStatus = 'failed';
+          } else {
+            adminSmsStatus = 'sent';
+          }
+        } catch (smsError) {
+          console.error('SOS admin SMS delivery attempt failed:', smsError);
+          adminSmsStatus = 'failed';
+        }
+      }
+      await incidentRef.set({
+        adminSmsStatus,
+        adminSmsUpdatedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+    } else {
+      const savedIncident = await incidentRef.get();
+      const savedStatus = savedIncident.data()?.adminSmsStatus;
+      if (savedStatus === 'sent' || savedStatus === 'failed' || savedStatus === 'not_configured') {
+        adminSmsStatus = savedStatus;
+      }
+    }
+
     return res.status(result.status === 'created' ? 202 : 200).json({
       success: true,
       incidentId: result.incidentId,
       duplicate: result.status === 'duplicate',
       status: 'received_pending_review',
+      adminSmsStatus,
+      adminSmsConfigured: adminSmsStatus === 'sent',
       emergencyDispatchConfigured: false,
-      message: 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Emergency services या contact को सूचना भेजे जाने की पुष्टि नहीं है। तत्काल खतरे में स्थानीय आपातकालीन सेवा से सीधे संपर्क करें।'
+      message: adminSmsStatus === 'sent'
+        ? 'Safety report QuickFix में दर्ज हुई और Admin SMS alert भेजा गया। यह police/ambulance/emergency-contact dispatch नहीं है। तत्काल खतरे में 112 call करें।'
+        : 'Safety report QuickFix में दर्ज हुई। Admin SMS alert अभी भेजा नहीं जा सका या configure नहीं है। Emergency services/contact alerts जुड़े नहीं हैं; तत्काल खतरे में 112 call करें।'
     });
   } catch (error) {
     console.error('Secure SOS incident intake failed:', error);
