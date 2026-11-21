@@ -50,7 +50,6 @@ This is verification and secure storage only. It does **not yet send SOS alerts 
 ## Not implemented by this integration
 
 - Emergency contact SMS notifications on SOS, contact opt-out/notification preferences, and delivery receipts/retry queue.
-- Admin Dashboard incident inbox / acknowledgement workflow.
 - Police/ambulance dispatch, call-centre escalation, or automatic 112 calling.
 - Delivery receipts or retry queue for messages accepted/rejected by Twilio.
 
