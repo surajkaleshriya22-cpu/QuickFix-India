@@ -20,11 +20,24 @@
 
 ## 3. Respectful and safe conduct
 Customers must not:
-- abuse, threaten, harass, intimidate, or physically harm a partner;
+- abuse, threaten, harass, intimidate, stalk, or physically harm a partner;
 - use caste, religion, sex, disability, language, or other personal characteristics to demean or discriminate;
 - pressure a partner into unpaid work, unrelated personal tasks, or unauthorized work;
-- request illegal, unsafe, or out-of-scope services;
-- misuse, publish, or share a partner's private phone number, identity documents, images, or location without permission.
+- demand work outside the confirmed booking, force a price change, or prevent a partner from leaving after the agreed work is stopped or completed;
+- request illegal, dangerous, or out-of-scope services, or ask a partner to handle unsafe equipment/conditions without appropriate safeguards;
+- give a deliberately false address, impersonate another customer, create a deceptive booking, or arrange a visit for an undisclosed person/location;
+- withhold payment for authorized completed work without raising a genuine, documented dispute through QuickFix;
+- confiscate or threaten to damage a partner's phone, tools, vehicle, documents, or personal belongings;
+- misuse, publish, record, or share a partner's private phone number, identity documents, images, conversations, or live location without permission or lawful basis;
+- retaliate against a partner for refusing unsafe, illegal, unpaid, or out-of-scope work, or for reporting a safety concern.
+
+**Partner safety rights and safeguards**
+- A partner may refuse, pause, or leave a visit where there is a credible threat, harassment, violence, an unsafe environment, an address/person mismatch, or pressure to perform illegal, unpaid, or unapproved work. The partner must be able to report the reason without automatic penalty.
+- Before travel, show the partner the verified booking summary, service address, customer contact method, requested work, and approved estimate. Do not disclose unrelated customer identity documents.
+- Provide a booking-linked check-in/arrival and work-status trail. Where the partner opts in, allow active-duty location sharing with designated safety staff or a chosen emergency contact, with clear start/stop controls.
+- Provide an SOS/help route that records the incident and booking context. Until a real emergency-response integration is deployed and tested, clearly state that the in-app SOS does not itself contact police, ambulance, or emergency contacts.
+- Keep partner evidence and incident reports private, restrict access to authorized reviewers, and give the partner a way to see the case status and submit a response.
+- Do not automatically deduct wallet funds, withhold earned amounts, suspend, or deactivate a partner merely because a customer complained. Any interim restriction must be risk-based, time-limited where possible, reviewed by an authorized person, and communicated with a response/appeal route.
 
 Partners are also required to treat customers respectfully, follow the agreed scope and price, protect customer data, and not threaten, harass, discriminate against, or pressure customers.
 
