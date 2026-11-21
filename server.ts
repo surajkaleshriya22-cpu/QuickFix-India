@@ -572,6 +572,9 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       return res.status(503).json({ success: false, error: 'Secure job acceptance is temporarily unavailable.' });
     }
     const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) {
+      return res.status(403).json({ success: false, error: 'Verified mobile number is required to submit an emergency report.' });
+    }
     const bookingId = String(req.params.bookingId || '');
     if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId)) {
       return res.status(400).json({ success: false, error: 'Booking ID is invalid.' });
