@@ -63,6 +63,7 @@ import { useQuickFix } from '../../context/QuickFixContext';
 import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, PaymentStatus, PaymentMethod } from '../../types';
 import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
+import { AdminSafetyIncidentsSection } from './AdminSafetyIncidentsSection';
 import { auth } from '../../lib/firebase';
 
 export const AdminDashboard: React.FC = () => {
@@ -112,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates'
+    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates' | 'safety'
   >('overview');
 
   // Search & Filter States
@@ -775,6 +776,14 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => { setActiveTab('safety'); setSearchQuery(''); }}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === 'safety' ? 'bg-rose-700 text-white shadow-xs font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Safety & SOS</span>
+          </button>
+
+          <button
             onClick={() => { setActiveTab('firebase'); setSearchQuery(''); }}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
               activeTab === 'firebase'
@@ -791,6 +800,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Content Viewport */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === 'rates' && <AdminRateCardsSection />}
+        {activeTab === 'safety' && <AdminSafetyIncidentsSection />}
 
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (

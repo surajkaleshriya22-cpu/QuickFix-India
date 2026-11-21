@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Phone, Mail, MapPin, Shield, LogOut, Check, Plus, Edit2, ShieldCheck, Wrench, Zap } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
+import { EmergencyContactsSection } from './EmergencyContactsSection';
 
 interface UserProfileDrawerProps {
   onClose: () => void;
@@ -53,7 +54,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
         return (
           <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Wrench className="w-3 h-3 text-blue-600" />
-            <span>Technician Partner</span>
+            <span>Channel Partner</span>
           </span>
         );
       default:
@@ -128,6 +129,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
               <span className="text-emerald-700 font-semibold">Firebase Authenticated</span>
             </div>
           </div>
+
+          {isAuthenticated && currentUser?.role !== 'admin' && <EmergencyContactsSection />}
 
           {/* Saved Addresses Section (for Customer) */}
           <div className="space-y-2">

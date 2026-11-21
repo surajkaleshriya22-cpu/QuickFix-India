@@ -37,6 +37,7 @@ import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
+import { BookingSosButton } from '../shared/BookingSosButton';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -1229,6 +1230,8 @@ export const TechnicianPortal: React.FC = () => {
                 </div>
               )}
             </div>
+
+            <BookingSosButton bookingId={currentActiveJob.id} reporterRole="partner" />
 
             {/* Customer Details & Call Action */}
             <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">

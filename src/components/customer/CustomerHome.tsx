@@ -32,6 +32,7 @@ import { ReviewModal } from './ReviewModal';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
 import { INDIAN_CITIES } from '../../data/mockData';
+import { BookingSosButton } from '../shared/BookingSosButton';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -221,6 +222,10 @@ export const CustomerHome: React.FC = () => {
               <ChevronRight className="w-4 h-4" />
             </div>
           </div>
+        )}
+
+        {activeBooking && ['assigned', 'technician_en_route', 'in_progress'].includes(activeBooking.status) && (
+          <BookingSosButton bookingId={activeBooking.id} reporterRole="customer" />
         )}
 
         {/* Hero Promo Banner */}

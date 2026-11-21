@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.quickfix.app.data.model.ServiceItem
 import com.quickfix.app.viewmodel.QuickFixViewModel
@@ -35,6 +36,8 @@ fun CustomerHomeScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val context = LocalContext.current
+    var sosStatus by remember { mutableStateOf("") }
     val currentCity by viewModel.currentCity.collectAsState()
     val services by viewModel.services.collectAsState()
     val bookings by viewModel.bookings.collectAsState()
@@ -264,6 +267,38 @@ fun CustomerHomeScreen(
                                 contentDescription = "Track",
                                 tint = BrandBlue
                             )
+                        }
+                    }
+                }
+            }
+
+            if (activeBooking != null && activeBooking.status in listOf("assigned", "technician_en_route", "in_progress")) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F2)),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SOS / ग्राहक सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239))
+                            Text("आपकी safety report QuickFix में save होगी. Emergency team/contact alerts अभी connected नहीं हैं.", fontSize = 11.sp, color = Color(0xFF881337))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                Button(
+                                    onClick = {
+                                        viewModel.submitBookingSafetyReport(activeBooking.id) { success, message -> sosStatus = message }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))
+                                ) { Text("SOS Report") }
+                                OutlinedButton(
+                                    onClick = {
+                                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:112")))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("Call 112") }
+                            }
+                            if (sosStatus.isNotBlank()) Text(sosStatus, fontSize = 11.sp, color = TextPrimary)
                         }
                     }
                 }
