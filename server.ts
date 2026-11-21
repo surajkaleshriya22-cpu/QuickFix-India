@@ -1084,6 +1084,117 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
   }
 });
 
+// Partner emergency contact and SOS records. This creates an auditable incident;
+// it does not claim to send an SMS/call until a verified notification provider is configured.
+app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { name, phone, consentConfirmed } = req.body ?? {};
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100 ||
+        typeof phone !== 'string' || !/^\\+?[1-9]\\d{9,14}$/.test(phone.trim()) ||
+        consentConfirmed !== true) {
+      return res.status(400).json({ success: false, error: 'Enter a valid emergency contact and confirm their consent.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(userSnap.data()?.role || ''))) {
+      return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    }
+    await userRef.update({
+      emergencyContact: { name: name.trim(), phone: phone.trim(), consentConfirmed: true, updatedAt: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.json({ success: true, saved: true, message: 'Emergency contact saved. No alert is sent by this setup action.' });
+  } catch (error) {
+    console.error('Partner emergency contact update failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be saved securely.' });
+  }
+});
+
+app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { bookingId, message, latitude, longitude } = req.body ?? {};
+    if (typeof bookingId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) ||
+        (message !== undefined && (typeof message !== 'string' || message.trim().length > 1000))) {
+      return res.status(400).json({ success: false, error: 'A valid active booking and optional short message are required.' });
+    }
+    const validPoint = latitude === undefined && longitude === undefined ||
+      typeof latitude === 'number' && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
+      typeof longitude === 'number' && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+    if (!validPoint) return res.status(400).json({ success: false, error: 'Location coordinates are invalid.' });
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const incidentRef = db.collection('partner_safety_incidents').doc();
+    await db.runTransaction(async transaction => {
+      const [bookingSnap, partnerSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(partnerRef)]);
+      if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(partnerSnap.data()?.role || ''))) {
+        throw new Error('PARTNER_PROFILE_REQUIRED');
+      }
+      if (!bookingSnap.exists || bookingSnap.data()?.technicianUid !== identity.uid ||
+          !['assigned', 'technician_en_route', 'in_progress'].includes(String(bookingSnap.data()?.status || ''))) {
+        throw new Error('ACTIVE_ASSIGNED_BOOKING_REQUIRED');
+      }
+      transaction.create(incidentRef, {
+        bookingId,
+        partnerUid: identity.uid,
+        customerUid: String(bookingSnap.data()?.customerUid || ''),
+        status: 'open',
+        priority: 'urgent',
+        message: typeof message === 'string' ? message.trim().slice(0, 1000) : '',
+        ...(validPoint && typeof latitude === 'number' && typeof longitude === 'number'
+          ? { location: { latitude, longitude }, locationCapturedAt: FieldValue.serverTimestamp() } : {}),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(db.collection('partner_job_audit_logs').doc(), {
+        action: 'partner_safety_sos_triggered', bookingId, partnerUid: identity.uid,
+        incidentId: incidentRef.id, createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.status(201).json({
+      success: true, incidentId: incidentRef.id, status: 'open',
+      alertDispatched: false,
+      message: 'SOS incident recorded for the QuickFix safety dashboard. Emergency calling/SMS is not yet connected.'
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_PROFILE_REQUIRED') return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (code === 'ACTIVE_ASSIGNED_BOOKING_REQUIRED') return res.status(403).json({ success: false, error: 'SOS can be linked only to your own active assigned booking.' });
+    console.error('Partner SOS recording failed:', error);
+    return res.status(500).json({ success: false, error: 'SOS incident could not be recorded.' });
+  }
+});
+
+app.get('/api/admin/partner-safety/incidents', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Safety dashboard is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('partner_safety_incidents')
+      .orderBy('createdAt', 'desc').limit(100).get();
+    const incidents = snapshot.docs.map(document => {
+      const item = document.data();
+      const createdAt = item.createdAt && typeof item.createdAt.toDate === 'function'
+        ? item.createdAt.toDate().toISOString() : null;
+      return {
+        id: document.id, bookingId: String(item.bookingId || ''),
+        partnerUid: String(item.partnerUid || ''), status: String(item.status || 'open'),
+        priority: String(item.priority || 'urgent'), message: String(item.message || ''),
+        location: item.location && typeof item.location.latitude === 'number' && typeof item.location.longitude === 'number'
+          ? item.location : null,
+        createdAt
+      };
+    });
+    return res.json({ success: true, incidents });
+  } catch (error) {
+    console.error('Admin partner safety incident list failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incidents could not be loaded.' });
+  }
+});
+
 // Assigned partner marks a started job complete; payment and wallet settlement remain separate.
 app.post('/api/partners/bookings/:bookingId/complete', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
