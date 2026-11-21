@@ -40,7 +40,7 @@ The Admin Dashboard intentionally does not display reporter phone numbers, full 
 The customer/partner profile drawer exposes a shared Emergency Contact section. The signed-in account must itself have a verified Firebase phone number. The owner can add up to three contacts and must confirm that each person agreed to have their number added and verified.
 
 - `POST /api/me/emergency-contacts/send-otp` validates E.164, prevents adding the account's own number, requires explicit consent, and sends a 6-digit OTP using the configured Twilio sender.
-- OTPs expire after 5 minutes, are stored only as salted SHA-256 hashes, allow at most 5 verification attempts, enforce a 60-second resend cooldown, cap sends at 3 per contact per hour and 5 per account per hour.
+- OTPs expire after 5 minutes, are stored only as HMAC-SHA-256 hashes keyed with the server-side Twilio auth token (plus a per-challenge salt), allow at most 5 verification attempts, enforce a 60-second resend cooldown, cap sends at 3 per contact per hour and 5 per account per hour.
 - `POST /api/me/emergency-contacts/verify` verifies the code server-side and marks the contact verified.
 - `GET /api/me/emergency-contacts` returns only masked numbers and basic status. `DELETE /api/me/emergency-contacts/:contactId` removes only the signed-in owner's contact.
 - Contact and OTP collections are server-owned; Firestore client rules deny direct access.
