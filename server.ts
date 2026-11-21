@@ -1330,6 +1330,75 @@ async function runFirestoreStartupProbe() {
   }
 }
 
+// Two-sided SOS intake. This records an authenticated incident against an active booking;
+// it does not claim emergency services or contacts were notified.
+app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) {
+      return res.status(503).json({ success: false, error: 'Secure emergency reporting is temporarily unavailable.' });
+    }
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = String(req.params.bookingId || '');
+    const { requestId, incidentType, message } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{8,100}$/.test(bookingId) ||
+        typeof requestId !== 'string' || !/^[A-Za-z0-9_-]{12,100}$/.test(requestId) ||
+        !['safety_concern', 'medical_emergency', 'harassment', 'other'].includes(incidentType) ||
+        (message !== undefined && (typeof message !== 'string' || message.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Emergency report details are invalid.' });
+    }
+
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    // Deterministic ID makes retries idempotent for this authenticated caller/request.
+    const incidentRef = db.collection('safety_incidents').doc(
+      bookingId + '_' + identity.uid + '_' + requestId
+    );
+    const result = await db.runTransaction(async (transaction) => {
+      const bookingSnap = await transaction.get(bookingRef);
+      if (!bookingSnap.exists) return { status: 'not_found' as const };
+      const booking = bookingSnap.data()!;
+      const active = ['assigned', 'technician_en_route', 'in_progress'].includes(String(booking.status || ''));
+      if (!active) return { status: 'inactive' as const };
+
+      const isCustomer = booking.customerUid === identity.uid;
+      const isAssignedPartner = booking.technicianUid === identity.uid;
+      if (!isCustomer && !isAssignedPartner) return { status: 'forbidden' as const };
+
+      const existing = await transaction.get(incidentRef);
+      if (existing.exists) return { status: 'duplicate' as const, incidentId: incidentRef.id };
+
+      transaction.create(incidentRef, {
+        incidentId: incidentRef.id,
+        bookingId,
+        reporterUid: identity.uid,
+        reporterRole: isCustomer ? 'CUSTOMER' : 'CHANNEL_PARTNER',
+        reporterPhoneVerified: Boolean(identity.phone_number),
+        incidentType,
+        message: typeof message === 'string' ? message.trim().slice(0, 500) : '',
+        status: 'received_pending_review',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      return { status: 'created' as const, incidentId: incidentRef.id };
+    });
+
+    if (result.status === 'not_found') return res.status(404).json({ success: false, error: 'Booking not found.' });
+    if (result.status === 'forbidden') return res.status(403).json({ success: false, error: 'Only the customer or assigned Channel Partner can report an incident for this booking.' });
+    if (result.status === 'inactive') return res.status(409).json({ success: false, error: 'Emergency reporting is available only during an active assigned booking.' });
+    return res.status(result.status === 'created' ? 202 : 200).json({
+      success: true,
+      incidentId: result.incidentId,
+      duplicate: result.status === 'duplicate',
+      status: 'received_pending_review',
+      emergencyDispatchConfigured: false,
+      message: 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Emergency services या contact को सूचना भेजे जाने की पुष्टि नहीं है। तत्काल खतरे में स्थानीय आपातकालीन सेवा से सीधे संपर्क करें।'
+    });
+  } catch (error) {
+    console.error('Secure SOS incident intake failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency report could not be saved. Please contact local emergency services directly if in immediate danger.' });
+  }
+});
+
 // Start Express and attach Vite middleware in dev or static in prod
 async function startServer() {
   const distPath = path.resolve(__dirname, 'dist');
