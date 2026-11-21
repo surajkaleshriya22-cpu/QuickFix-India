@@ -3,6 +3,7 @@ package com.quickfix.app.viewmodel
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.PhoneAuthProvider
 import com.quickfix.app.data.model.AuthState
 import com.quickfix.app.data.model.User
@@ -58,17 +59,26 @@ class AuthViewModel(
                 _authState.value = AuthState.OtpSent(verificationId, phoneNumber)
             },
             onVerificationFailed = { exception ->
-                val rawMsg = exception.localizedMessage ?: ""
-                val errorMsg = when {
-                    rawMsg.contains("17010") || rawMsg.contains("app is not authorized") ->
-                        "Firebase Config Required: Add your Android SHA-1 fingerprint to Firebase Console (Project Settings > Android App)."
-                    rawMsg.contains("39") || rawMsg.contains("Play Integrity") || rawMsg.contains("reCAPTCHA") ->
-                        "Play Integrity / SafetyNet check failed. Ensure SHA-256 fingerprint is added to Firebase Console."
-                    rawMsg.contains("BILLING") || rawMsg.contains("quota", ignoreCase = true) ||
-                        rawMsg.contains("too many requests", ignoreCase = true) ->
-                        "Firebase SMS limit reached or SMS billing is not enabled. For real OTP, link a Cloud Billing account and use the Blaze plan in Firebase Console. For app testing, add a Firebase test phone number and its fixed test code; no SMS will be sent."
+                // Use Firebase's stable error code, not substring guesses against
+                // localized messages (for example, matching "39" can misclassify errors).
+                val firebaseCode = (exception as? FirebaseAuthException)
+                    ?.errorCode
+                    ?.uppercase()
+                    .orEmpty()
+                val rawMsg = exception.localizedMessage.orEmpty()
+                val errorMsg = when (firebaseCode) {
+                    "ERROR_INVALID_PHONE_NUMBER", "ERROR_MISSING_PHONE_NUMBER" ->
+                        "मोबाइल नंबर सही नहीं है। देश कोड +91 के साथ 10 अंकों का नंबर जाँचें।"
+                    "ERROR_APP_NOT_AUTHORIZED" ->
+                        "Firebase ने इस Android ऐप को अनुमति नहीं दी। Firebase Console में com.quickfix.app का package name और SHA-1/SHA-256 fingerprints जाँचें।"
+                    "ERROR_CAPTCHA_CHECK_FAILED" ->
+                        "Firebase की ऐप-सत्यापन जाँच पूरी नहीं हुई। Google Play services, इंटरनेट और Firebase App Verification configuration जाँचें।"
+                    "ERROR_QUOTA_EXCEEDED" ->
+                        "Firebase SMS quota पूरा हो गया है। Firebase Authentication की SMS quota/region policy जाँचें; यह जरूरी नहीं कि billing ही कारण हो।"
+                    "ERROR_TOO_MANY_REQUESTS" ->
+                        "बहुत अधिक OTP अनुरोध हुए हैं। सुरक्षा सीमा के कारण कुछ समय बाद दोबारा प्रयास करें।"
                     else ->
-                        if (rawMsg.isNotEmpty()) rawMsg else "Failed to send SMS OTP. Please check mobile network or Firebase Phone Auth settings."
+                        rawMsg.ifBlank { "SMS OTP नहीं भेजा जा सका। Firebase Phone Authentication configuration और नेटवर्क जाँचें।" }
                 }
                 _authState.value = AuthState.Error(errorMsg)
             },
