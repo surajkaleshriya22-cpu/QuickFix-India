@@ -1721,9 +1721,10 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       // Only contacts with explicit account-owner consent and their own OTP
       // verification receive this alert. A duplicate SOS request never resends.
       if (accountSid && authToken && validE164(fromNumber)) {
-        const contacts = await db.collection('users').doc(identity.uid)
-          .collection('emergency_contacts').where('verified', '==', true).where('consent', '==', true).limit(3).get();
-        if (contacts.empty) {
+        try {
+          const contacts = await db.collection('users').doc(identity.uid)
+            .collection('emergency_contacts').where('verified', '==', true).where('consent', '==', true).limit(3).get();
+          if (contacts.empty) {
           emergencyContactSmsStatus = 'no_verified_contacts';
         } else {
           for (const contactDoc of contacts.docs) {
@@ -1761,9 +1762,14 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
               emergencyContactSmsFailed++;
             }
           }
-          emergencyContactSmsStatus = emergencyContactSmsSent > 0 && emergencyContactSmsFailed > 0
-            ? 'partial'
-            : emergencyContactSmsSent > 0 ? 'sent' : 'failed';
+            emergencyContactSmsStatus = emergencyContactSmsSent > 0 && emergencyContactSmsFailed > 0
+              ? 'partial'
+              : emergencyContactSmsSent > 0 ? 'sent' : 'failed';
+          }
+        } catch (contactQueryError) {
+          console.error('SOS emergency contact lookup failed:', contactQueryError);
+          emergencyContactSmsStatus = 'failed';
+          emergencyContactSmsFailed = 1;
         }
       } else {
         emergencyContactSmsStatus = 'not_configured';
