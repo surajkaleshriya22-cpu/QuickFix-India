@@ -24,6 +24,17 @@ All four values must be present and both phone numbers must pass E.164 validatio
 
 The SMS deliberately contains only the incident ID, booking ID, reporter role, and incident type. It excludes full address, phone number, report text, OTP, and government identity data.
 
+## Admin incident inbox
+
+The Admin Dashboard includes a **Safety & SOS** tab backed by server-verified admin endpoints:
+
+- `GET /api/admin/safety-incidents` lists up to 100 recent incidents with minimum operational fields only.
+- `PATCH /api/admin/safety-incidents/:incidentId` supports `acknowledged`, `under_review`, and `resolved`.
+- Status changes are recorded in the server-only `safety_incident_audit` collection.
+- The browser never reads the `safety_incidents` collection directly. The endpoints require a valid Firebase ID token with the server-side `admin` custom claim.
+
+The Admin Dashboard intentionally does not display reporter phone numbers, full addresses, government IDs, or the free-text incident message.
+
 ## Not implemented by this integration
 
 - Emergency contact capture, consent, phone verification, or contact SMS.
