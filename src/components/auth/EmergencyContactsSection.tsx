@@ -146,7 +146,7 @@ export const EmergencyContactsSection: React.FC = () => {
       )}
       {otpSent && (
         <form onSubmit={verifyOtp} className="space-y-2 rounded-lg border border-blue-200 bg-white p-3">
-          <p className="text-[11px] text-slate-700">OTP sent to {phoneNumber}. Enter the 6-digit code. It expires in 5 minutes.</p>
+          <p className="text-[11px] text-slate-700">OTP sent to {phoneNumber}. Ask that contact to share the 6-digit code with you only if they agree to be your emergency contact. It expires in 5 minutes.</p>
           <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit OTP" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-lg tracking-[0.4em]" />
           <div className="flex gap-2">
             <button type="submit" disabled={busy || code.length !== 6} className="flex-1 rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Verifying…' : 'Verify OTP'}</button>
