@@ -11,7 +11,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt, createHash } from 'node:crypto';
+import { randomInt, createHash, createHmac } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -1462,7 +1462,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     const now = Date.now();
     const otp = String(randomInt(0, 1000000)).padStart(6, '0');
     const salt = String(randomInt(100000000, 999999999));
-    const otpHash = createHash('sha256').update(identity.uid + ':' + phone + ':' + salt + ':' + otp).digest('hex');
+    const otpHash = createHmac('sha256', authToken).update(identity.uid + ':' + phone + ':' + salt + ':' + otp).digest('hex');
     const sendAllowed = await db.runTransaction(async (transaction) => {
       const [contactSnap, challengeSnap, contactsSnap, accountLimitSnap] = await Promise.all([
         transaction.get(contactRef), transaction.get(challengeRef),
@@ -1542,6 +1542,8 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before verifying an emergency contact.' });
+    const otpPepper = process.env.TWILIO_AUTH_TOKEN?.trim();
+    if (!otpPepper) return res.status(503).json({ success: false, error: 'OTP verification is temporarily unavailable. Please contact QuickFix support.' });
     const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
     const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
     if (!validEmergencyPhone(phone) || !/^\d{6}$/.test(code)) {
@@ -1566,7 +1568,7 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
         transaction.delete(challengeRef);
         return 'locked' as const;
       }
-      const candidate = createHash('sha256').update(identity.uid + ':' + phone + ':' + String(challenge.salt) + ':' + code).digest('hex');
+      const candidate = createHmac('sha256', otpPepper).update(identity.uid + ':' + phone + ':' + String(challenge.salt) + ':' + code).digest('hex');
       if (candidate !== challenge.otpHash) {
         transaction.update(challengeRef, { attempts: attempts + 1 });
         return 'invalid' as const;
