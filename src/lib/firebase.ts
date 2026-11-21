@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAg4mWAkvOtU9AEd2-4DFx2wRFsBEaGJSA',
@@ -39,6 +40,7 @@ const app = getApps().length > 0 ? getApp() : initializeApp(appConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const storage = getStorage(app);
 
 export async function testFirestoreConnection(): Promise<boolean> {
   if (!isFirebaseConfigured) return false;

@@ -5,6 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -779,6 +780,125 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
 });
 
 // Return only the authenticated customer's own bookings; private OTPs are fetched separately.
+// Fair complaint reporting: only a booking participant may open a case.
+// Case records are server-owned; clients cannot alter status, decision, or audit fields.
+const complaintCategories = new Set([
+  'non_payment', 'abuse_or_threat', 'harassment', 'unsafe_conduct',
+  'overcharging', 'poor_service', 'property_damage', 'false_booking', 'other'
+]);
+
+app.post('/api/complaints', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Complaint service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
+    const category = typeof req.body?.category === 'string' ? req.body.category.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !complaintCategories.has(category) ||
+        description.length < 10 || description.length > 3000) {
+      return res.status(400).json({ success: false, error: 'Booking, complaint category, or description is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const bookingSnap = await db.collection('bookings').doc(bookingId).get();
+    if (!bookingSnap.exists) return res.status(404).json({ success: false, error: 'Booking was not found.' });
+    const booking = bookingSnap.data()!;
+    const isCustomer = booking.customerUid === identity.uid;
+    const isPartner = booking.technicianUid === identity.uid;
+    if (!isCustomer && !isPartner) return res.status(403).json({ success: false, error: 'Only a customer or Channel Partner on this booking can report it.' });
+    const accusedUid = isCustomer ? String(booking.technicianUid || '') : String(booking.customerUid || '');
+    const caseRef = db.collection('complaints').doc();
+    await caseRef.create({
+      bookingId,
+      actorUid: identity.uid,
+      actorRole: isCustomer ? 'customer' : 'channel_partner',
+      accusedUid: accusedUid || null,
+      category,
+      description,
+      status: 'open',
+      decision: null,
+      adminNote: null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.status(201).json({ success: true, complaintId: caseRef.id, status: 'open' });
+  } catch (error) {
+    console.error('Complaint submission failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint could not be submitted securely.' });
+  }
+});
+
+app.get('/api/complaints/mine', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Complaint service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('complaints')
+      .where('actorUid', '==', identity.uid).limit(50).get();
+    const complaints = snapshot.docs.map(doc => {
+      const item = doc.data();
+      const createdAt = item.createdAt && typeof item.createdAt.toDate === 'function' ? item.createdAt.toDate().toISOString() : null;
+      return { id: doc.id, bookingId: String(item.bookingId || ''), category: String(item.category || ''),
+        status: String(item.status || 'open'), decision: item.decision || null, adminNote: item.adminNote || null, createdAt };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, complaints });
+  } catch (error) {
+    console.error('Complaint history read failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint history could not be loaded.' });
+  }
+});
+
+app.get('/api/admin/complaints', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin complaint service is temporarily unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('complaints').limit(100).get();
+    const complaints = snapshot.docs.map(doc => {
+      const item = doc.data();
+      const createdAt = item.createdAt && typeof item.createdAt.toDate === 'function' ? item.createdAt.toDate().toISOString() : null;
+      return { id: doc.id, bookingId: String(item.bookingId || ''), actorUid: String(item.actorUid || ''),
+        actorRole: String(item.actorRole || ''), accusedUid: item.accusedUid || null, category: String(item.category || ''),
+        description: String(item.description || ''), status: String(item.status || 'open'),
+        decision: item.decision || null, adminNote: item.adminNote || null, createdAt };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, complaints });
+  } catch (error) {
+    console.error('Admin complaint list failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint cases could not be loaded.' });
+  }
+});
+
+app.post('/api/admin/complaints/:complaintId/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin complaint service is temporarily unavailable.' });
+    const complaintId = String(req.params.complaintId || '');
+    const status = req.body?.status;
+    const decision = typeof req.body?.decision === 'string' ? req.body.decision.trim() : '';
+    const adminNote = typeof req.body?.adminNote === 'string' ? req.body.adminNote.trim() : '';
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(complaintId) ||
+        !['under_review', 'resolved', 'dismissed'].includes(status) ||
+        !['no_action', 'warning_recommended', 'payment_follow_up', 'account_restriction_recommended', 'refund_review'].includes(decision) ||
+        adminNote.length < 5 || adminNote.length > 2000) {
+      return res.status(400).json({ success: false, error: 'Review status, decision, or admin note is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const ref = db.collection('complaints').doc(complaintId);
+    const result = await db.runTransaction(async transaction => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists) return false;
+      transaction.update(ref, {
+        status, decision, adminNote,
+        reviewedBy: (req as AuthenticatedRequest).firebaseUser!.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      return true;
+    });
+    if (!result) return res.status(404).json({ success: false, error: 'Complaint case was not found.' });
+    return res.json({ success: true, complaintId, status, decision });
+  } catch (error) {
+    console.error('Admin complaint review failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint review could not be saved.' });
+  }
+});
+
 app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
@@ -814,6 +934,45 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
 
 // Customers can read only the live location attached to their own active booking.
 // Locations older than five minutes are deliberately reported as stale, not presented as live.
+// Return the authenticated Channel Partner's own assigned booking history for complaint selection.
+// Query by both current UID and legacy technicianId, then deduplicate and expose only safe display fields.
+app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    if (!profileSnap.exists || profileSnap.data()?.role !== 'technician') {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
+    }
+    const [ownedByUid, ownedByLegacyId] = await Promise.all([
+      db.collection('bookings').where('technicianUid', '==', identity.uid).limit(50).get(),
+      db.collection('bookings').where('technicianId', '==', identity.uid).limit(50).get()
+    ]);
+    const unique = new Map<string, QueryDocumentSnapshot>();
+    [...ownedByUid.docs, ...ownedByLegacyId.docs].forEach(document => unique.set(document.id, document));
+    const bookings = [...unique.values()].map(document => {
+      const booking = document.data();
+      const createdAt = booking.createdAt && typeof booking.createdAt.toDate === 'function'
+        ? booking.createdAt.toDate().toISOString()
+        : String(booking.createdAt || '');
+      return {
+        id: document.id,
+        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
+        category: String(booking.category || ''),
+        scheduledDate: String(booking.scheduledDate || ''),
+        scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
+        status: String(booking.status || 'requested'),
+        createdAt
+      };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Partner complaint booking feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner booking history could not be loaded securely.' });
+  }
+});
+
 app.get('/api/customer/bookings/:bookingId/partner-location', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure location service is temporarily unavailable.' });
@@ -923,6 +1082,218 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
     if (code === 'OTP_INVALID') return res.status(400).json({ success: false, error: 'The customer OTP is incorrect.' });
     console.error('Partner service-start verification failed:', error);
     return res.status(500).json({ success: false, error: 'The service could not be started securely.' });
+  }
+});
+
+// Partner emergency contact and SOS records. This creates an auditable incident;
+// it does not claim to send an SMS/call until a verified notification provider is configured.
+app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { name, phone, consentConfirmed } = req.body ?? {};
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100 ||
+        typeof phone !== 'string' || !/^\+?[1-9]\d{9,14}$/.test(phone.trim()) ||
+        consentConfirmed !== true) {
+      return res.status(400).json({ success: false, error: 'Enter a valid emergency contact and confirm their consent.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(userSnap.data()?.role || ''))) {
+      return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    }
+    await userRef.update({
+      emergencyContact: { name: name.trim(), phone: phone.trim(), consentConfirmed: true, updatedAt: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.json({ success: true, saved: true, message: 'Emergency contact saved. No alert is sent by this setup action.' });
+  } catch (error) {
+    console.error('Partner emergency contact update failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be saved securely.' });
+  }
+});
+
+const dispatchPartnerSafetySms = async (to: string, partnerName: string, incidentId: string): Promise<boolean> => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  if (!accountSid || !authToken || !fromNumber) return false;
+  if (!/^\+?[1-9]\d{9,14}$/.test(to) || !/^\+[1-9]\d{7,14}$/.test(fromNumber)) return false;
+  const body = new URLSearchParams({
+    To: to,
+    From: fromNumber,
+    Body: 'QuickFix safety alert: ' + partnerName + ' has requested urgent assistance during a service booking. Incident ID: ' + incidentId + '. Please contact them directly. If there is immediate danger, contact local emergency services.'
+  });
+  const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error('Partner safety SMS provider rejected the request:', response.status, detail.slice(0, 500));
+    return false;
+  }
+  return true;
+};
+
+app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { bookingId, message, latitude, longitude } = req.body ?? {};
+    if (typeof bookingId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) ||
+        (message !== undefined && (typeof message !== 'string' || message.trim().length > 1000))) {
+      return res.status(400).json({ success: false, error: 'A valid active booking and optional short message are required.' });
+    }
+    const validPoint = latitude === undefined && longitude === undefined ||
+      typeof latitude === 'number' && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
+      typeof longitude === 'number' && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+    if (!validPoint) return res.status(400).json({ success: false, error: 'Location coordinates are invalid.' });
+    const db = getFirestore(firebaseAdminApp);
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const incidentRef = db.collection('partner_safety_incidents').doc();
+    await db.runTransaction(async transaction => {
+      const [bookingSnap, partnerSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(partnerRef)]);
+      if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(partnerSnap.data()?.role || ''))) {
+        throw new Error('PARTNER_PROFILE_REQUIRED');
+      }
+      if (!bookingSnap.exists ||
+          (bookingSnap.data()?.technicianUid !== identity.uid && bookingSnap.data()?.technicianId !== identity.uid) ||
+          !['assigned', 'technician_en_route', 'in_progress'].includes(String(bookingSnap.data()?.status || ''))) {
+        throw new Error('ACTIVE_ASSIGNED_BOOKING_REQUIRED');
+      }
+      transaction.create(incidentRef, {
+        bookingId,
+        partnerUid: identity.uid,
+        customerUid: String(bookingSnap.data()?.customerUid || ''),
+        status: 'open',
+        priority: 'urgent',
+        message: typeof message === 'string' ? message.trim().slice(0, 1000) : '',
+        ...(validPoint && typeof latitude === 'number' && typeof longitude === 'number'
+          ? { location: { latitude, longitude }, locationCapturedAt: FieldValue.serverTimestamp() } : {}),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(db.collection('partner_job_audit_logs').doc(), {
+        action: 'partner_safety_sos_triggered', bookingId, partnerUid: identity.uid,
+        incidentId: incidentRef.id, createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    let alertDispatched = false;
+    let alertStatus = 'not_configured_or_no_consented_emergency_contact';
+    const partnerAfterIncident = await partnerRef.get();
+    const partnerAfterData = partnerAfterIncident.data() || {};
+    const contact = partnerAfterData.emergencyContact;
+    const emergencyContact = contact && contact.consentConfirmed === true &&
+      typeof contact.phone === 'string' && typeof contact.name === 'string'
+      ? { name: contact.name, phone: contact.phone, consentConfirmed: true } : null;
+    const partnerDisplayName = String(partnerAfterData.displayName || partnerAfterData.name || 'QuickFix Channel Partner').slice(0, 80);
+    if (emergencyContact?.consentConfirmed) {
+      try {
+        alertDispatched = await dispatchPartnerSafetySms(emergencyContact.phone, partnerDisplayName, incidentRef.id);
+        alertStatus = alertDispatched ? 'sms_accepted_by_provider' : 'provider_not_configured_or_rejected';
+      } catch (smsError) {
+        console.error('Partner safety SMS dispatch failed:', smsError);
+        alertStatus = 'provider_request_failed';
+      }
+    }
+    await incidentRef.update({
+      alertDispatched,
+      alertChannel: alertDispatched ? 'sms' : null,
+      alertStatus,
+      alertAttemptedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.status(201).json({
+      success: true, incidentId: incidentRef.id, status: 'open',
+      alertDispatched,
+      message: alertDispatched
+        ? 'SOS incident recorded. SMS request was accepted by the configured messaging provider; delivery is not guaranteed.'
+        : 'SOS incident recorded for the QuickFix safety dashboard. SMS was not sent; check provider configuration and the partner emergency contact.'
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_PROFILE_REQUIRED') return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (code === 'ACTIVE_ASSIGNED_BOOKING_REQUIRED') return res.status(403).json({ success: false, error: 'SOS can be linked only to your own active assigned booking.' });
+    console.error('Partner SOS recording failed:', error);
+    return res.status(500).json({ success: false, error: 'SOS incident could not be recorded.' });
+  }
+});
+
+app.get('/api/admin/partner-safety/incidents', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Safety dashboard is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('partner_safety_incidents')
+      .orderBy('createdAt', 'desc').limit(100).get();
+    const incidents = snapshot.docs.map(document => {
+      const item = document.data();
+      const createdAt = item.createdAt && typeof item.createdAt.toDate === 'function'
+        ? item.createdAt.toDate().toISOString() : null;
+      return {
+        id: document.id, bookingId: String(item.bookingId || ''),
+        partnerUid: String(item.partnerUid || ''), status: String(item.status || 'open'),
+        priority: String(item.priority || 'urgent'), message: String(item.message || ''),
+        reviewNote: String(item.reviewNote || ''),
+        location: item.location && typeof item.location.latitude === 'number' && typeof item.location.longitude === 'number'
+          ? item.location : null,
+        createdAt
+      };
+    });
+    return res.json({ success: true, incidents });
+  } catch (error) {
+    console.error('Admin partner safety incident list failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incidents could not be loaded.' });
+  }
+
+});
+
+app.post('/api/admin/partner-safety/incidents/:incidentId/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Safety review service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const incidentId = String(req.params.incidentId || '');
+    const { status, note } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(incidentId) ||
+        !['acknowledged', 'resolved'].includes(String(status)) ||
+        typeof note !== 'string' || note.trim().length < 5 || note.trim().length > 1000) {
+      return res.status(400).json({ success: false, error: 'Choose acknowledged/resolved and provide a review note (5–1000 characters).' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const incidentRef = db.collection('partner_safety_incidents').doc(incidentId);
+    const auditRef = db.collection('admin_audit_logs').doc();
+    await db.runTransaction(async transaction => {
+      const incidentSnap = await transaction.get(incidentRef);
+      if (!incidentSnap.exists) throw new Error('SAFETY_INCIDENT_NOT_FOUND');
+      const incident = incidentSnap.data()!;
+      if (incident.status === 'resolved') throw new Error('SAFETY_INCIDENT_ALREADY_RESOLVED');
+      transaction.update(incidentRef, {
+        status,
+        reviewNote: note.trim(),
+        reviewedBy: identity.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: status === 'resolved' ? 'partner_safety_incident_resolved' : 'partner_safety_incident_acknowledged',
+        incidentId, bookingId: String(incident.bookingId || ''),
+        partnerUid: String(incident.partnerUid || ''),
+        adminUid: identity.uid, note: note.trim(),
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({ success: true, incidentId, status, message: 'Safety incident review saved.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'SAFETY_INCIDENT_NOT_FOUND') return res.status(404).json({ success: false, error: 'Safety incident not found.' });
+    if (code === 'SAFETY_INCIDENT_ALREADY_RESOLVED') return res.status(409).json({ success: false, error: 'This safety incident is already resolved.' });
+    console.error('Admin partner safety incident review failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident review could not be saved.' });
   }
 });
 
@@ -1120,6 +1491,133 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
     verified: false,
     error: 'Payout webhook is not configured. No payout has been settled.'
   });
+});
+
+// Secure KYC submission and review. Storage objects remain private; only paths and metadata
+// are stored in Firestore. No raw government ID number is accepted by these endpoints.
+app.post('/api/partners/kyc/submit', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { documentType, storagePath, originalName } = req.body ?? {};
+    const allowedTypes = ['ITI Trade Certificate', 'Skill India / NSDC Certified', 'State Wireman/Plumber License', 'Govt Polytechnic Diploma', 'PAN'];
+    if (!allowedTypes.includes(documentType) ||
+        storagePath !== `partner-kyc/${identity.uid}/${String(storagePath || '').split('/').pop()}` ||
+        typeof originalName !== 'string' || !originalName.trim() || originalName.length > 180) {
+      return res.status(400).json({ success: false, error: 'KYC document details are invalid.' });
+    }
+    const bucket = getStorage(firebaseAdminApp).bucket();
+    const file = bucket.file(storagePath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(400).json({ success: false, error: 'Uploaded private KYC file was not found.' });
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size || 0);
+    const contentType = String(metadata.contentType || '');
+    if (!size || size > 10 * 1024 * 1024 || !/^(image\/(jpeg|png)|application\/pdf)$/.test(contentType)) {
+      return res.status(400).json({ success: false, error: 'KYC file must be JPG, PNG or PDF up to 10 MB.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    await db.runTransaction(async transaction => {
+      const partnerSnap = await transaction.get(partnerRef);
+      if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(partner.role)) throw new Error('NOT_A_PARTNER');
+      if (!['basic_profile_approved', 'kyc_rejected', 'kyc_pending'].includes(partner.approvalStatus)) throw new Error('PROFILE_NOT_APPROVED');
+      transaction.update(partnerRef, {
+        kycDocument: { documentType, storagePath, originalName: originalName.trim(), contentType, size },
+        kycStatus: 'pending_review',
+        approvalStatus: 'kyc_pending',
+        isVerified: false,
+        kycSubmittedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.status(202).json({ success: true, kycStatus: 'pending_review', message: 'Private KYC document submitted for admin review. You are not verified yet.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_NOT_FOUND') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (code === 'NOT_A_PARTNER') return res.status(403).json({ success: false, error: 'Only Channel Partners can submit KYC.' });
+    if (code === 'PROFILE_NOT_APPROVED') return res.status(409).json({ success: false, error: 'Basic partner profile must be approved before KYC submission.' });
+    console.error('Partner KYC submission failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC submission could not be recorded securely.' });
+  }
+});
+
+app.get('/api/admin/partners/kyc/pending', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin KYC service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users')
+      .where('kycStatus', '==', 'pending_review').limit(100).get();
+    const partners = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id, displayName: String(data.displayName || ''),
+        phoneNumber: String(data.phoneNumber || ''), city: String(data.city || ''),
+        kycDocument: data.kycDocument ? {
+          documentType: String(data.kycDocument.documentType || ''),
+          storagePath: String(data.kycDocument.storagePath || ''),
+          originalName: String(data.kycDocument.originalName || ''),
+          contentType: String(data.kycDocument.contentType || ''),
+          size: Number(data.kycDocument.size || 0)
+        } : null,
+        kycStatus: 'pending_review'
+      };
+    });
+    return res.json({ success: true, partners });
+  } catch (error) {
+    console.error('Admin pending KYC lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Pending KYC list could not be loaded.' });
+  }
+});
+
+app.post('/api/admin/partners/:partnerUid/kyc/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin KYC service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const partnerUid = String(req.params.partnerUid || '');
+    const { decision, reason } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(partnerUid) ||
+        !['approve', 'reject'].includes(decision) ||
+        (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'KYC review details are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(partnerUid);
+    const auditRef = db.collection('admin_audit_logs').doc();
+    let approved = false;
+    await db.runTransaction(async transaction => {
+      const partnerSnap = await transaction.get(partnerRef);
+      if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      if (partner.kycStatus !== 'pending_review' || !partner.kycDocument?.storagePath ||
+          !String(partner.kycDocument.storagePath).startsWith(`partner-kyc/${partnerUid}/`)) throw new Error('KYC_NOT_PENDING');
+      approved = decision === 'approve';
+      transaction.update(partnerRef, {
+        kycStatus: approved ? 'approved' : 'rejected',
+        approvalStatus: approved ? 'kyc_approved' : 'kyc_rejected',
+        isVerified: approved,
+        kycReviewedBy: identity.uid,
+        kycReviewedAt: FieldValue.serverTimestamp(),
+        kycReviewReason: typeof reason === 'string' ? reason.trim() : '',
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: approved ? 'partner_kyc_approved' : 'partner_kyc_rejected',
+        targetUid: partnerUid, actorUid: identity.uid,
+        reason: typeof reason === 'string' ? reason.trim() : '',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({ success: true, kycStatus: approved ? 'approved' : 'rejected', isVerified: approved,
+      message: approved ? 'KYC approved. Dispatch eligibility checks still apply.' : 'KYC rejected. Partner must submit corrected documents.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_NOT_FOUND') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (code === 'KYC_NOT_PENDING') return res.status(409).json({ success: false, error: 'KYC is not awaiting review.' });
+    console.error('Admin KYC review failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC review could not be saved securely.' });
+  }
 });
 
 // Admin-only directory for all registered Channel Partners and legacy Technicians.

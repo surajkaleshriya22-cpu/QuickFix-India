@@ -64,6 +64,8 @@ import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, 
 import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { auth } from '../../lib/firebase';
+import { AdminComplaintsSection } from './AdminComplaintsSection';
+import { AdminPartnerSafetySection } from './AdminPartnerSafetySection';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -112,7 +114,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates'
+    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates' | 'complaints'
   >('overview');
 
   // Search & Filter States
@@ -775,6 +777,12 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => { setActiveTab('complaints'); setSearchQuery(''); }}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === 'complaints' ? 'bg-amber-700 text-white shadow-xs font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" /> Complaints
+          </button>
+          <button
             onClick={() => { setActiveTab('firebase'); setSearchQuery(''); }}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
               activeTab === 'firebase'
@@ -791,6 +799,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Content Viewport */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === 'rates' && <AdminRateCardsSection />}
+        {activeTab === 'complaints' && <><AdminComplaintsSection /><AdminPartnerSafetySection /></>}
 
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (

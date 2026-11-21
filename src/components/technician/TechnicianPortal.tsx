@@ -36,7 +36,10 @@ import { INDIAN_CITIES } from '../../data/mockData';
 import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
-import { auth, isFirebaseConfigured } from '../../lib/firebase';
+import { auth, isFirebaseConfigured, storage } from '../../lib/firebase';
+import { ref as storageRef, uploadBytes } from 'firebase/storage';
+import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
+import { PartnerSafetyPanel } from './PartnerSafetyPanel';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -164,6 +167,10 @@ export const TechnicianPortal: React.FC = () => {
   const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
+  const [kycFile, setKycFile] = useState<File | null>(null);
+  const [kycDocumentType, setKycDocumentType] = useState('ITI Trade Certificate');
+  const [kycFeedback, setKycFeedback] = useState('');
+  const [kycLoading, setKycLoading] = useState(false);
 
   // Active dispatch is sourced only from the authenticated, ownership-filtered server feed.
   const assignedJobs = assignedBookings;
@@ -294,6 +301,56 @@ export const TechnicianPortal: React.FC = () => {
       }, 1600);
     }
   };
+
+  const submitPartnerKyc = async () => {
+    const user = auth.currentUser;
+    if (!isFirebaseConfigured || !user || !kycFile) {
+      setKycFeedback('पहले verified partner account से sign in करें और document चुनें।'); return;
+    }
+    if (kycFile.size <= 0 || kycFile.size > 10 * 1024 * 1024 ||
+        !['image/jpeg', 'image/png', 'application/pdf'].includes(kycFile.type)) {
+      setKycFeedback('केवल JPG, PNG या PDF (अधिकतम 10 MB) अपलोड करें।'); return;
+    }
+    setKycLoading(true); setKycFeedback('');
+    try {
+      const token = await user.getIdToken();
+      const safeName = kycFile.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-100);
+      const path = `partner-kyc/${user.uid}/${Date.now()}_${safeName}`;
+      await uploadBytes(storageRef(storage, path), kycFile, { contentType: kycFile.type });
+      const response = await fetch('/api/partners/kyc/submit', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentType: kycDocumentType, storagePath: path, originalName: kycFile.name })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'KYC submission failed.');
+      setKycFeedback('Document सुरक्षित रूप से जमा हो गया है। Admin review pending है; अभी आप verified नहीं हैं।');
+      setKycFile(null);
+    } catch (error) {
+      setKycFeedback(error instanceof Error ? error.message : 'KYC upload failed. कृपया दोबारा प्रयास करें।');
+    } finally { setKycLoading(false); }
+  };
+
+  if (['technician', 'CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(currentUser?.role || '')) &&
+      currentUser?.approvalStatus === 'basic_profile_approved' && !isTechnicianLoggedIn) {
+    return (
+      <div className="flex-1 bg-slate-50 p-5"><div className="max-w-sm mx-auto bg-white rounded-2xl border border-blue-200 p-5 space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">Channel Partner KYC</h2>
+        <p className="text-sm text-slate-600">आपका basic profile approve हो गया है। अब skill certificate या PAN जैसे आवश्यक दस्तावेज़ जमा करें। Aadhaar default रूप से आवश्यक नहीं है।</p>
+        <label className="block text-xs font-semibold text-slate-700">Document type
+          <select value={kycDocumentType} onChange={e => setKycDocumentType(e.target.value)} className="mt-1 w-full rounded-lg border p-2 bg-white">
+            <option>ITI Trade Certificate</option><option>Skill India / NSDC Certified</option><option>State Wireman/Plumber License</option><option>Govt Polytechnic Diploma</option><option>PAN</option>
+          </select>
+        </label>
+        <label className="block text-xs font-semibold text-slate-700">Document file (JPG, PNG, PDF; max 10 MB)
+          <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={e => setKycFile(e.target.files?.[0] || null)} className="mt-1 block w-full text-xs" />
+        </label>
+        <button type="button" disabled={!kycFile || kycLoading} onClick={() => void submitPartnerKyc()} className="w-full rounded-xl bg-blue-600 text-white font-bold py-3 disabled:opacity-50">{kycLoading ? 'Uploading securely…' : 'Submit KYC for review'}</button>
+        {kycFeedback && <p className="text-xs text-slate-700" role="status">{kycFeedback}</p>}
+        <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-lg">दस्तावेज़ private Storage में रहेगा। Approval के बाद भी duty eligibility के अन्य checks लागू होंगे।</p>
+        <button type="button" onClick={() => void logoutUser()} className="w-full text-sm text-slate-600 underline">Sign out</button>
+      </div></div>
+    );
+  }
 
   // A newly registered partner must see the real review state, not a misleading login form.
   if (currentUser?.role === 'technician' && currentUser.approvalStatus === 'pending_audit' && !isTechnicianLoggedIn) {
@@ -597,6 +654,8 @@ export const TechnicianPortal: React.FC = () => {
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
+      <div className="p-4 pb-0"><PartnerSafetyPanel bookingId={currentActiveJob?.id} />
+        <CustomerComplaintPanel /></div>
       {/* Top Bar with Online Switch & Profile */}
       <header className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5">

@@ -32,6 +32,7 @@ import { ReviewModal } from './ReviewModal';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
 import { INDIAN_CITIES } from '../../data/mockData';
+import { CustomerComplaintPanel } from './CustomerComplaintPanel';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -415,6 +416,8 @@ export const CustomerHome: React.FC = () => {
             </button>
           </div>
         </div>
+
+        <CustomerComplaintPanel />
 
         {/* QuickFix Trust Pillars */}
         <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 space-y-2.5">

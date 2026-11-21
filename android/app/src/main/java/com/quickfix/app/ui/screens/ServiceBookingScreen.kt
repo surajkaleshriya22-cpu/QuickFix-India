@@ -56,9 +56,11 @@ fun ServiceBookingScreen(
 
     val service = services.find { it.id == serviceId } ?: services.first()
 
-    val defaultAddress = ""
-
-    var address by remember { mutableStateOf(defaultAddress) }
+    var houseFlat by remember { mutableStateOf("") }
+    var locality by remember { mutableStateOf("") }
+    var landmark by remember { mutableStateOf("") }
+    var pincode by remember { mutableStateOf("") }
+    val address = listOf(houseFlat, locality, landmark, pincode).filter { it.isNotBlank() }.joinToString(", ")
     var state by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
     var tehsil by remember { mutableStateOf("") }
@@ -106,10 +108,10 @@ fun ServiceBookingScreen(
                     if (place == null) {
                         locationMessage = "GPS मिल गया, लेकिन पता नहीं मिला। कृपया पता हाथ से भरें।"
                     } else {
-                        val addressParts = listOfNotNull(
-                            place.subLocality, place.thoroughfare, place.featureName, place.postalCode
-                        ).map { it.trim() }.filter { it.isNotBlank() }.distinct()
-                        if (addressParts.isNotEmpty()) address = addressParts.joinToString(", ")
+                        place.subLocality?.takeIf { it.isNotBlank() }?.let { locality = it }
+                        place.thoroughfare?.takeIf { it.isNotBlank() }?.let { houseFlat = it }
+                        place.featureName?.takeIf { it.isNotBlank() && it != place.thoroughfare }?.let { landmark = it }
+                        place.postalCode?.takeIf { it.matches(Regex("^\\d{6}$")) }?.let { pincode = it }
                         place.adminArea?.takeIf { it.isNotBlank() }?.let { state = it }
                         place.subAdminArea?.takeIf { it.isNotBlank() }?.let { district = it }
                         place.locality?.takeIf { it.isNotBlank() }?.let { viewModel.setCity(it) }
@@ -188,8 +190,8 @@ fun ServiceBookingScreen(
                                 bookingError = "Please choose a valid date today or later."
                             } else if (!isValidQuantity) {
                                 bookingError = "Please enter a valid quantity greater than zero."
-                            } else if (address.isBlank()) {
-                                bookingError = "Please enter your complete service address."
+                            } else if (houseFlat.isBlank() || locality.isBlank() || landmark.isBlank() || !pincode.matches(Regex("^\\d{6}$"))) {
+                                bookingError = "Please enter house/flat, area/locality, landmark and a valid 6-digit PIN code."
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
                                 bookingError = "Please enter State, District and Tehsil."
                             } else {
@@ -224,7 +226,7 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
+                        enabled = !isBooking && houseFlat.isNotBlank() && locality.isNotBlank() && landmark.isNotBlank() && pincode.matches(Regex("^\\d{6}$")) && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -286,12 +288,11 @@ fun ServiceBookingScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Service Address ($currentCity)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                    OutlinedTextField(
-                        value = address,
-                        onValueChange = { address = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("House / Flat, Landmark, Full Address") }
-                    )
+                    OutlinedTextField(value = houseFlat, onValueChange = { houseFlat = it }, modifier = Modifier.fillMaxWidth(), label = { Text("House / Flat / मकान नंबर") }, singleLine = true)
+                    OutlinedTextField(value = locality, onValueChange = { locality = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Street / Area / मोहल्ला") }, singleLine = true)
+                    OutlinedTextField(value = landmark, onValueChange = { landmark = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nearby landmark / नजदीकी पहचान") }, singleLine = true)
+                    OutlinedTextField(value = pincode, onValueChange = { pincode = it.filter(Char::isDigit).take(6) }, modifier = Modifier.fillMaxWidth(), label = { Text("6-digit PIN code") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    Text("यह पूरा पता केवल इस बुकिंग के लिए नियुक्त verified partner और अधिकृत QuickFix staff को दिखेगा।", fontSize = 10.sp, color = TextSecondary)
                     OutlinedButton(
                         onClick = {
                             val fineGranted = ContextCompat.checkSelfPermission(
