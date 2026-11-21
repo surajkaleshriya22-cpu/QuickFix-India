@@ -813,6 +813,52 @@ class QuickFixViewModel : ViewModel() {
         }
     }
 
+    fun submitBookingSafetyReport(
+        bookingId: String,
+        incidentType: String = "safety_concern",
+        message: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) { onResult(false, "कृपया verified mobile number से फिर sign in करें."); return }
+        if (!bookingId.matches(Regex("[A-Za-z0-9_-]{1,150}"))) { onResult(false, "Booking ID सही नहीं है."); return }
+        if (incidentType !in setOf("safety_concern", "medical_emergency", "harassment", "other") || message.length > 500) {
+            onResult(false, "Report details सही नहीं हैं."); return
+        }
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val encodedId = java.net.URLEncoder.encode(bookingId, "UTF-8")
+                    val payload = org.json.JSONObject()
+                        .put("requestId", java.util.UUID.randomUUID().toString())
+                        .put("incidentType", incidentType)
+                        .put("message", message.trim())
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/bookings/$encodedId/sos")
+                        .openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "POST"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) {
+                            error(json.optString("error").ifBlank { "Safety report save नहीं हो सका (HTTP $status)." })
+                        }
+                        "Report QuickFix में save हो गई. Emergency dispatch/contact alerts जुड़े नहीं हैं; तुरंत खतरे में 112 call करें."
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { result -> onResult(true, result) }
+                .onFailure { error -> onResult(false, error.localizedMessage ?: "SOS report save नहीं हो सकी. तुरंत खतरे में 112 call करें.") }
+        }
+    }
+
     fun updatePartnerLiveLocation(latitude: Double, longitude: Double, accuracyMeters: Float? = null) {
         val user = auth.currentUser ?: run {
             _partnerLocationStatus.value = "Live location भेजने के लिए पहले sign in करें."
