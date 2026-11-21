@@ -156,7 +156,7 @@ export const EmergencyContactsSection: React.FC = () => {
       )}
       {error && <p role="alert" className="text-[11px] font-medium text-rose-700">{error}</p>}
       {notice && <p role="status" className="text-[11px] font-medium text-emerald-700">{notice}</p>}
-      <p className="text-[10px] leading-relaxed text-slate-500">अभी यह सुविधा नंबर verify और save करती है। SOS पर emergency contacts को SMS भेजना/dispatch अभी connected नहीं है। तत्काल खतरे में 112 पर सीधे call करें। OTP किसी से share न करें।</p>
+      <p className="text-[10px] leading-relaxed text-slate-500">Verified emergency contacts को SOS पर SMS alert भेजा जाएगा, जब QuickFix का SMS setup चालू होगा। यह police/ambulance dispatch नहीं है। तत्काल खतरे में 112 पर सीधे call करें। OTP किसी से share न करें।</p>
     </section>
   );
 };
