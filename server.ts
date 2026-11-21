@@ -1185,6 +1185,7 @@ app.get('/api/admin/partner-safety/incidents', authenticateFirebaseUser, require
         id: document.id, bookingId: String(item.bookingId || ''),
         partnerUid: String(item.partnerUid || ''), status: String(item.status || 'open'),
         priority: String(item.priority || 'urgent'), message: String(item.message || ''),
+        reviewNote: String(item.reviewNote || ''),
         location: item.location && typeof item.location.latitude === 'number' && typeof item.location.longitude === 'number'
           ? item.location : null,
         createdAt
