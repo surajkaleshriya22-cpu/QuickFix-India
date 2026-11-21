@@ -46,7 +46,9 @@ class AuthViewModel(
         }
     }
 
-    fun sendOtp(phoneNumber: String, activity: Activity) {
+    fun sendOtp(phoneNumber: String, activity: Activity, pendingUser: User) {
+        // Invalidate the previous session before requesting a fresh SMS code.
+        currentVerificationId = ""
         _authState.value = AuthState.Loading
         repository.sendPhoneOtp(
             phoneNumber = phoneNumber,
@@ -71,14 +73,24 @@ class AuthViewModel(
                 _authState.value = AuthState.Error(errorMsg)
             },
             onAutoVerified = { credential ->
-                // Instant SMS auto retrieval
+                // Instant SMS auto-retrieval follows the same profile-creation path as manual OTP entry.
                 viewModelScope.launch {
                     try {
                         val uid = repository.signInWithCredential(credential)
                         val existing = repository.getUserProfile(uid)
-                        if (existing != null) {
-                            _authState.value = AuthState.Authenticated(existing)
+                        val verifiedUser = when {
+                            existing != null -> existing
+                            pendingUser.role == UserRole.CHANNEL_PARTNER -> {
+                                repository.registerChannelPartner(pendingUser.copy(uid = uid))
+                                repository.getUserProfile(uid)
+                                    ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
+                            }
+                            pendingUser.role == UserRole.CUSTOMER -> {
+                                pendingUser.copy(uid = uid).also { repository.saveUserProfile(it) }
+                            }
+                            else -> throw SecurityException("This account type cannot be registered from this screen.")
                         }
+                        _authState.value = AuthState.Authenticated(verifiedUser)
                     } catch (e: Exception) {
                         _authState.value = AuthState.Error(e.localizedMessage ?: "Verification error")
                     }
@@ -92,10 +104,19 @@ class AuthViewModel(
         pendingUser: User,
         onSuccess: (User) -> Unit
     ) {
+        val cleanOtp = otpCode.filter { it.isDigit() }
+        if (currentVerificationId.isBlank()) {
+            _authState.value = AuthState.Error("OTP session expired. Please request a new SMS code.")
+            return
+        }
+        if (cleanOtp.length != 6) {
+            _authState.value = AuthState.Error("Enter the complete 6-digit SMS OTP.")
+            return
+        }
         viewModelScope.launch {
             try {
                 _authState.value = AuthState.Loading
-                val credential = PhoneAuthProvider.getCredential(currentVerificationId, otpCode)
+                val credential = PhoneAuthProvider.getCredential(currentVerificationId, cleanOtp)
                 val uid = repository.signInWithCredential(credential)
 
                 // Check if profile exists, otherwise save new profile

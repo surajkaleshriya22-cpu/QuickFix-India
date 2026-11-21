@@ -188,13 +188,14 @@ fun AuthScreen(
 
                         OutlinedTextField(
                             value = otpCode,
-                            onValueChange = { if (it.length <= 6) otpCode = it },
+                            onValueChange = { value -> otpCode = value.filter { it.isDigit() }.take(6) },
                             label = { Text("Verification OTP") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Button(
+                            enabled = otpCode.length == 6,
                             onClick = {
                                 val pendingUser = User(
                                     phoneNumber = "+91 $phone",
@@ -219,6 +220,29 @@ fun AuthScreen(
                         ) {
                             Text("Verify OTP & Login", fontWeight = FontWeight.Bold)
                         }
+                        TextButton(
+                            enabled = activity != null && phone.filter { it.isDigit() }.length == 10,
+                            onClick = {
+                                otpCode = ""
+                                val pendingUser = User(
+                                    phoneNumber = "+91 $phone",
+                                    displayName = displayName,
+                                    email = email,
+                                    role = selectedRole,
+                                    address = address,
+                                    city = city,
+                                    trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
+                                    experienceYears = experienceYears.toIntOrNull() ?: 5,
+                                )
+                                activity?.let { act ->
+                                    authViewModel.sendOtp("+91 $phone", act, pendingUser)
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Resend OTP", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                        }
+
                     } else if (selectedRole == UserRole.ADMIN) {
                         // Admin access is based only on an existing Firebase session
                         // carrying an Admin SDK-issued custom claim. No client passcode is accepted.
@@ -350,7 +374,7 @@ fun AuthScreen(
 
                         OutlinedTextField(
                             value = phone,
-                            onValueChange = { phone = it },
+                            onValueChange = { value -> phone = value.filter { it.isDigit() }.take(10) },
                             label = { Text("Mobile Number for Firebase OTP (+91)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth()
@@ -371,7 +395,17 @@ fun AuthScreen(
                                     (selectedRole != UserRole.CHANNEL_PARTNER || selectedTrades.isNotEmpty()))),
                             onClick = {
                                 activity?.let { act ->
-                                    authViewModel.sendOtp("+91 $phone", act)
+                                    val pendingUser = User(
+                                        phoneNumber = "+91 $phone",
+                                        displayName = displayName,
+                                        email = email,
+                                        role = selectedRole,
+                                        address = address,
+                                        city = city,
+                                        trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
+                                        experienceYears = experienceYears.toIntOrNull() ?: 5,
+                                    )
+                                    authViewModel.sendOtp("+91 $phone", act, pendingUser)
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),

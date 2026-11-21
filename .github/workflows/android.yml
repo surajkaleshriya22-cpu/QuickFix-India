@@ -76,17 +76,41 @@ jobs:
           import json
           with open("android/app/google-services.json", encoding="utf-8") as f:
               data = json.load(f)
-          packages = {
-              c.get("client_info", {}).get("android_client_info", {}).get("package_name")
-              for c in data.get("client", [])
+          project_id = data.get("project_info", {}).get("project_id")
+          if project_id != "quickfix-india":
+              raise SystemExit(f"Wrong Firebase project: expected quickfix-india, got {project_id!r}")
+
+          expected_app_id = "1:731570128431:android:887008c924cca44e3568da"
+          matching_clients = [
+              c for c in data.get("client", [])
+              if c.get("client_info", {}).get("android_client_info", {}).get("package_name") == "com.quickfix.app"
+          ]
+          if not matching_clients:
+              raise SystemExit("Wrong Firebase Android package: expected com.quickfix.app")
+
+          app_ids = {
+              c.get("client_info", {}).get("mobilesdk_app_id")
+              for c in matching_clients
           }
-          if "com.quickfix.app" not in packages:
-              raise SystemExit("Wrong Firebase package")
-          print("Firebase configuration verified.")
+          if expected_app_id not in app_ids:
+              raise SystemExit("Firebase Android app ID does not match the registered QuickFix India app")
+
+          print("Firebase project, Android package, and Android app ID verified.")
           PY
 
       - name: Build debug APK
         run: gradle -p android assembleDebug --no-daemon
+
+      - name: Print APK signing certificate fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find android/app/build/outputs/apk/debug -name '*.apk' -print -quit)"
+          if [ -z "$apk" ]; then
+            echo "::error::Debug APK not found"
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
