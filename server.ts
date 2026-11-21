@@ -1441,6 +1441,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before adding an emergency contact.' });
     const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
     const relationship = typeof req.body?.relationship === 'string' ? req.body.relationship.trim() : '';
     if (!validEmergencyPhone(phone) || phone === identity.phone_number ||
@@ -1528,6 +1529,7 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before verifying an emergency contact.' });
     const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
     const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
     if (!validEmergencyPhone(phone) || !/^\\d{6}$/.test(code)) {
