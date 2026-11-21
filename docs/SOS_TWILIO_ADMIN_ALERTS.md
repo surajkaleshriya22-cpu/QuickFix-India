@@ -45,11 +45,11 @@ The customer/partner profile drawer exposes a shared Emergency Contact section. 
 - `GET /api/me/emergency-contacts` returns only masked numbers and basic status. `DELETE /api/me/emergency-contacts/:contactId` removes only the signed-in owner's contact.
 - Contact and OTP collections are server-owned; Firestore client rules deny direct access.
 
-This is verification and secure storage only. It does **not yet send SOS alerts to those contacts**. That requires a separate, tested incident-notification workflow with delivery status and a contact opt-out path.
+When a **new** SOS incident is created, the server now attempts an SMS to up to three contacts whose numbers are both OTP-verified and consented. Duplicate SOS submissions do not send duplicate alerts. The message includes only the incident reference, incident type, and 112 guidance; it excludes reporter phone, address, free-text report, OTP, and identity documents. `emergencyContactSmsStatus`, sent count, and failed count are recorded on the incident. `sent` means Twilio accepted the message, not that the handset delivered or read it. Owners can remove a contact from their profile; carrier/Twilio STOP handling and delivery receipts/retry queue are not implemented.
 
 ## Not implemented by this integration
 
-- Emergency contact SMS notifications on SOS, contact opt-out/notification preferences, and delivery receipts/retry queue.
+- Contact-side notification preference management, delivery receipts, and retry queue.
 - Police/ambulance dispatch, call-centre escalation, or automatic 112 calling.
 - Delivery receipts or retry queue for messages accepted/rejected by Twilio.
 
