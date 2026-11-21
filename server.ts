@@ -1195,6 +1195,51 @@ app.get('/api/admin/partner-safety/incidents', authenticateFirebaseUser, require
     console.error('Admin partner safety incident list failed:', error);
     return res.status(500).json({ success: false, error: 'Safety incidents could not be loaded.' });
   }
+
+});
+
+app.post('/api/admin/partner-safety/incidents/:incidentId/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Safety review service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const incidentId = String(req.params.incidentId || '');
+    const { status, note } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(incidentId) ||
+        !['acknowledged', 'resolved'].includes(String(status)) ||
+        typeof note !== 'string' || note.trim().length < 5 || note.trim().length > 1000) {
+      return res.status(400).json({ success: false, error: 'Choose acknowledged/resolved and provide a review note (5–1000 characters).' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const incidentRef = db.collection('partner_safety_incidents').doc(incidentId);
+    const auditRef = db.collection('admin_audit_logs').doc();
+    await db.runTransaction(async transaction => {
+      const incidentSnap = await transaction.get(incidentRef);
+      if (!incidentSnap.exists) throw new Error('SAFETY_INCIDENT_NOT_FOUND');
+      const incident = incidentSnap.data()!;
+      if (incident.status === 'resolved') throw new Error('SAFETY_INCIDENT_ALREADY_RESOLVED');
+      transaction.update(incidentRef, {
+        status,
+        reviewNote: note.trim(),
+        reviewedBy: identity.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: status === 'resolved' ? 'partner_safety_incident_resolved' : 'partner_safety_incident_acknowledged',
+        incidentId, bookingId: String(incident.bookingId || ''),
+        partnerUid: String(incident.partnerUid || ''),
+        adminUid: identity.uid, note: note.trim(),
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({ success: true, incidentId, status, message: 'Safety incident review saved.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'SAFETY_INCIDENT_NOT_FOUND') return res.status(404).json({ success: false, error: 'Safety incident not found.' });
+    if (code === 'SAFETY_INCIDENT_ALREADY_RESOLVED') return res.status(409).json({ success: false, error: 'This safety incident is already resolved.' });
+    console.error('Admin partner safety incident review failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident review could not be saved.' });
+  }
 });
 
 // Assigned partner marks a started job complete; payment and wallet settlement remain separate.
