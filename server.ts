@@ -572,9 +572,6 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       return res.status(503).json({ success: false, error: 'Secure job acceptance is temporarily unavailable.' });
     }
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    if (!identity.phone_number) {
-      return res.status(403).json({ success: false, error: 'Verified mobile number is required to submit an emergency report.' });
-    }
     const bookingId = String(req.params.bookingId || '');
     if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId)) {
       return res.status(400).json({ success: false, error: 'Booking ID is invalid.' });
@@ -1341,6 +1338,9 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       return res.status(503).json({ success: false, error: 'Secure emergency reporting is temporarily unavailable.' });
     }
     const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) {
+      return res.status(403).json({ success: false, error: 'Verified mobile number is required to submit a safety report.' });
+    }
     const bookingId = String(req.params.bookingId || '');
     const { requestId, incidentType, message } = req.body ?? {};
     if (!/^[A-Za-z0-9_-]{8,100}$/.test(bookingId) ||
