@@ -1411,7 +1411,7 @@ app.patch('/api/admin/safety-incidents/:incidentId', authenticateFirebaseUser, r
 // Emergency contacts are private to the signed-in account. A contact is not
 // notified until the owner explicitly consents and the contact verifies the OTP.
 const normalizeEmergencyPhone = (value: unknown) => typeof value === 'string' ? value.trim() : '';
-const validEmergencyPhone = (value: string) => /^\\+[1-9]\\d{7,14}$/.test(value);
+const validEmergencyPhone = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
 const emergencyContactDocId = (uid: string, phone: string) => createHash('sha256').update(uid + ':' + phone).digest('hex');
 const maskEmergencyPhone = (phone: string) => phone.length >= 6 ? phone.slice(0, 3) + '******' + phone.slice(-3) : '******';
 
@@ -1528,7 +1528,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       return res.status(202).json({ success: true, message: 'OTP sent. It expires in 5 minutes.' });
     } catch (error) {
       console.error('Emergency contact OTP send failed:', error);
-      await challengeRef.set({ sendFailed: true }, { merge: true });
+      await challengeRef.set({ sendFailed: true, sendStatus: 'failed' }, { merge: true });
       return res.status(502).json({ success: false, error: 'OTP SMS could not be sent. Please try again later.' });
     }
   } catch (error) {
@@ -1544,7 +1544,7 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
     if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before verifying an emergency contact.' });
     const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
     const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
-    if (!validEmergencyPhone(phone) || !/^\\d{6}$/.test(code)) {
+    if (!validEmergencyPhone(phone) || !/^\d{6}$/.test(code)) {
       return res.status(400).json({ success: false, error: 'Enter the same mobile number and 6-digit OTP.' });
     }
     const db = getFirestore(firebaseAdminApp);
