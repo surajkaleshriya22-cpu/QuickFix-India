@@ -54,7 +54,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
         return (
           <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Wrench className="w-3 h-3 text-blue-600" />
-            <span>Technician Partner</span>
+            <span>Channel Partner</span>
           </span>
         );
       default:
