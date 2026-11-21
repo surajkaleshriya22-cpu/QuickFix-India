@@ -32,3 +32,5 @@ The SMS deliberately contains only the incident ID, booking ID, reporter role, a
 - Delivery receipts or retry queue for messages accepted/rejected by Twilio.
 
 Until those features and real-device tests are complete, the SOS UI must continue to tell users to call **112 directly** in immediate danger and must not claim that emergency services were notified.
+
+CI note: this change must pass the repository's Vite/Web CI and Android Debug APK workflows before the stacked SOS changes are merged to `main`.
