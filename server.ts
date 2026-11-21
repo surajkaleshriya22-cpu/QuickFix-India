@@ -1391,6 +1391,133 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
   });
 });
 
+// Secure KYC submission and review. Storage objects remain private; only paths and metadata
+// are stored in Firestore. No raw government ID number is accepted by these endpoints.
+app.post('/api/partners/kyc/submit', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { documentType, storagePath, originalName } = req.body ?? {};
+    const allowedTypes = ['ITI Trade Certificate', 'Skill India / NSDC Certified', 'State Wireman/Plumber License', 'Govt Polytechnic Diploma', 'PAN'];
+    if (!allowedTypes.includes(documentType) ||
+        storagePath !== `partner-kyc/${identity.uid}/${String(storagePath || '').split('/').pop()}` ||
+        typeof originalName !== 'string' || !originalName.trim() || originalName.length > 180) {
+      return res.status(400).json({ success: false, error: 'KYC document details are invalid.' });
+    }
+    const bucket = getStorage(firebaseAdminApp).bucket();
+    const file = bucket.file(storagePath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(400).json({ success: false, error: 'Uploaded private KYC file was not found.' });
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size || 0);
+    const contentType = String(metadata.contentType || '');
+    if (!size || size > 10 * 1024 * 1024 || !/^(image\/(jpeg|png)|application\/pdf)$/.test(contentType)) {
+      return res.status(400).json({ success: false, error: 'KYC file must be JPG, PNG or PDF up to 10 MB.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    await db.runTransaction(async transaction => {
+      const partnerSnap = await transaction.get(partnerRef);
+      if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(partner.role)) throw new Error('NOT_A_PARTNER');
+      if (!['basic_profile_approved', 'kyc_rejected', 'kyc_pending'].includes(partner.approvalStatus)) throw new Error('PROFILE_NOT_APPROVED');
+      transaction.update(partnerRef, {
+        kycDocument: { documentType, storagePath, originalName: originalName.trim(), contentType, size },
+        kycStatus: 'pending_review',
+        approvalStatus: 'kyc_pending',
+        isVerified: false,
+        kycSubmittedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.status(202).json({ success: true, kycStatus: 'pending_review', message: 'Private KYC document submitted for admin review. You are not verified yet.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_NOT_FOUND') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (code === 'NOT_A_PARTNER') return res.status(403).json({ success: false, error: 'Only Channel Partners can submit KYC.' });
+    if (code === 'PROFILE_NOT_APPROVED') return res.status(409).json({ success: false, error: 'Basic partner profile must be approved before KYC submission.' });
+    console.error('Partner KYC submission failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC submission could not be recorded securely.' });
+  }
+});
+
+app.get('/api/admin/partners/kyc/pending', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin KYC service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users')
+      .where('kycStatus', '==', 'pending_review').limit(100).get();
+    const partners = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id, displayName: String(data.displayName || ''),
+        phoneNumber: String(data.phoneNumber || ''), city: String(data.city || ''),
+        kycDocument: data.kycDocument ? {
+          documentType: String(data.kycDocument.documentType || ''),
+          storagePath: String(data.kycDocument.storagePath || ''),
+          originalName: String(data.kycDocument.originalName || ''),
+          contentType: String(data.kycDocument.contentType || ''),
+          size: Number(data.kycDocument.size || 0)
+        } : null,
+        kycStatus: 'pending_review'
+      };
+    });
+    return res.json({ success: true, partners });
+  } catch (error) {
+    console.error('Admin pending KYC lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Pending KYC list could not be loaded.' });
+  }
+});
+
+app.post('/api/admin/partners/:partnerUid/kyc/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin KYC service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const partnerUid = String(req.params.partnerUid || '');
+    const { decision, reason } = req.body ?? {};
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(partnerUid) ||
+        !['approve', 'reject'].includes(decision) ||
+        (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'KYC review details are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(partnerUid);
+    const auditRef = db.collection('admin_audit_logs').doc();
+    let approved = false;
+    await db.runTransaction(async transaction => {
+      const partnerSnap = await transaction.get(partnerRef);
+      if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
+      const partner = partnerSnap.data()!;
+      if (partner.kycStatus !== 'pending_review' || !partner.kycDocument?.storagePath ||
+          !String(partner.kycDocument.storagePath).startsWith(`partner-kyc/${partnerUid}/`)) throw new Error('KYC_NOT_PENDING');
+      approved = decision === 'approve';
+      transaction.update(partnerRef, {
+        kycStatus: approved ? 'approved' : 'rejected',
+        approvalStatus: approved ? 'kyc_approved' : 'kyc_rejected',
+        isVerified: approved,
+        kycReviewedBy: identity.uid,
+        kycReviewedAt: FieldValue.serverTimestamp(),
+        kycReviewReason: typeof reason === 'string' ? reason.trim() : '',
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        action: approved ? 'partner_kyc_approved' : 'partner_kyc_rejected',
+        targetUid: partnerUid, actorUid: identity.uid,
+        reason: typeof reason === 'string' ? reason.trim() : '',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({ success: true, kycStatus: approved ? 'approved' : 'rejected', isVerified: approved,
+      message: approved ? 'KYC approved. Dispatch eligibility checks still apply.' : 'KYC rejected. Partner must submit corrected documents.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_NOT_FOUND') return res.status(404).json({ success: false, error: 'Partner profile was not found.' });
+    if (code === 'KYC_NOT_PENDING') return res.status(409).json({ success: false, error: 'KYC is not awaiting review.' });
+    console.error('Admin KYC review failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC review could not be saved securely.' });
+  }
+});
+
 // Admin-only directory for all registered Channel Partners and legacy Technicians.
 app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
   try {
