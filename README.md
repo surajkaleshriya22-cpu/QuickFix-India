@@ -59,3 +59,16 @@ Before production release, verify web and Android builds, test Firestore rules a
 ## Customer and partner protection policy
 
 The proposed customer payment, respectful-conduct, complaint, dispute, privacy, and proportionate-enforcement rules are documented in [`docs/CUSTOMER_RULES_AND_PROTECTION_POLICY.md`](docs/CUSTOMER_RULES_AND_PROTECTION_POLICY.md). This is a draft policy only; it is not yet enforced by the app or backend. See its implementation checklist before describing these controls as live.
+
+
+## Partner SOS SMS configuration
+
+Partner SOS incidents are always recorded in Firestore for the authenticated admin safety dashboard. Optional SMS notification to the partner's saved emergency contact is attempted only when all three server-side environment variables are configured:
+
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER` (an SMS-capable Twilio number in E.164 format, for example `+1...`)
+
+Set these values only in the hosting provider's encrypted server environment; never commit credentials to this repository or expose them in browser variables. The partner must save an emergency contact and confirm that contact's consent before an SOS can trigger an SMS attempt.
+
+The API reports `alertDispatched: true` only when Twilio accepts the message request. This is not proof of handset delivery, does not place a voice call, and does not contact police or public emergency services. Delivery status callbacks and a separately tested emergency escalation process are not implemented. If the provider is unconfigured or rejects the request, the SOS incident remains recorded and the API reports that the SMS was not sent. Partners must contact local emergency services directly in immediate danger.
