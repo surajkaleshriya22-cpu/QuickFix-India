@@ -39,6 +39,7 @@ import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured, storage } from '../../lib/firebase';
 import { ref as storageRef, uploadBytes } from 'firebase/storage';
 import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
+import { PartnerSafetyPanel } from './PartnerSafetyPanel';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -653,7 +654,8 @@ export const TechnicianPortal: React.FC = () => {
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
-      <div className="p-4 pb-0"><CustomerComplaintPanel /></div>
+      <div className="p-4 pb-0"><PartnerSafetyPanel bookingId={currentActiveJob?.id} />
+        <CustomerComplaintPanel /></div>
       {/* Top Bar with Online Switch & Profile */}
       <header className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5">
