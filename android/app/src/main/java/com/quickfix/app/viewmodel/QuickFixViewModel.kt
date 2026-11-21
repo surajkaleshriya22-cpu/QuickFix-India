@@ -821,7 +821,7 @@ class QuickFixViewModel : ViewModel() {
     ) {
         val user = auth.currentUser
         if (user == null) { onResult(false, "कृपया verified mobile number से फिर sign in करें."); return }
-        if (!bookingId.matches(Regex("[A-Za-z0-9_-]{1,150}"))) { onResult(false, "Booking ID सही नहीं है."); return }
+        if (!bookingId.matches(Regex("[A-Za-z0-9_-]{8,100}"))) { onResult(false, "Booking ID सही नहीं है."); return }
         if (incidentType !in setOf("safety_concern", "medical_emergency", "harassment", "other") || message.length > 500) {
             onResult(false, "Report details सही नहीं हैं."); return
         }
