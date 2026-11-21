@@ -1482,7 +1482,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       }, { merge: true });
       transaction.set(challengeRef, {
         uid: identity.uid, phoneNumber: phone, otpHash, salt,
-        attempts: 0, sendStatus: 'pending', expiresAtMs: now + 5 * 60 * 1000,
+        attempts: 0, sendFailed: false, sendStatus: 'pending', expiresAtMs: now + 5 * 60 * 1000,
         lastSentAtMs: now,
         windowStartMs: now - windowStart >= 60 * 60 * 1000 ? now : windowStart,
         sentInWindow: now - windowStart >= 60 * 60 * 1000 ? 1 : sentInWindow + 1,
