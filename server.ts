@@ -1330,6 +1330,84 @@ async function runFirestoreStartupProbe() {
   }
 }
 
+// Admin-only safety incident inbox. Return minimum operational fields; never expose
+// customer/partner phone numbers, full addresses, identity documents, or report text here.
+app.get('/api/admin/safety-incidents', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('safety_incidents')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+    const incidents = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const createdAt = data.createdAt?.toDate?.();
+      const updatedAt = data.updatedAt?.toDate?.();
+      return {
+        incidentId: doc.id,
+        bookingId: String(data.bookingId || ''),
+        reporterRole: String(data.reporterRole || 'UNKNOWN'),
+        incidentType: String(data.incidentType || 'other'),
+        status: String(data.status || 'received_pending_review'),
+        adminSmsStatus: String(data.adminSmsStatus || 'not_configured'),
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : null,
+        updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : null
+      };
+    });
+    return res.json({ success: true, incidents });
+  } catch (error) {
+    console.error('Admin safety incident list failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident list could not be loaded.' });
+  }
+});
+
+app.patch('/api/admin/safety-incidents/:incidentId', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const incidentId = String(req.params.incidentId || '');
+    const { status, note } = req.body ?? {};
+    const allowedStatuses = ['acknowledged', 'under_review', 'resolved', 'closed'];
+    if (!/^[A-Za-z0-9_-]{8,180}$/.test(incidentId) ||
+        typeof status !== 'string' || !allowedStatuses.includes(status) ||
+        (note !== undefined && (typeof note !== 'string' || note.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Safety incident update is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const incidentRef = db.collection('safety_incidents').doc(incidentId);
+    const auditRef = db.collection('safety_incident_audit').doc();
+    await db.runTransaction(async (transaction) => {
+      const incident = await transaction.get(incidentRef);
+      if (!incident.exists) throw new Error('INCIDENT_NOT_FOUND');
+      const before = String(incident.data()?.status || 'received_pending_review');
+      transaction.update(incidentRef, {
+        status,
+        adminNote: typeof note === 'string' ? note.trim() : '',
+        reviewedBy: identity.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      transaction.create(auditRef, {
+        incidentId,
+        adminUid: identity.uid,
+        action: 'status_changed',
+        previousStatus: before,
+        newStatus: status,
+        note: typeof note === 'string' ? note.trim() : '',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.json({ success: true, incidentId, status });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'INCIDENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: 'Safety incident not found.' });
+    }
+    console.error('Admin safety incident update failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident could not be updated.' });
+  }
+});
+
 // Two-sided SOS intake. This records an authenticated incident against an active booking;
 // it does not claim emergency services or contacts were notified.
 app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -1396,7 +1474,7 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
       const fromNumber = process.env.TWILIO_FROM_NUMBER?.trim();
       const adminNumber = process.env.SOS_ADMIN_ALERT_TO?.trim();
-      const validE164 = (value: string | undefined) => Boolean(value && /^\\+[1-9]\\d{7,14}$/.test(value));
+      const validE164 = (value: string | undefined) => Boolean(value && /^\+[1-9]\d{7,14}$/.test(value));
       if (accountSid && authToken && validE164(fromNumber) && validE164(adminNumber)) {
         try {
           const form = new URLSearchParams({
