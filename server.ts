@@ -1678,6 +1678,9 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
     if (result.status === 'inactive') return res.status(409).json({ success: false, error: 'Emergency reporting is available only during an active assigned booking.' });
 
     let adminSmsStatus: 'sent' | 'failed' | 'not_configured' = 'not_configured';
+    let emergencyContactSmsStatus: 'sent' | 'partial' | 'failed' | 'no_verified_contacts' | 'not_configured' = 'no_verified_contacts';
+    let emergencyContactSmsSent = 0;
+    let emergencyContactSmsFailed = 0;
     if (result.status === 'created') {
       const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
       const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
@@ -1715,9 +1718,63 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
           adminSmsStatus = 'failed';
         }
       }
+      // Only contacts with explicit account-owner consent and their own OTP
+      // verification receive this alert. A duplicate SOS request never resends.
+      if (accountSid && authToken && validE164(fromNumber)) {
+        const contacts = await db.collection('users').doc(identity.uid)
+          .collection('emergency_contacts').where('verified', '==', true).where('consent', '==', true).limit(3).get();
+        if (contacts.empty) {
+          emergencyContactSmsStatus = 'no_verified_contacts';
+        } else {
+          for (const contactDoc of contacts.docs) {
+            const contactNumber = String(contactDoc.data().phoneNumber || '');
+            if (!validE164(contactNumber)) {
+              emergencyContactSmsFailed++;
+              continue;
+            }
+            try {
+              const contactForm = new URLSearchParams({
+                To: contactNumber,
+                From: fromNumber!,
+                Body: `QuickFix safety alert: A person who listed you as an emergency contact has raised an SOS during an active service booking. Reference: ${result.incidentId}. Incident type: ${incidentType}. Please contact them if you can. If anyone is in immediate danger, call India's emergency number 112. This SMS is not an emergency-service dispatch.`
+              });
+              const contactResponse = await fetch(
+                `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                  },
+                  body: contactForm,
+                  signal: AbortSignal.timeout(8000)
+                }
+              );
+              if (contactResponse.ok) emergencyContactSmsSent++;
+              else {
+                const providerError = await contactResponse.json().catch(() => ({})) as { code?: number };
+                console.error('SOS emergency contact SMS provider rejected alert:', providerError.code ?? contactResponse.status);
+                emergencyContactSmsFailed++;
+              }
+            } catch (contactSmsError) {
+              console.error('SOS emergency contact SMS attempt failed:', contactSmsError);
+              emergencyContactSmsFailed++;
+            }
+          }
+          emergencyContactSmsStatus = emergencyContactSmsSent > 0 && emergencyContactSmsFailed > 0
+            ? 'partial'
+            : emergencyContactSmsSent > 0 ? 'sent' : 'failed';
+        }
+      } else {
+        emergencyContactSmsStatus = 'not_configured';
+      }
       await incidentRef.set({
         adminSmsStatus,
         adminSmsUpdatedAt: FieldValue.serverTimestamp(),
+        emergencyContactSmsStatus,
+        emergencyContactSmsSent,
+        emergencyContactSmsFailed,
+        emergencyContactSmsUpdatedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       }, { merge: true });
     } else {
@@ -1726,6 +1783,12 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       if (savedStatus === 'sent' || savedStatus === 'failed' || savedStatus === 'not_configured') {
         adminSmsStatus = savedStatus;
       }
+      const savedContactStatus = savedIncident.data()?.emergencyContactSmsStatus;
+      if (savedContactStatus === 'sent' || savedContactStatus === 'partial' || savedContactStatus === 'failed' || savedContactStatus === 'no_verified_contacts' || savedContactStatus === 'not_configured') {
+        emergencyContactSmsStatus = savedContactStatus;
+      }
+      emergencyContactSmsSent = Number(savedIncident.data()?.emergencyContactSmsSent || 0);
+      emergencyContactSmsFailed = Number(savedIncident.data()?.emergencyContactSmsFailed || 0);
     }
 
     return res.status(result.status === 'created' ? 202 : 200).json({
@@ -1735,10 +1798,15 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       status: 'received_pending_review',
       adminSmsStatus,
       adminSmsConfigured: adminSmsStatus === 'sent',
+      emergencyContactSmsStatus,
+      emergencyContactSmsSent,
+      emergencyContactSmsFailed,
       emergencyDispatchConfigured: false,
-      message: adminSmsStatus === 'sent'
-        ? 'Safety report QuickFix में दर्ज हुई और Admin SMS alert भेजा गया। यह police/ambulance/emergency-contact dispatch नहीं है। तत्काल खतरे में 112 call करें।'
-        : 'Safety report QuickFix में दर्ज हुई। Admin SMS alert अभी भेजा नहीं जा सका या configure नहीं है। Emergency services/contact alerts जुड़े नहीं हैं; तत्काल खतरे में 112 call करें।'
+      message: emergencyContactSmsSent > 0
+        ? 'Safety report QuickFix में दर्ज हुई। Admin और verified emergency contacts को SMS provider ने alert स्वीकार किया है। यह police/ambulance dispatch नहीं है। तत्काल खतरे में 112 call करें।'
+        : adminSmsStatus === 'sent'
+          ? 'Safety report दर्ज हुई और Admin SMS alert भेजा गया। कोई verified emergency contact SMS स्वीकार नहीं हुआ। तत्काल खतरे में 112 call करें।'
+          : 'Safety report QuickFix में दर्ज हुई। SMS alerts configure नहीं हैं या भेजे नहीं जा सके। तत्काल खतरे में 112 call करें।'
     });
   } catch (error) {
     console.error('Secure SOS incident intake failed:', error);
