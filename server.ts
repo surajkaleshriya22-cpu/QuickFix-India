@@ -1158,19 +1158,11 @@ app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Reque
     const bookingRef = db.collection('bookings').doc(bookingId);
     const partnerRef = db.collection('users').doc(identity.uid);
     const incidentRef = db.collection('partner_safety_incidents').doc();
-    let emergencyContact: { name: string; phone: string; consentConfirmed: boolean } | null = null;
-    let partnerDisplayName = 'QuickFix Channel Partner';
     await db.runTransaction(async transaction => {
       const [bookingSnap, partnerSnap] = await Promise.all([transaction.get(bookingRef), transaction.get(partnerRef)]);
       if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(partnerSnap.data()?.role || ''))) {
         throw new Error('PARTNER_PROFILE_REQUIRED');
       }
-      const partnerData = partnerSnap.data()!;
-      const contact = partnerData.emergencyContact;
-      if (contact && contact.consentConfirmed === true && typeof contact.phone === 'string' && typeof contact.name === 'string') {
-        emergencyContact = { name: contact.name, phone: contact.phone, consentConfirmed: true };
-      }
-      partnerDisplayName = String(partnerData.displayName || partnerData.name || 'QuickFix Channel Partner').slice(0, 80);
       if (!bookingSnap.exists ||
           (bookingSnap.data()?.technicianUid !== identity.uid && bookingSnap.data()?.technicianId !== identity.uid) ||
           !['assigned', 'technician_en_route', 'in_progress'].includes(String(bookingSnap.data()?.status || ''))) {
@@ -1195,6 +1187,13 @@ app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Reque
     });
     let alertDispatched = false;
     let alertStatus = 'not_configured_or_no_consented_emergency_contact';
+    const partnerAfterIncident = await partnerRef.get();
+    const partnerAfterData = partnerAfterIncident.data() || {};
+    const contact = partnerAfterData.emergencyContact;
+    const emergencyContact = contact && contact.consentConfirmed === true &&
+      typeof contact.phone === 'string' && typeof contact.name === 'string'
+      ? { name: contact.name, phone: contact.phone, consentConfirmed: true } : null;
+    const partnerDisplayName = String(partnerAfterData.displayName || partnerAfterData.name || 'QuickFix Channel Partner').slice(0, 80);
     if (emergencyContact?.consentConfirmed) {
       try {
         alertDispatched = await dispatchPartnerSafetySms(emergencyContact.phone, partnerDisplayName, incidentRef.id);
