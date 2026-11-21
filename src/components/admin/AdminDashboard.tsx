@@ -65,6 +65,7 @@ import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { auth } from '../../lib/firebase';
 import { AdminComplaintsSection } from './AdminComplaintsSection';
+import { AdminPartnerSafetySection } from './AdminPartnerSafetySection';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -798,7 +799,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Content Viewport */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === 'rates' && <AdminRateCardsSection />}
-        {activeTab === 'complaints' && <AdminComplaintsSection />}
+        {activeTab === 'complaints' && <><AdminComplaintsSection /><AdminPartnerSafetySection /></>}
 
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (
