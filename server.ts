@@ -1478,6 +1478,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       transaction.set(contactRef, {
         phoneNumber: phone, maskedPhone: maskEmergencyPhone(phone), relationship,
         consent: true, consentAt: FieldValue.serverTimestamp(), verified: false,
+        createdAt: contactSnap.exists ? (contactSnap.data()?.createdAt || FieldValue.serverTimestamp()) : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       }, { merge: true });
       transaction.set(challengeRef, {
