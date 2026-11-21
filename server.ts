@@ -1458,14 +1458,15 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     const userRef = db.collection('users').doc(identity.uid);
     const contactRef = userRef.collection('emergency_contacts').doc(emergencyContactDocId(identity.uid, phone));
     const challengeRef = db.collection('emergency_contact_otp').doc(emergencyContactDocId(identity.uid, phone));
+    const accountLimitRef = db.collection('emergency_contact_otp_limits').doc(identity.uid);
     const now = Date.now();
     const otp = String(randomInt(0, 1000000)).padStart(6, '0');
     const salt = String(randomInt(100000000, 999999999));
     const otpHash = createHash('sha256').update(identity.uid + ':' + phone + ':' + salt + ':' + otp).digest('hex');
     const sendAllowed = await db.runTransaction(async (transaction) => {
-      const [contactSnap, challengeSnap, contactsSnap] = await Promise.all([
+      const [contactSnap, challengeSnap, contactsSnap, accountLimitSnap] = await Promise.all([
         transaction.get(contactRef), transaction.get(challengeRef),
-        transaction.get(userRef.collection('emergency_contacts'))
+        transaction.get(userRef.collection('emergency_contacts')), transaction.get(accountLimitRef)
       ]);
       if (contactSnap.exists && contactSnap.data()?.verified === true) return 'already_verified' as const;
       const challenge = challengeSnap.data();
@@ -1474,11 +1475,20 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       const windowStart = Number(challenge?.windowStartMs || 0);
       if (now - lastSentAt < 60_000) return 'cooldown' as const;
       if (now - windowStart < 60 * 60 * 1000 && sentInWindow >= 3) return 'limit' as const;
+      const accountLimit = accountLimitSnap.data();
+      const accountWindowStart = Number(accountLimit?.windowStartMs || 0);
+      const accountSent = Number(accountLimit?.sentCount || 0);
+      if (now - accountWindowStart < 60 * 60 * 1000 && accountSent >= 5) return 'account_limit' as const;
       if (contactsSnap.size >= 3 && !contactSnap.exists) return 'max_contacts' as const;
       transaction.set(contactRef, {
         phoneNumber: phone, maskedPhone: maskEmergencyPhone(phone), relationship,
         consent: true, consentAt: FieldValue.serverTimestamp(), verified: false,
         createdAt: contactSnap.exists ? (contactSnap.data()?.createdAt || FieldValue.serverTimestamp()) : FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      transaction.set(accountLimitRef, {
+        windowStartMs: now - accountWindowStart >= 60 * 60 * 1000 ? now : accountWindowStart,
+        sentCount: now - accountWindowStart >= 60 * 60 * 1000 ? 1 : accountSent + 1,
         updatedAt: FieldValue.serverTimestamp()
       }, { merge: true });
       transaction.set(challengeRef, {
@@ -1494,6 +1504,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     if (sendAllowed === 'already_verified') return res.status(409).json({ success: false, error: 'This emergency contact is already verified.' });
     if (sendAllowed === 'cooldown') return res.status(429).json({ success: false, error: 'Wait 60 seconds before requesting another OTP.' });
     if (sendAllowed === 'limit') return res.status(429).json({ success: false, error: 'Maximum 3 OTP messages per contact per hour reached.' });
+    if (sendAllowed === 'account_limit') return res.status(429).json({ success: false, error: 'Maximum 5 emergency-contact OTP messages per account per hour reached.' });
     if (sendAllowed === 'max_contacts') return res.status(409).json({ success: false, error: 'You can save up to 3 emergency contacts.' });
     try {
       const form = new URLSearchParams({
