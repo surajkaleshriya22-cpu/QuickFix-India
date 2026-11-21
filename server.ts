@@ -1482,7 +1482,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       }, { merge: true });
       transaction.set(challengeRef, {
         uid: identity.uid, phoneNumber: phone, otpHash, salt,
-        attempts: 0, expiresAtMs: now + 5 * 60 * 1000,
+        attempts: 0, sendStatus: 'pending', expiresAtMs: now + 5 * 60 * 1000,
         lastSentAtMs: now,
         windowStartMs: now - windowStart >= 60 * 60 * 1000 ? now : windowStart,
         sentInWindow: now - windowStart >= 60 * 60 * 1000 ? 1 : sentInWindow + 1,
@@ -1509,10 +1509,10 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       if (!providerResponse.ok) {
         const providerError = await providerResponse.json().catch(() => ({})) as { code?: number };
         console.error('Emergency contact OTP SMS rejected:', providerError.code ?? providerResponse.status);
-        await challengeRef.set({ sendFailed: true }, { merge: true });
+        await challengeRef.set({ sendFailed: true, sendStatus: 'failed' }, { merge: true });
         return res.status(502).json({ success: false, error: 'OTP SMS could not be sent. Check SMS provider configuration.' });
       }
-      await challengeRef.set({ sendFailed: false }, { merge: true });
+      await challengeRef.set({ sendFailed: false, sendStatus: 'sent' }, { merge: true });
       return res.status(202).json({ success: true, message: 'OTP sent. It expires in 5 minutes.' });
     } catch (error) {
       console.error('Emergency contact OTP send failed:', error);
@@ -1543,7 +1543,8 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
       const [challengeSnap, contactSnap] = await Promise.all([transaction.get(challengeRef), transaction.get(contactRef)]);
       if (!challengeSnap.exists || !contactSnap.exists) return 'missing' as const;
       const challenge = challengeSnap.data()!;
-      if (challenge.sendFailed === true) return 'send_failed' as const;
+      if (challenge.sendFailed === true || challenge.sendStatus === 'failed') return 'send_failed' as const;
+      if (challenge.sendStatus !== 'sent') return 'send_pending' as const;
       if (Number(challenge.expiresAtMs || 0) < Date.now()) {
         transaction.delete(challengeRef);
         return 'expired' as const;
@@ -1567,6 +1568,7 @@ app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (r
     });
     if (result === 'missing') return res.status(404).json({ success: false, error: 'OTP request not found. Request a new code.' });
     if (result === 'send_failed') return res.status(409).json({ success: false, error: 'OTP message was not sent. Request a new code.' });
+    if (result === 'send_pending') return res.status(409).json({ success: false, error: 'OTP delivery is still being confirmed. Please wait a moment and try again.' });
     if (result === 'expired') return res.status(410).json({ success: false, error: 'OTP expired. Request a new code.' });
     if (result === 'locked') return res.status(429).json({ success: false, error: 'Too many incorrect OTP attempts. Request a new code.' });
     if (result === 'invalid') return res.status(400).json({ success: false, error: 'Incorrect OTP. Check the code and try again.' });
