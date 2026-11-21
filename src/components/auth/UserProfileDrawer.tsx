@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Phone, Mail, MapPin, Shield, LogOut, Check, Plus, Edit2, ShieldCheck, Wrench, Zap } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
+import { EmergencyContactsSection } from './EmergencyContactsSection';
 
 interface UserProfileDrawerProps {
   onClose: () => void;
@@ -128,6 +129,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
               <span className="text-emerald-700 font-semibold">Firebase Authenticated</span>
             </div>
           </div>
+
+          {isAuthenticated && currentUser?.role !== 'admin' && <EmergencyContactsSection />}
 
           {/* Saved Addresses Section (for Customer) */}
           <div className="space-y-2">
