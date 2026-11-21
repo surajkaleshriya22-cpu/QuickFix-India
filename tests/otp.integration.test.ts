@@ -161,4 +161,24 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   await seedBooking('otp-wrong-state', customer.uid, partner.uid, '123456', new Date(Date.now() + 60_000).toISOString(), 'completed');
   const wrongState = await request('/api/customer/bookings/otp-wrong-state/start-otp', customer.token);
   assert.equal(wrongState.status, 409);
+
+  // Two simultaneous start requests must never consume the same OTP twice.
+  await seedBooking('otp-concurrent', customer.uid, partner.uid, '654321', new Date(Date.now() + 60_000).toISOString());
+  const concurrentResults = await Promise.all([
+    request('/api/partners/bookings/otp-concurrent/start', partner.token, 'POST', { otp: '654321' }),
+    request('/api/partners/bookings/otp-concurrent/start', partner.token, 'POST', { otp: '654321' })
+  ]);
+  assert.deepEqual(
+    concurrentResults.map(result => result.status).sort((a, b) => a - b),
+    [200, 404],
+    'exactly one concurrent request may consume and start a booking OTP'
+  );
+  const concurrentBooking = await db.collection('bookings').doc('otp-concurrent').get();
+  assert.equal(concurrentBooking.data()?.status, 'in_progress');
+  assert.equal((await db.collection('booking_start_otps').doc('otp-concurrent').get()).exists, false);
+  const startAudits = await db.collection('partner_job_audit_logs')
+    .where('bookingId', '==', 'otp-concurrent')
+    .where('action', '==', 'service_started')
+    .get();
+  assert.equal(startAudits.size, 1, 'a concurrent replay must not create a second service-start audit');
 });
