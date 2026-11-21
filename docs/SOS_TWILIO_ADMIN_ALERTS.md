@@ -35,9 +35,21 @@ The Admin Dashboard includes a **Safety & SOS** tab backed by server-verified ad
 
 The Admin Dashboard intentionally does not display reporter phone numbers, full addresses, government IDs, or the free-text incident message.
 
+## Emergency contact verification
+
+The customer/partner profile drawer exposes a shared Emergency Contact section. The signed-in account must itself have a verified Firebase phone number. The owner can add up to three contacts and must confirm that each person agreed to have their number added and verified.
+
+- `POST /api/me/emergency-contacts/send-otp` validates E.164, prevents adding the account's own number, requires explicit consent, and sends a 6-digit OTP using the configured Twilio sender.
+- OTPs expire after 5 minutes, are stored only as salted SHA-256 hashes, allow at most 5 verification attempts, enforce a 60-second resend cooldown, and cap sends at 3 per contact per hour.
+- `POST /api/me/emergency-contacts/verify` verifies the code server-side and marks the contact verified.
+- `GET /api/me/emergency-contacts` returns only masked numbers and basic status. `DELETE /api/me/emergency-contacts/:contactId` removes only the signed-in owner's contact.
+- Contact and OTP collections are server-owned; Firestore client rules deny direct access.
+
+This is verification and secure storage only. It does **not yet send SOS alerts to those contacts**. That requires a separate, tested incident-notification workflow with delivery status and a contact opt-out path.
+
 ## Not implemented by this integration
 
-- Emergency contact capture, consent, phone verification, or contact SMS.
+- Emergency contact SMS notifications on SOS, contact opt-out/notification preferences, and delivery receipts/retry queue.
 - Admin Dashboard incident inbox / acknowledgement workflow.
 - Police/ambulance dispatch, call-centre escalation, or automatic 112 calling.
 - Delivery receipts or retry queue for messages accepted/rejected by Twilio.
