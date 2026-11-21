@@ -51,20 +51,17 @@ jobs:
       - name: Restore stable Android debug signing key
         env:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
-          ANDROID_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_DEBUG_KEYSTORE_PASSWORD }}
-          ANDROID_DEBUG_KEY_ALIAS: ${{ secrets.ANDROID_DEBUG_KEY_ALIAS }}
-          ANDROID_DEBUG_KEY_PASSWORD: ${{ secrets.ANDROID_DEBUG_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
           if [ -z "${ANDROID_DEBUG_KEYSTORE_BASE64:-}" ]; then
-            echo "::error::Stable debug signing key is not configured. Add ANDROID_DEBUG_KEYSTORE_BASE64, ANDROID_DEBUG_KEYSTORE_PASSWORD, ANDROID_DEBUG_KEY_ALIAS, and ANDROID_DEBUG_KEY_PASSWORD repository secrets. Without a persistent key, Firebase phone-auth SHA fingerprints can change on every hosted build."
+            echo "::error::Add the one-time ANDROID_DEBUG_KEYSTORE_BASE64 repository secret using the private debug keystore supplied for QuickFix. Firebase phone-auth fingerprints must remain stable across builds."
             exit 1
           fi
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass "$ANDROID_DEBUG_KEYSTORE_PASSWORD" -alias "$ANDROID_DEBUG_KEY_ALIAS" >/dev/null
-          echo "Stable Android debug signing key restored."
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass 'QFdebug-only-2026!' -alias quickfixdebug >/dev/null
+          echo "Stable QuickFix Android debug signing key restored."
 
       - name: Configure Firebase
         env:
