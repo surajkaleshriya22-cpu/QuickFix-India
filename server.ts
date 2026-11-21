@@ -1093,7 +1093,7 @@ app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, asyn
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const { name, phone, consentConfirmed } = req.body ?? {};
     if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100 ||
-        typeof phone !== 'string' || !/^\\+?[1-9]\\d{9,14}$/.test(phone.trim()) ||
+        typeof phone !== 'string' || !/^\+?[1-9]\d{9,14}$/.test(phone.trim()) ||
         consentConfirmed !== true) {
       return res.status(400).json({ success: false, error: 'Enter a valid emergency contact and confirm their consent.' });
     }
@@ -1136,7 +1136,8 @@ app.post('/api/partners/safety/sos', authenticateFirebaseUser, async (req: Reque
       if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN', 'technician'].includes(String(partnerSnap.data()?.role || ''))) {
         throw new Error('PARTNER_PROFILE_REQUIRED');
       }
-      if (!bookingSnap.exists || bookingSnap.data()?.technicianUid !== identity.uid ||
+      if (!bookingSnap.exists ||
+          (bookingSnap.data()?.technicianUid !== identity.uid && bookingSnap.data()?.technicianId !== identity.uid) ||
           !['assigned', 'technician_en_route', 'in_progress'].includes(String(bookingSnap.data()?.status || ''))) {
         throw new Error('ACTIVE_ASSIGNED_BOOKING_REQUIRED');
       }
