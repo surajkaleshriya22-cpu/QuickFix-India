@@ -23,6 +23,10 @@ class AuthViewModel(
 
     private var currentVerificationId: String = ""
 
+    private fun requireVerifiedPhoneNumber(): String =
+        repository.currentUserPhoneNumber?.takeIf { it.isNotBlank() }
+            ?: throw SecurityException("Firebase verified phone number is missing. Please sign in again with SMS OTP.")
+
     init {
         checkExistingSession()
     }
@@ -93,7 +97,7 @@ class AuthViewModel(
                             pendingUser.role == UserRole.CHANNEL_PARTNER -> {
                                 repository.registerChannelPartner(pendingUser.copy(
                                     uid = uid,
-                                    phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                                    phoneNumber = requireVerifiedPhoneNumber()
                                 ))
                                 repository.getUserProfile(uid)
                                     ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
