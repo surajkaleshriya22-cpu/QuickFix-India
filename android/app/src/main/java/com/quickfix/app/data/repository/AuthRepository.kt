@@ -124,10 +124,7 @@ class AuthRepository(
             "pincode" to user.pincode,
             "trades" to user.trades,
             "experienceYears" to user.experienceYears,
-            "kycDocType" to user.kycDocType,
-            "kycDocNumber" to user.kycDocNumber,
             "isVerified" to user.isVerified,
-            "upiId" to user.upiId,
             "createdAt" to FieldValue.serverTimestamp()
         )
         firestore.collection("users")
