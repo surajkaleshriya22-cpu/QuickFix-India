@@ -30,6 +30,10 @@ class AuthRepository(
     val currentUserEmail: String?
         get() = auth.currentUser?.email
 
+    /** E.164 number Firebase actually verified for the signed-in account. */
+    val currentUserPhoneNumber: String?
+        get() = auth.currentUser?.phoneNumber
+
     val isUserLoggedIn: Boolean
         get() = auth.currentUser != null
 
