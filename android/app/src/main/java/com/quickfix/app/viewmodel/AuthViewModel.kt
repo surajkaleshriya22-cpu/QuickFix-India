@@ -105,7 +105,7 @@ class AuthViewModel(
                             pendingUser.role == UserRole.CUSTOMER -> {
                                 pendingUser.copy(
                                     uid = uid,
-                                    phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                                    phoneNumber = requireVerifiedPhoneNumber()
                                 ).also { repository.saveUserProfile(it) }
                             }
                             else -> throw SecurityException("This account type cannot be registered from this screen.")
@@ -146,7 +146,7 @@ class AuthViewModel(
                     pendingUser.role == UserRole.CHANNEL_PARTNER -> {
                         repository.registerChannelPartner(pendingUser.copy(
                             uid = uid,
-                            phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                            phoneNumber = requireVerifiedPhoneNumber()
                         ))
                         repository.getUserProfile(uid)
                             ?: throw IllegalStateException("Registration was accepted, but the partner profile could not be loaded. Please sign in again.")
@@ -154,7 +154,7 @@ class AuthViewModel(
                     pendingUser.role == UserRole.CUSTOMER -> {
                         val newProfile = pendingUser.copy(
                             uid = uid,
-                            phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                            phoneNumber = requireVerifiedPhoneNumber()
                         )
                         repository.saveUserProfile(newProfile)
                         newProfile
