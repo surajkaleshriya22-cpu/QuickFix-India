@@ -91,12 +91,18 @@ class AuthViewModel(
                         val verifiedUser = when {
                             existing != null -> existing
                             pendingUser.role == UserRole.CHANNEL_PARTNER -> {
-                                repository.registerChannelPartner(pendingUser.copy(uid = uid))
+                                repository.registerChannelPartner(pendingUser.copy(
+                                    uid = uid,
+                                    phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                                ))
                                 repository.getUserProfile(uid)
                                     ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
                             }
                             pendingUser.role == UserRole.CUSTOMER -> {
-                                pendingUser.copy(uid = uid).also { repository.saveUserProfile(it) }
+                                pendingUser.copy(
+                                    uid = uid,
+                                    phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                                ).also { repository.saveUserProfile(it) }
                             }
                             else -> throw SecurityException("This account type cannot be registered from this screen.")
                         }
@@ -134,12 +140,18 @@ class AuthViewModel(
                 val userToPersist = when {
                     existingProfile != null -> existingProfile
                     pendingUser.role == UserRole.CHANNEL_PARTNER -> {
-                        repository.registerChannelPartner(pendingUser)
+                        repository.registerChannelPartner(pendingUser.copy(
+                            uid = uid,
+                            phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                        ))
                         repository.getUserProfile(uid)
                             ?: throw IllegalStateException("Registration was accepted, but the partner profile could not be loaded. Please sign in again.")
                     }
                     pendingUser.role == UserRole.CUSTOMER -> {
-                        val newProfile = pendingUser.copy(uid = uid)
+                        val newProfile = pendingUser.copy(
+                            uid = uid,
+                            phoneNumber = repository.currentUserPhoneNumber ?: pendingUser.phoneNumber
+                        )
                         repository.saveUserProfile(newProfile)
                         newProfile
                     }
