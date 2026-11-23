@@ -29,10 +29,11 @@ fun ProfileScreen(
     authViewModel: AuthViewModel,
     user: User
 ) {
+    val isEnglish = rememberQuickFixLanguage() == "en"
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My QuickFix Account", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "My QuickFix Account" else "मेरा QuickFix खाता", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -114,15 +115,15 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("PROFILE DETAILS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text(if (isEnglish) "PROFILE DETAILS" else "प्रोफ़ाइल विवरण", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
 
                     ProfileItemRow(icon = Icons.Default.Email, label = "Email", value = user.email.ifEmpty { "Not set" })
-                    ProfileItemRow(icon = Icons.Default.LocationOn, label = "Address", value = user.address.ifEmpty { "Default Bangalore address" })
-                    ProfileItemRow(icon = Icons.Default.Place, label = "City", value = user.city)
+                    ProfileItemRow(icon = Icons.Default.LocationOn, label = if (isEnglish) "Address" else "पता", value = user.address.ifEmpty { if (isEnglish) "Address not set" else "पता उपलब्ध नहीं" })
+                    ProfileItemRow(icon = Icons.Default.Place, label = if (isEnglish) "City" else "शहर", value = user.city)
 
                     if (user.role == UserRole.CHANNEL_PARTNER || user.role == UserRole.TECHNICIAN) {
-                        ProfileItemRow(icon = Icons.Default.Build, label = "Trades", value = user.trades.joinToString(", "))
-                        ProfileItemRow(icon = Icons.Default.CheckCircle, label = "KYC Status", value = if (user.isVerified) "Verified" else "Pending Review")
+                        ProfileItemRow(icon = Icons.Default.Build, label = if (isEnglish) "Work categories" else "काम की श्रेणियाँ", value = user.trades.joinToString(", "))
+                        ProfileItemRow(icon = Icons.Default.CheckCircle, label = if (isEnglish) "KYC Status" else "KYC स्थिति", value = if (user.isVerified) { if (isEnglish) "Verified" else "सत्यापित" } else { if (isEnglish) "Pending Review" else "जाँच बाकी" })
                     }
                 }
             }
@@ -141,7 +142,7 @@ fun ProfileScreen(
             ) {
                 Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sign Out of QuickFix", fontWeight = FontWeight.Bold)
+                Text(if (isEnglish) "Sign Out of QuickFix" else "QuickFix से लॉग आउट", fontWeight = FontWeight.Bold)
             }
         }
     }
