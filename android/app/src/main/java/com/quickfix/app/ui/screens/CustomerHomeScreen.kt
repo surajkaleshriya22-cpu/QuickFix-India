@@ -55,6 +55,9 @@ fun CustomerHomeScreen(
     var cityInput by remember(currentCity) { mutableStateOf(currentCity) }
     var voiceMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val languagePrefs = remember { context.getSharedPreferences("quickfix_preferences", android.content.Context.MODE_PRIVATE) }
+    var appLanguage by remember { mutableStateOf(languagePrefs.getString("app_language", "hi") ?: "hi") }
+    val isEnglish = appLanguage == "en"
     var hindiSpeaker by remember { mutableStateOf<TextToSpeech?>(null) }
     DisposableEffect(context) {
         val speaker = TextToSpeech(context) { status ->
@@ -162,13 +165,31 @@ fun CustomerHomeScreen(
                             )
                         }
                         Text(
-                            "अपना शहर चुनें",
+                            if (isEnglish) "Choose your city" else "अपना शहर चुनें",
                             color = Color(0xFF94A3B8),
                             fontSize = 10.sp
                         )
                     }
                 },
                 actions = {
+                    Box {
+                        var showLanguageMenu by remember { mutableStateOf(false) }
+                        TextButton(onClick = { showLanguageMenu = true }) {
+                            Text(if (isEnglish) "EN" else "हिं", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        DropdownMenu(expanded = showLanguageMenu, onDismissRequest = { showLanguageMenu = false }) {
+                            DropdownMenuItem(text = { Text("हिंदी") }, onClick = {
+                                appLanguage = "hi"
+                                languagePrefs.edit().putString("app_language", "hi").apply()
+                                showLanguageMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("English") }, onClick = {
+                                appLanguage = "en"
+                                languagePrefs.edit().putString("app_language", "en").apply()
+                                showLanguageMenu = false
+                            })
+                        }
+                    }
                     IconButton(onClick = { navController.navigate("profile_screen") }) {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = Color.White)
                     }
@@ -264,13 +285,13 @@ fun CustomerHomeScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "आपको कौन-सा काम करवाना है?",
+                            if (isEnglish) "What work do you need done?" else "आपको कौन-सा काम करवाना है?",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Text(
-                            "अपना काम चुनें। बाकी जानकारी हम आसान तरीके से पूछेंगे।",
+                            if (isEnglish) "Choose your work. We will ask for the remaining details simply." else "अपना काम चुनें। बाकी जानकारी हम आसान तरीके से पूछेंगे।",
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
@@ -283,7 +304,7 @@ fun CustomerHomeScreen(
                         ) {
                             Icon(Icons.Default.Mic, contentDescription = "आवाज़ से काम बताएं", tint = BrandBlue)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("बोलकर अपना काम बताइए", color = BrandBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Tell us what you need" else "बोलकर अपना काम बताइए", color = BrandBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         if (voiceMessage.isNotBlank()) {
                             Text(voiceMessage, color = Color.White, fontSize = 12.sp)
