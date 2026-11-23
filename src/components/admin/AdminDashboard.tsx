@@ -146,6 +146,7 @@ export const AdminDashboard: React.FC = () => {
   const [adminVpa, setAdminVpa] = useState(adminPaymentConfig.merchantVpa);
   const [adminBankName, setAdminBankName] = useState(adminPaymentConfig.bankName);
   const [adminAccountNo, setAdminAccountNo] = useState(adminPaymentConfig.bankAccountNumber);
+  const [adminAccountHolder, setAdminAccountHolder] = useState('');
   const [adminIfsc, setAdminIfsc] = useState(adminPaymentConfig.bankIfsc);
   const [adminGateway, setAdminGateway] = useState(adminPaymentConfig.gatewayProvider);
   const [adminEscrowEnabled, setAdminEscrowEnabled] = useState(adminPaymentConfig.escrowEnabled);
@@ -2718,6 +2719,10 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     <div>
+                      <label className="text-[11px] font-bold text-slate-400 block mb-1">Account Holder Name</label>
+                      <input type="text" value={adminAccountHolder} onChange={e => setAdminAccountHolder(e.target.value)} maxLength={100} autoComplete="off" className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium" />
+                    </div>
+                    <div>
                       <label className="text-[11px] font-bold text-slate-400 block mb-1">Current Bank Account Number</label>
                       <input
                         type="text"
@@ -2787,8 +2792,24 @@ export const AdminDashboard: React.FC = () => {
                   {/* Save Button */}
                   <div className="pt-2 flex justify-end">
                     <button
-                      onClick={() => {
-                        setAdminConfigSavedMsg('Bank details are editable in this form, but secure admin-only server storage is not deployed yet. Nothing has been saved or activated.');
+                      onClick={async () => {
+                        setAdminConfigSavedMsg('');
+                        const firebaseUser = auth.currentUser;
+                        if (!firebaseUser) { setAdminConfigSavedMsg('Please sign in again as an authorized admin.'); return; }
+                        try {
+                          const token = await firebaseUser.getIdToken(true);
+                          const response = await fetch('/api/admin/payment-bank', {
+                            method: 'PUT',
+                            headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bankName: adminBankName, accountHolderName: adminAccountHolder, accountNumber: adminAccountNo, ifsc: adminIfsc })
+                          });
+                          const result = await response.json();
+                          if (!response.ok || !result.success) throw new Error(result.error || 'Bank details could not be saved.');
+                          setAdminAccountNo('');
+                          setAdminConfigSavedMsg('Bank details securely saved. Account ending ' + result.accountLast4 + '. Payments and payouts remain disabled until separately verified and configured.');
+                        } catch (error) {
+                          setAdminConfigSavedMsg(error instanceof Error ? error.message : 'Bank details could not be saved securely.');
+                        }
                       }}
                       className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
                     >
