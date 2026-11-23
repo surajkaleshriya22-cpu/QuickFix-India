@@ -5,6 +5,7 @@ type RechargePolicy = {
   freeTrialDays: number;
   currentRechargeAmount: number;
   rolloutAmounts: number[];
+  plans: { id: string; durationDays: 30 | 90 | 365; amount: number; enabled: boolean }[];
   effectiveAt: string | null;
   enabled: boolean;
 };
@@ -13,6 +14,11 @@ const DEFAULT_POLICY: RechargePolicy = {
   freeTrialDays: 30,
   currentRechargeAmount: 500,
   rolloutAmounts: [500, 1000, 2000],
+  plans: [
+    { id: '30-days', durationDays: 30, amount: 500, enabled: true },
+    { id: '90-days', durationDays: 90, amount: 1350, enabled: true },
+    { id: '365-days', durationDays: 365, amount: 5000, enabled: true }
+  ],
   effectiveAt: null,
   enabled: true
 };
@@ -111,6 +117,25 @@ export const AdminPartnerRechargePolicySection: React.FC = () => {
               </label>
             ))}
           </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-slate-300">SIM-style validity plans (Admin editable)</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {policy.plans.map((plan, index) => (
+              <div key={plan.id} className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-2">
+                <div className="text-sm font-bold text-white">{plan.durationDays} days</div>
+                <label className="block space-y-1">
+                  <span className="text-[11px] text-slate-400">Plan price (₹)</span>
+                  <input type="number" min="0" max="100000" step="1" value={plan.amount} onChange={(e) => setPolicy((p) => ({ ...p, plans: p.plans.map((item, i) => i === index ? { ...item, amount: Number(e.target.value) } : item) }))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-white" required />
+                </label>
+                <label className="flex items-center gap-2 text-[11px] text-slate-300">
+                  <input type="checkbox" checked={plan.enabled} onChange={(e) => setPolicy((p) => ({ ...p, plans: p.plans.map((item, i) => i === index ? { ...item, enabled: e.target.checked } : item) }))} />
+                  Available to partners
+                </label>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">Default prices are ₹500 / ₹1,350 / ₹5,000. Admin can change them. These are policy settings only; checkout and wallet credit remain disabled until verified payment integration is live.</p>
         </div>
         <label className="block space-y-1">
           <span className="text-xs font-semibold text-slate-300">Policy effective date (optional)</span>
