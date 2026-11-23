@@ -16,8 +16,8 @@ const DEFAULT_POLICY: RechargePolicy = {
   rolloutAmounts: [500, 1000, 2000],
   plans: [
     { id: '30-days', durationDays: 30, amount: 500, enabled: true },
-    { id: '90-days', durationDays: 90, amount: 1350, enabled: true },
-    { id: '365-days', durationDays: 365, amount: 5000, enabled: true }
+    { id: '90-days', durationDays: 90, amount: 0, enabled: false },
+    { id: '365-days', durationDays: 365, amount: 0, enabled: false }
   ],
   effectiveAt: null,
   enabled: true
@@ -135,7 +135,7 @@ export const AdminPartnerRechargePolicySection: React.FC = () => {
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">Default prices are ₹500 / ₹1,350 / ₹5,000. Admin can change them. These are policy settings only; checkout and wallet credit remain disabled until verified payment integration is live.</p>
+          <p className="text-[11px] text-slate-500">The 30-day launch price is ₹500. 90-day and 365-day plans start disabled until Admin sets and approves their prices. These are policy settings only; checkout and wallet credit remain disabled until verified payment integration is live.</p>
         </div>
         <label className="block space-y-1">
           <span className="text-xs font-semibold text-slate-300">Policy effective date (optional)</span>
