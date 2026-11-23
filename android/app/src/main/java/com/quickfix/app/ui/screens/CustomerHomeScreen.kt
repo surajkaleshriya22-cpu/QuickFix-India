@@ -269,38 +269,71 @@ fun CustomerHomeScreen(
                 }
             }
 
-            // All partner categories from the canonical Android service catalogue.
+            // Large, easy-to-tap Hindi service tiles for first-time and low-literacy users.
             item {
                 val categoryOptions = listOf(
-                    "all" to "सभी काम",
-                    "electrician" to "⚡ बिजली का काम",
-                    "plumber" to "🔧 नल-पाइप का काम",
-                    "ac_repair" to "❄️ AC ठीक करवाएँ",
-                    "fridge_repair" to "🧊 फ्रिज ठीक करवाएँ",
-                    "appliance_repair" to "🛠️ घर के सामान की मरम्मत",
-                    "welder" to "वेल्डिंग का काम",
-                    "mechanic" to "गाड़ी ठीक करवाएँ",
-                    "driver" to "ड्राइवर बुलाएँ",
-                    "tourist_guide" to "घूमने के लिए गाइड",
-                    "contractor" to "ठेकेदार",
-                    "bike_taxi" to "🏍️ बाइक से सफर",
-                    "kaamkaaj_partner" to "🏠 घर के काम में मदद",
-                    "carpenter" to "बढ़ई का काम",
-                    "painter" to "पेंट का काम",
-                    "gardener" to "माली का काम",
-                    "pest_control" to "कीड़े-मकोड़े हटाएँ",
-                    "house_shifting" to "घर का सामान शिफ्ट करें"
+                    "all" to "🧰\nसभी काम",
+                    "electrician" to "⚡\nबिजली का काम",
+                    "plumber" to "🔧\nनल-पाइप का काम",
+                    "ac_repair" to "❄️\nAC ठीक करवाएँ",
+                    "fridge_repair" to "🧊\nफ्रिज ठीक करवाएँ",
+                    "appliance_repair" to "🛠️\nघर के सामान की मरम्मत",
+                    "welder" to "🔥\nवेल्डिंग का काम",
+                    "mechanic" to "🚗\nगाड़ी ठीक करवाएँ",
+                    "driver" to "🚕\nड्राइवर बुलाएँ",
+                    "tourist_guide" to "🧭\nघूमने के लिए गाइड",
+                    "contractor" to "🏗️\nठेकेदार",
+                    "bike_taxi" to "🏍️\nबाइक से सफर",
+                    "kaamkaaj_partner" to "🏠\nघर के काम में मदद",
+                    "carpenter" to "🪚\nबढ़ई का काम",
+                    "painter" to "🖌️\nपेंट का काम",
+                    "gardener" to "🌱\nमाली का काम",
+                    "pest_control" to "🐜\nकीड़े-मकोड़े हटाएँ",
+                    "house_shifting" to "📦\nघर का सामान शिफ्ट करें"
                 )
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(categoryOptions) { (id, label) ->
-                        FilterChip(
-                            selected = selectedCategory == id,
-                            onClick = { selectedCategory = id },
-                            label = { Text(label, fontSize = 12.sp) }
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "काम चुनने के लिए तस्वीर वाले बटन दबाएँ",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    )
+                    categoryOptions.chunked(2).forEach { pair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            pair.forEach { (id, label) ->
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(94.dp)
+                                        .clickable { selectedCategory = id },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (selectedCategory == id) Color(0xFFDBEAFE) else Color.White
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        if (selectedCategory == id) 2.dp else 1.dp,
+                                        if (selectedCategory == id) BrandBlue else Color(0xFFE2E8F0)
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            label,
+                                            fontSize = 15.sp,
+                                            lineHeight = 21.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                }
+                            }
+                            if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
