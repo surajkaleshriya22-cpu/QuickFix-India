@@ -192,7 +192,7 @@ export const AdminDashboard: React.FC = () => {
     city?: string; serviceArea?: { state?: string; district?: string; tehsil?: string };
     trades?: string[]; approvalStatus?: string; kycStatus?: string;
     isVerified?: boolean; isOnline?: boolean; isSuspended?: boolean;
-    securityDepositPaid?: boolean; walletBalance?: number | null;
+    walletBalance?: number | null;
     dispatchEligible?: boolean; dispatchReady?: boolean; dispatchRadiusKm?: number | null; dispatchLocationConfigured?: boolean;
     createdAt?: string | null;
   }>>([]);
