@@ -38,6 +38,9 @@ fun AdminLoginScreen(
     navController: NavController,
     authViewModel: AuthViewModel
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val authState by authViewModel.authState.collectAsState()
 
     var email by remember { mutableStateOf("") }
