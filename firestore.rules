@@ -31,6 +31,7 @@ service cloud.firestore {
         // Partner profiles must be created only by the authenticated server API.
         // Client-side self-assignment of CHANNEL_PARTNER is not permitted.
         && request.resource.data.role == 'CUSTOMER'
+        && request.resource.data.roles == ['CUSTOMER']
         && request.resource.data.isVerified == false
         && (!('trades' in request.resource.data) || request.resource.data.trades.size() == 0)
         && request.resource.data.keys().hasOnly([
@@ -39,6 +40,7 @@ service cloud.firestore {
           'displayName',
           'email',
           'role',
+          'roles',
           'address',
           'city',
           'pincode',
