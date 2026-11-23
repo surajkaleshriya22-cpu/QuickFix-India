@@ -8,11 +8,11 @@ const eligible = {
   isVerified: true,
   isOnline: true,
   isSuspended: false,
-  securityDepositPaid: true,
-  walletBalance: 2500
+  securityDepositPaid: false,
+  walletBalance: 0
 };
 
-test('allows a fully approved and funded active partner', () => {
+test('allows an approved and verified active partner without a wallet reserve', () => {
   assert.equal(isPartnerEligibleForDispatch(eligible), true);
 });
 
@@ -20,10 +20,9 @@ test('blocks suspended partners even when all other checks pass', () => {
   assert.equal(isPartnerEligibleForDispatch({ ...eligible, isSuspended: true }), false);
 });
 
-test('blocks reserve below ₹2,000 and non-numeric wallet values', () => {
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: 1999 }), false);
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: '2500' }), false);
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: Number.NaN }), false);
+test('legacy reserve and wallet fields do not affect dispatch eligibility', () => {
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, securityDepositPaid: false, walletBalance: 0 }), true);
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, securityDepositPaid: undefined, walletBalance: undefined }), true);
 });
 
 test('blocks unapproved, unverified, offline, unpaid and non-partner profiles', () => {
@@ -31,7 +30,6 @@ test('blocks unapproved, unverified, offline, unpaid and non-partner profiles', 
     { approvalStatus: 'basic_profile_approved' },
     { isVerified: false },
     { isOnline: false },
-    { securityDepositPaid: false },
     { role: 'CUSTOMER' }
   ]) {
     assert.equal(isPartnerEligibleForDispatch({ ...eligible, ...patch }), false);
