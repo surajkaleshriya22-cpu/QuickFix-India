@@ -107,6 +107,9 @@ The submission endpoint fails closed until the hosting environment has all of th
 - `FIREBASE_STORAGE_BUCKET`: exact bucket name for the `quickfix-india` project.
 - `KYC_PRIVACY_NOTICE_VERSION`: version identifier of the actual privacy notice shown to the partner.
 - `KYC_RETENTION_DAYS`: approved retention period as an integer from 1 to 3650.
+- `KYC_EXPIRY_JOB_TOKEN`: a long random server-only bearer secret required by the scheduled expiry endpoint `POST /api/internal/kyc-document-expiry`. Never put it in the app or repository.
+- The expiry endpoint deletes only the exact stored KYC file generation after its 180-day deadline, marks the submission as expired, and writes an audit event. It deliberately leaves the partner/customer account, profile, KYC decision, bookings, and safety/audit records intact.
+- The endpoint is not automatic until a recurring scheduler is configured with the bearer secret. Do not create a paid scheduler or enable real uploads until its cost, schedule, secret handling, index deployment, and end-to-end deletion tests are approved and verified.
 
 Do not set these values until the notice states the purpose, document categories, who can review, retention/deletion process, and a contact for privacy requests. The API checks consent booleans and the notice version; that is not a substitute for a legally reviewed notice or a deployed upload UI. The current API accepts only JPEG, PNG, or PDF objects up to 10 MB and document categories `identity_proof`, `address_proof`, `qualification_certificate`, and `profile_photo`. It does not specifically request Aadhaar or PAN.
 
