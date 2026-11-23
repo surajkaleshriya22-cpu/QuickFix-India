@@ -111,7 +111,7 @@
     },
     "WalletTransaction": {
       "title": "WalletTransaction",
-      "description": "Technician wallet transactions including 2000 INR security deposit, cash commission deductions, and payouts",
+      "description": "Unified partner wallet transaction history; legacy reserve entries are not used for eligibility",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
