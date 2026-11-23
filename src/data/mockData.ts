@@ -1297,15 +1297,6 @@ export const INITIAL_PAYOUTS: PayoutRecord[] = [
 
 export const INITIAL_WALLET_TRANSACTIONS: WalletTransaction[] = [
   {
-    id: 'TXN-W101',
-    technicianId: 'tech-101',
-    type: 'security_deposit',
-    amount: 2000,
-    balanceAfter: 2000,
-    description: 'Mandatory Partner Security Deposit (Non-withdrawable)',
-    timestamp: '2026-10-15T09:00:00Z'
-  },
-  {
     id: 'TXN-W102',
     technicianId: 'tech-101',
     type: 'online_payout_credit',
@@ -1314,16 +1305,6 @@ export const INITIAL_WALLET_TRANSACTIONS: WalletTransaction[] = [
     bookingId: 'QF-7049',
     description: 'Online Job Net Payout credited for #QF-7049',
     timestamp: '2026-11-03T10:30:00Z'
-  },
-  {
-    id: 'TXN-W103',
-    technicianId: 'tech-101',
-    type: 'cash_commission_deduction',
-    amount: 288,
-    balanceAfter: 2850,
-    bookingId: 'QF-7052',
-    description: 'Auto-commission deduction for Cash Job (Customer paid ₹2,400 cash)',
-    timestamp: '2026-11-03T13:45:00Z'
   },
   {
     id: 'TXN-W105',
