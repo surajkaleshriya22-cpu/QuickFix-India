@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "partner_kyc_submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "documentExpiryStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retentionExpiresAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
