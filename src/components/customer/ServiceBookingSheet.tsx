@@ -31,17 +31,17 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   ];
   const [selectedDate, setSelectedDate] = useState(dateOptions[0].value);
   const [selectedSlot, setSelectedSlot] = useState('Express (Within 45 Mins)');
-  const defaultCityAddress =
-    customer.addresses.find(a => a.city.toLowerCase() === currentCity.toLowerCase())?.addressLine ||
-    (currentCity === 'Indore' ? '102, Shrivardhan Complex, RNT Marg, Indore' :
-     currentCity === 'Bhopal' ? 'E-3/42, Arera Colony, Near 10 No. Market, Bhopal' :
-     currentCity === 'Ujjain' ? '45, Freeganj Main Road, Near Tower Chowk, Ujjain' :
-     currentCity === 'Dewas' ? '12, Chamunda Complex, AB Road, Dewas' :
-     customer.addresses[0]?.addressLine || `Main Road, ${currentCity}`);
+  // Never invent a customer's service address. Only reuse an explicitly saved
+  // address for the selected city; otherwise require a real address selection.
+  const savedCityAddress =
+    customer.addresses.find(a =>
+      a.city.trim().toLowerCase() === currentCity.trim().toLowerCase() &&
+      typeof a.addressLine === 'string' && a.addressLine.trim().length > 0
+    )?.addressLine.trim() || '';
 
-  const [selectedAddress, setSelectedAddress] = useState(defaultCityAddress);
+  const [selectedAddress, setSelectedAddress] = useState(savedCityAddress);
   const [customAddress, setCustomAddress] = useState('');
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(!savedCityAddress);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('upi');
 
@@ -171,6 +171,11 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
       window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
       return;
     }
+    if (!selectedAddress.trim()) {
+      window.alert('Booking se pehle map se apna poora service address select karein.');
+      setIsEditingAddress(true);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await submitCustomerBooking({
@@ -276,7 +281,10 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               </label>
               <button
                 type="button"
-                onClick={() => setIsEditingAddress(!isEditingAddress)}
+                onClick={() => {
+                if (isEditingAddress && savedCityAddress) setSelectedAddress(savedCityAddress);
+                setIsEditingAddress(!isEditingAddress);
+              }}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium"
               >
                 {isEditingAddress ? 'Use Saved' : '+ Search on Map'}
