@@ -23,11 +23,11 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "serviceArea.state",
+          "fieldPath": "serviceArea.stateKey",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "serviceArea.district",
+          "fieldPath": "serviceArea.districtKey",
           "order": "ASCENDING"
         }
       ]
