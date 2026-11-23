@@ -4,26 +4,24 @@ export type PartnerDispatchProfile = {
   isVerified?: unknown;
   isOnline?: unknown;
   isSuspended?: unknown;
+  /** @deprecated Legacy migration fields; intentionally ignored for dispatch eligibility. */
   securityDepositPaid?: unknown;
+  /** @deprecated Legacy display field; intentionally ignored for dispatch eligibility. */
   walletBalance?: unknown;
 };
 
 /**
- * A registered Channel Partner has an individual wallet on their own user
- * profile. Dispatch remains blocked until the approved ₹2,000 reserve is
- * recorded as paid and the available wallet balance meets the reserve.
- * Client-supplied wallet or deposit values are never trusted by the API.
+ * Dispatch eligibility is based on verified partner status only.
+ * Recharge is a separate access/payment policy and must be checked by the
+ * trusted server-side subscription/recharge ledger, never by a client wallet
+ * balance or legacy security-deposit field.
  */
 export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): boolean {
   return (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
-    profile.isSuspended !== true &&
-    profile.securityDepositPaid === true &&
-    typeof profile.walletBalance === 'number' &&
-    Number.isFinite(profile.walletBalance) &&
-    profile.walletBalance >= 2000;
+    profile.isSuspended !== true;
 }
 
 const DISPATCHABLE_PARTNER_TRADES = new Set([
