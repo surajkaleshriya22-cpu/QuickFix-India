@@ -64,6 +64,7 @@ import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, 
 import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { AdminKycReviewSection } from './AdminKycReviewSection';
+import { AdminPartnerRechargePolicySection } from './AdminPartnerRechargePolicySection';
 import { auth } from '../../lib/firebase';
 
 const INDIAN_BANK_OPTIONS = [
@@ -1685,6 +1686,7 @@ export const AdminDashboard: React.FC = () => {
         {/* ================= TAB 5: PAYMENT & COMMISSION MANAGEMENT ================= */}
         {activeTab === 'commissions' && (
           <div className="space-y-4">
+            <AdminPartnerRechargePolicySection />
             {/* Header with Firestore Sync Badge */}
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
               <div>
