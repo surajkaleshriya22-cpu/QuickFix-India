@@ -185,7 +185,7 @@ fun AdminLoginScreen(
                     email = it
                     localError = null
                 },
-                label = { Text("Whitelisted Admin Email") },
+                label = { Text(if (isEnglish) "Whitelisted Admin Email" else "अधिकृत एडमिन ईमेल") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color(0xFF64748B)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -203,7 +203,7 @@ fun AdminLoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Firebase Account Password") },
+                label = { Text(if (isEnglish) "Firebase Account Password" else "Firebase खाते का पासवर्ड") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -285,7 +285,7 @@ fun AdminLoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Sign In & Verify Admin Permission", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(if (isEnglish) "Sign In & Verify Admin Permission" else "लॉगिन करें और एडमिन अनुमति जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
                 }
             }
