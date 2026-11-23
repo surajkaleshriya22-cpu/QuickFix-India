@@ -1321,6 +1321,7 @@ export const AdminDashboard: React.FC = () => {
                         <span className="font-mono font-bold text-white text-xs">
                           ₹{tech.walletBalance ?? 0}
                         </span>
+                      </div>
                       <div className="text-[10px] text-slate-500 font-mono">
                         Cash Coll: ₹{tech.lifetimeCashCollected ?? 0} · Comm Cut: ₹{tech.lifetimeCommissionPaid ?? 0}
                       </div>
