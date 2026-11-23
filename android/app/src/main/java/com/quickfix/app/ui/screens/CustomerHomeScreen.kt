@@ -1,5 +1,11 @@
 package com.quickfix.app.ui.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,6 +50,49 @@ fun CustomerHomeScreen(
     var selectedCategory by remember { mutableStateOf("all") }
     var showCityMenu by remember { mutableStateOf(false) }
     var cityInput by remember(currentCity) { mutableStateOf(currentCity) }
+    var voiceMessage by remember { mutableStateOf("") }
+    val voiceBookingLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spoken = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                .orEmpty()
+                .lowercase()
+            val match = when {
+                listOf("बिजली", "इलेक्ट्रिशियन", "electrician", "पंखा", "लाइट").any { spoken.contains(it) } -> "electrician"
+                listOf("पानी", "नल", "पाइप", "प्लंबर", "plumber").any { spoken.contains(it) } -> "plumber"
+                listOf("एसी", "ac", "एयर कंडीशनर").any { spoken.contains(it) } -> "ac_repair"
+                listOf("फ्रिज", "रेफ्रिजरेटर").any { spoken.contains(it) } -> "fridge_repair"
+                listOf("गाड़ी", "कार", "मैकेनिक").any { spoken.contains(it) } -> "mechanic"
+                listOf("ड्राइवर", "driver").any { spoken.contains(it) } -> "driver"
+                listOf("बाइक", "टैक्सी").any { spoken.contains(it) } -> "bike_taxi"
+                listOf("सफाई", "घर की मदद", "मदद").any { spoken.contains(it) } -> "kaamkaaj_partner"
+                else -> ""
+            }
+            if (match.isNotBlank()) {
+                selectedCategory = match
+                voiceMessage = "आपका काम चुना गया: $spoken"
+            } else {
+                voiceMessage = "काम समझ नहीं आया। फिर बोलें या नीचे से काम चुनें।"
+            }
+        } else {
+            voiceMessage = "आवाज़ से काम चुनना रद्द हुआ।"
+        }
+    }
+    fun startVoiceBooking() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "बताइए, आपको कौन-सा काम करवाना है?")
+        }
+        try {
+            voiceBookingLauncher.launch(intent)
+        } catch (_: Exception) {
+            voiceMessage = "इस फोन में आवाज़ पहचानने की सुविधा उपलब्ध नहीं है।"
+        }
+    }
     val filteredServices = if (selectedCategory == "all") {
         services
     } else {
@@ -201,6 +250,20 @@ fun CustomerHomeScreen(
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { startVoiceBooking() },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = "आवाज़ से काम बताएं", tint = BrandBlue)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("बोलकर अपना काम बताइए", color = BrandBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        if (voiceMessage.isNotBlank()) {
+                            Text(voiceMessage, color = Color.White, fontSize = 12.sp)
+                        }
                     }
                 }
             }
