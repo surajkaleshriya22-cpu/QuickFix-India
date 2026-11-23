@@ -1324,15 +1324,6 @@ export const INITIAL_WALLET_TRANSACTIONS: WalletTransaction[] = [
     timestamp: '2026-11-03T13:45:00Z'
   },
   {
-    id: 'TXN-W104',
-    technicianId: 'tech-102',
-    type: 'security_deposit',
-    amount: 2000,
-    balanceAfter: 2000,
-    description: 'Mandatory Partner Security Deposit (Non-withdrawable)',
-    timestamp: '2026-10-18T11:00:00Z'
-  },
-  {
     id: 'TXN-W105',
     technicianId: 'tech-102',
     type: 'topup',
@@ -1340,15 +1331,6 @@ export const INITIAL_WALLET_TRANSACTIONS: WalletTransaction[] = [
     balanceAfter: 3400,
     description: 'Technician Wallet Top-up via UPI (Fast Transfer)',
     timestamp: '2026-11-01T14:20:00Z'
-  },
-  {
-    id: 'TXN-W106',
-    technicianId: 'tech-109',
-    type: 'security_deposit',
-    amount: 2000,
-    balanceAfter: 2000,
-    description: 'Mandatory Partner Security Deposit (Non-withdrawable)',
-    timestamp: '2026-10-20T10:00:00Z'
   },
   {
     id: 'TXN-W107',
