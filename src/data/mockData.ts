@@ -1230,16 +1230,16 @@ export const INITIAL_COMMISSION_SETTINGS: CommissionSettings = {
 };
 
 export const INITIAL_ADMIN_PAYMENT_CONFIG: AdminMasterPaymentConfig = {
-  merchantName: 'QuickFix Technologies India Pvt Ltd (HQ Master Account)',
-  merchantVpa: 'quickfix.master@hdfcbank',
-  bankName: 'HDFC Bank Ltd',
-  bankAccountNumber: '50200088192831',
-  bankIfsc: 'HDFC0000128',
-  gatewayProvider: 'Razorpay Escrow & Cashfree Payouts API',
-  merchantId: 'MID_QF_MASTER_9921',
-  escrowEnabled: true,
+  merchantName: '',
+  merchantVpa: '',
+  bankName: '',
+  bankAccountNumber: '',
+  bankIfsc: '',
+  gatewayProvider: 'Not configured',
+  merchantId: '',
+  escrowEnabled: false,
   manualApprovalRequired: true,
-  payoutSchedule: 'instant_on_admin_approval',
+  payoutSchedule: 'manual_admin_approval',
   tdsDeductionPct: 1.0
 };
 
