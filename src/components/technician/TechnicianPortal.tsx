@@ -38,6 +38,7 @@ import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { PartnerKycPanel } from './PartnerKycPanel';
+import { PartnerRechargeStatusCard } from './PartnerRechargeStatusCard';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -572,6 +573,10 @@ export const TechnicianPortal: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <PartnerRechargeStatusCard />
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900">
+          <strong>Policy transition notice:</strong> Recharge collection is disabled. The older ₹2,000 wallet-reserve and online-eligibility rules are still present and have not yet been migrated. Do not pay anyone to activate duty.
+        </div>
         {/* Geo-fence Operating Perimeter Status Banner */}
         <div
           className={`p-3 rounded-2xl border text-xs shadow-xs flex flex-wrap items-center justify-between gap-2.5 transition-all ${
