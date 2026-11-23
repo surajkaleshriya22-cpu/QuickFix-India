@@ -164,8 +164,12 @@ export const PartnerKycPanel: React.FC = () => {
         </div>
       ) : config ? (
         <>
-          <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-950">
-            Upload your required documents for admin verification. Files are stored in a private folder and are not made public. QuickFix's configured retention period is <strong>{config.retentionDays} days</strong>.
+          <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-950 space-y-2">
+            <strong>QuickFix India KYC Privacy Notice · {config.privacyNoticeVersion}</strong>
+            <p>Purpose: verify your identity, service address and trade qualifications so QuickFix can review your Channel Partner application and help protect customers and partners.</p>
+            <p>Documents you choose to submit may include identity proof, address proof, trade/qualification certificate and profile photo. Access is restricted to your account and authorized QuickFix administrators for verification and security review. Documents are stored privately and are not public.</p>
+            <p>Configured retention period: <strong>up to {config.retentionDays} days</strong>. For privacy questions, correction or deletion requests, contact <a className="font-semibold underline" href="mailto:surajkaleshriya22@gmail.com">surajkaleshriya22@gmail.com</a>.</p>
+            <p className="font-semibold text-amber-800">Important: automated expiry/deletion is not yet deployed and verified. Do not upload real identity documents until QuickFix confirms the deletion process and privacy notice are operational.</p>
           </div>
           <div>
             <label htmlFor="partner-kyc-type" className="block text-xs font-semibold text-slate-700 mb-1">Document type</label>
