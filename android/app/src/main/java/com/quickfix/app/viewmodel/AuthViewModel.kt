@@ -23,6 +23,22 @@ class AuthViewModel(
 
     private var currentVerificationId: String = ""
 
+    private fun requireMatchingLoginRole(existing: User, requestedRole: UserRole): User {
+        val requestedPartner = requestedRole == UserRole.CHANNEL_PARTNER
+        val existingPartner = existing.role == UserRole.CHANNEL_PARTNER ||
+            existing.role == UserRole.TECHNICIAN
+        if (requestedPartner != existingPartner) {
+            throw SecurityException(
+                if (existingPartner) {
+                    "यह मोबाइल नंबर Channel Partner खाते से जुड़ा है। Partner विकल्प से लॉगिन करें।"
+                } else {
+                    "यह मोबाइल नंबर Customer खाते से जुड़ा है, Channel Partner खाते से नहीं। सही खाते से लॉगिन करें।"
+                }
+            )
+        }
+        return existing
+    }
+
     init {
         checkExistingSession()
     }
@@ -89,7 +105,7 @@ class AuthViewModel(
                         val uid = repository.signInWithCredential(credential)
                         val existing = repository.getUserProfile(uid)
                         val verifiedUser = when {
-                            existing != null -> existing
+                            existing != null -> requireMatchingLoginRole(existing, pendingUser.role)
                             pendingUser.role == UserRole.CHANNEL_PARTNER -> {
                                 repository.registerChannelPartner(pendingUser.copy(uid = uid))
                                 repository.getUserProfile(uid)
@@ -132,7 +148,7 @@ class AuthViewModel(
                 // Check if profile exists, otherwise save new profile
                 val existingProfile = repository.getUserProfile(uid)
                 val userToPersist = when {
-                    existingProfile != null -> existingProfile
+                    existingProfile != null -> requireMatchingLoginRole(existingProfile, pendingUser.role)
                     pendingUser.role == UserRole.CHANNEL_PARTNER -> {
                         repository.registerChannelPartner(pendingUser)
                         repository.getUserProfile(uid)
