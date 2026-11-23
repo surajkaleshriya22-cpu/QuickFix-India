@@ -12,11 +12,35 @@ import androidx.compose.ui.platform.LocalContext
 private const val LANGUAGE_PREFS = "quickfix_preferences"
 private const val LANGUAGE_KEY = "app_language"
 
+/** One observable language preference shared by every Compose screen. */
+object QuickFixLanguage {
+    var current by mutableStateOf("hi")
+        private set
+
+    fun load(context: Context) {
+        current = context.getSharedPreferences(LANGUAGE_PREFS, Context.MODE_PRIVATE)
+            .getString(LANGUAGE_KEY, "hi")?.takeIf { it == "en" || it == "hi" } ?: "hi"
+    }
+
+    fun set(context: Context, language: String) {
+        val safeLanguage = if (language == "en") "en" else "hi"
+        current = safeLanguage
+        context.getSharedPreferences(LANGUAGE_PREFS, Context.MODE_PRIVATE)
+            .edit().putString(LANGUAGE_KEY, safeLanguage).apply()
+    }
+}
+
+@Composable
+fun rememberQuickFixLanguage(): String {
+    val context = LocalContext.current
+    LaunchedEffect(context) { QuickFixLanguage.load(context) }
+    return QuickFixLanguage.current
+}
+
 @Composable
 fun QuickFixLanguageSelector() {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences(LANGUAGE_PREFS, Context.MODE_PRIVATE) }
-    var language by remember { mutableStateOf(prefs.getString(LANGUAGE_KEY, "hi") ?: "hi") }
+    val language = rememberQuickFixLanguage()
     var expanded by remember { mutableStateOf(false) }
 
     Box {
@@ -25,13 +49,11 @@ fun QuickFixLanguageSelector() {
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text("हिंदी") }, onClick = {
-                language = "hi"
-                prefs.edit().putString(LANGUAGE_KEY, language).apply()
+                QuickFixLanguage.set(context, "hi")
                 expanded = false
             })
             DropdownMenuItem(text = { Text("English") }, onClick = {
-                language = "en"
-                prefs.edit().putString(LANGUAGE_KEY, language).apply()
+                QuickFixLanguage.set(context, "en")
                 expanded = false
             })
         }
