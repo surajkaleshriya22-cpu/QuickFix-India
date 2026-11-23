@@ -107,10 +107,30 @@ export async function validateTechnicianGeofence(
 ): Promise<GeofenceValidationResult> {
   const { lat, lng } = technicianCoords;
 
-  // 1. Fetch zones from Firestore (or use provided cache)
-  const zones = cachedZones && cachedZones.length > 0
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return {
+      allowed: false,
+      insideZone: null,
+      distanceKm: 0,
+      minDistanceToAllowedZoneKm: 0,
+      technicianLocation: technicianCoords,
+      reason: 'A valid device location is required to verify the service area.'
+    };
+  }
+
+  // 1. Fetch zones from Firestore (or use provided cache), then discard
+  // inactive or malformed cached entries before evaluating dispatch access.
+  const loadedZones = cachedZones && cachedZones.length > 0
     ? cachedZones
     : await queryServiceZonesFromFirestore(preferredCity);
+  const zones = loadedZones.filter(zone =>
+    zone.isActive === true &&
+    Number.isFinite(zone.center?.lat) &&
+    Number.isFinite(zone.center?.lng) &&
+    zone.center.lat >= -90 && zone.center.lat <= 90 &&
+    zone.center.lng >= -180 && zone.center.lng <= 180 &&
+    Number.isFinite(zone.radiusKm) && zone.radiusKm > 0
+  );
 
   if (!zones || zones.length === 0) {
     return {
