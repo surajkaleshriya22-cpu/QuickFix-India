@@ -112,6 +112,9 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
     createdAt: new Date().toISOString()
   });
 
+  const kycConfig = await request('/api/partners/kyc-config', partner.token);
+  assert.equal(kycConfig.status, 503, 'KYC policy must not be advertised as ready without privacy, retention and Storage configuration');
+
   // KYC remains fail-closed until the reviewed privacy notice, retention policy,
   // private Storage bucket and deployed server configuration are explicitly set.
   const kycId = '550e8400-e29b-41d4-a716-446655440000';
