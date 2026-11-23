@@ -4,6 +4,10 @@ export type PartnerDispatchProfile = {
   isVerified?: unknown;
   isOnline?: unknown;
   isSuspended?: unknown;
+  /** @deprecated Legacy migration fields; intentionally ignored for dispatch eligibility. */
+  securityDepositPaid?: unknown;
+  /** @deprecated Legacy display field; intentionally ignored for dispatch eligibility. */
+  walletBalance?: unknown;
 };
 
 /**
