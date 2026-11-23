@@ -277,7 +277,6 @@ export const CustomerHome: React.FC = () => {
               ['ac_repair','AC Repair','एसी मरम्मत'],
               ['fridge_repair','Fridge Repair','फ्रिज मरम्मत'],
               ['appliance_repair','Appliance Repair','घरेलू उपकरण मरम्मत'],
-              ['technician','Technician','अन्य तकनीकी सेवाएँ'],
               ['welder','Welder / Fabricator','वेल्डर'],
               ['mechanic','Mechanic','मैकेनिक'],
               ['driver','Driver','ड्राइवर'],
