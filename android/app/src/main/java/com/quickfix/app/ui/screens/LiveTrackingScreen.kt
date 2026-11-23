@@ -40,6 +40,9 @@ fun LiveTrackingScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsState()
     val customerStartOtps by viewModel.customerStartOtps.collectAsState()
