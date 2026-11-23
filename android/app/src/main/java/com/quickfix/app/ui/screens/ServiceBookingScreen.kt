@@ -51,6 +51,9 @@ fun ServiceBookingScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val services by viewModel.services.collectAsState()
     val currentCity by viewModel.currentCity.collectAsState()
 
