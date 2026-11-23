@@ -266,12 +266,11 @@ export const CustomerHome: React.FC = () => {
         {/* All QuickFix partner categories */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">All Services & Channel Partners</h2>
+            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Choose a Partner Category</h2>
             <span className="text-[11px] text-slate-500">{filteredServices.length} services</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {([
-              ['all','All Services','सभी सेवाएं'],
               ['electrician','Electrician','बिजली मिस्त्री'],
               ['plumber','Plumber','प्लंबर'],
               ['ac_repair','AC Repair','एसी मरम्मत'],
