@@ -37,7 +37,8 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
   // Default coordinates based on city or provided location
   const defaultCoords = currentLocation || { lat: 22.7196, lng: 75.8577 }; // Indore center fallback
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>(defaultCoords);
-  const [locationSource, setLocationSource] = useState<'device' | 'preset'>('preset');
+  const [locationSource, setLocationSource] = useState<'device' | 'preset'>(currentLocation ? 'device' : 'preset');
+  const [deviceGpsCaptured, setDeviceGpsCaptured] = useState(Boolean(currentLocation));
   const [activeZone, setActiveZone] = useState<ServiceZone>(
     serviceZones.find(z => z.city.toLowerCase() === technicianCity.toLowerCase()) || serviceZones[0]
   );
@@ -86,11 +87,13 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
         };
         setSelectedCoords(coords);
         setLocationSource('device');
+        setDeviceGpsCaptured(true);
         runValidation(coords);
       },
       (err) => {
         setIsValidating(false);
-        setGpsError(`GPS permission warning: ${err.message}. Using high-precision preset simulation below.`);
+        setDeviceGpsCaptured(false);
+        setGpsError(`GPS permission warning: ${err.message}. Preset locations are for boundary preview only and cannot activate duty.`);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
@@ -129,6 +132,8 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
 
   const isAllowed = validation?.allowed ?? false;
   const currentDistance = validation?.distanceKm ?? 0;
+  const hasLiveDeviceGps = locationSource === 'device' && deviceGpsCaptured;
+  const canGoOnline = isAllowed && hasLiveDeviceGps;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -153,7 +158,7 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
                       : 'bg-rose-950 text-rose-300 border border-rose-800'
                   }`}
                 >
-                  {isAllowed ? 'Perimeter Cleared' : 'Out of Bounds'}
+                  {canGoOnline ? 'Live GPS Verified' : isAllowed ? 'Test Location Only' : 'Out of Bounds'}
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
@@ -188,10 +193,12 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
               )}
               <div>
                 <span className="font-bold text-sm block text-white">
-                  {isAllowed ? 'Service Radius Verified' : 'Status Update Restricted'}
+                  {canGoOnline ? 'Service Radius Verified' : isAllowed ? 'Live GPS Required — Preview Only' : 'Status Update Restricted'}
                 </span>
                 <p className="mt-0.5 text-xs">
-                  {validation?.reason || 'Validating current GPS position against Firestore service zones...'}
+                  {hasLiveDeviceGps
+                    ? validation?.reason || 'Validating live device GPS against service zones...'
+                    : 'This is a preset or unverified location preview. Fetch the real device GPS before going online.'}
                 </p>
               </div>
             </div>
@@ -218,7 +225,7 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
             <GeofenceRadiusMap
               technicianCoords={selectedCoords}
               zone={activeZone}
-              isInside={isAllowed}
+              isInside={canGoOnline}
               distanceKm={currentDistance}
               height="240px"
             />
@@ -261,6 +268,7 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
                     onClick={() => {
                       setSelectedCoords(preset.coords);
                       setLocationSource('preset');
+                      setDeviceGpsCaptured(false);
                       runValidation(preset.coords);
                     }}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
@@ -303,9 +311,9 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={!isAllowed || isValidating}
+              disabled={!canGoOnline || isValidating}
               onClick={() => {
-                if (isAllowed && activeZone) {
+                if (canGoOnline && activeZone) {
                   onConfirmOnline({
                     lat: selectedCoords.lat,
                     lng: selectedCoords.lng,
@@ -317,13 +325,13 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
                 }
               }}
               className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-md ${
-                isAllowed
+                canGoOnline
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-98 ring-2 ring-emerald-400/30'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>{isAllowed ? 'Verify Geo-fence & Go Online' : 'Blocked: Move Inside Service Radius'}</span>
+              <span>{canGoOnline ? 'Verify Geo-fence & Go Online' : isAllowed ? 'Blocked: Fetch Live Device GPS' : 'Blocked: Move Inside Service Radius'}</span>
             </button>
           </div>
         </div>
