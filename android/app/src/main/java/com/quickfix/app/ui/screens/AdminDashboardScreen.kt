@@ -252,30 +252,30 @@ fun OverviewTab(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text("Cloud Firestore Real-Time Sync", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(if (isEnglish) "Cloud Firestore Real-Time Sync" else "Cloud Firestore लाइव सिंक", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Text(firestoreStatus, color = Color(0xFF93C5FD), fontSize = 11.sp)
                     }
                 }
-                Text("Live latency not measured", color = Color(0xFFBAE6FD), fontSize = 10.sp)
+                Text(if (isEnglish) "Live latency not measured" else "लाइव विलंब मापा नहीं गया", color = Color(0xFFBAE6FD), fontSize = 10.sp)
             }
         }
 
         // Metrics Grid (5 KPI Cards requested by User)
-        Text("Primary Marketplace Metrics", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+        Text(if (isEnglish) "Primary Marketplace Metrics" else "मुख्य मार्केटप्लेस आँकड़े", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = "Total Customers",
+                title = if (isEnglish) "Total Customers" else "कुल ग्राहक",
                 value = totalCustomers.toString(),
-                subtitle = "Accounts in loaded data",
+                subtitle = if (isEnglish) "Accounts in loaded data" else "लोड किए गए खाते",
                 color = BrandBlue,
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.CUSTOMERS) }
             )
             KpiCard(
-                title = "Total Bookings",
+                title = if (isEnglish) "Total Bookings" else "कुल बुकिंग",
                 value = totalBookings.toString(),
-                subtitle = "Requests in loaded data",
+                subtitle = if (isEnglish) "Requests in loaded data" else "लोड किए गए अनुरोध",
                 color = Color(0xFF8B5CF6),
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.BOOKINGS) }
@@ -284,17 +284,17 @@ fun OverviewTab(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = "Electricians",
+                title = if (isEnglish) "Electricians" else "इलेक्ट्रिशियन",
                 value = totalElectricians.toString(),
-                subtitle = "Wiremen & Technicians",
+                subtitle = if (isEnglish) "Wiremen & Technicians" else "बिजली मिस्त्री और तकनीशियन",
                 color = Color(0xFFF59E0B),
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.TECHNICIANS) }
             )
             KpiCard(
-                title = "Plumbers",
+                title = if (isEnglish) "Plumbers" else "प्लंबर",
                 value = totalPlumbers.toString(),
-                subtitle = "Pipe & Sanity Pros",
+                subtitle = if (isEnglish) "Pipe & Sanity Pros" else "पाइपलाइन विशेषज्ञ",
                 color = Color(0xFF06B6D4),
                 modifier = Modifier.weight(1f),
                 onClick = { onNavigateToTab(AdminTab.TECHNICIANS) }
@@ -309,7 +309,7 @@ fun OverviewTab(
             modifier = Modifier.fillMaxWidth().clickable { onNavigateToTab(AdminTab.COMMISSIONS) }
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Booking totals (not collected revenue)", fontSize = 12.sp, color = TextSecondary)
+                Text(if (isEnglish) "Booking totals (not collected revenue)" else "बुकिंग का कुल मूल्य (वसूली गई आय नहीं)", fontSize = 12.sp, color = TextSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("₹$totalRevenueGmv", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
 
@@ -319,11 +319,11 @@ fun OverviewTab(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text("Platform Commission", fontSize = 11.sp, color = TextSecondary)
+                        Text(if (isEnglish) "Platform Commission" else "प्लेटफ़ॉर्म कमीशन", fontSize = 11.sp, color = TextSecondary)
                         Text("₹$totalCommissionCut", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Estimated remainder (not paid out)", fontSize = 11.sp, color = TextSecondary)
+                        Text(if (isEnglish) "Estimated remainder (not paid out)" else "अनुमानित शेष (अभी भुगतान नहीं हुआ)", fontSize = 11.sp, color = TextSecondary)
                         Text("₹${totalRevenueGmv - totalCommissionCut}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                 }
