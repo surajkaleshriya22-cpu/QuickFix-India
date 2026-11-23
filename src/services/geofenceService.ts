@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { ServiceZone, GeofenceValidationResult } from '../types';
-import { INITIAL_SERVICE_ZONES, calculateBoundingBox } from '../data/serviceZones';
+import { INITIAL_SERVICE_ZONES } from '../data/serviceZones';
 
 /**
  * Calculates great-circle distance between two points in kilometers using the Haversine formula.
@@ -61,8 +61,8 @@ export async function seedServiceZonesIfEmpty(): Promise<ServiceZone[]> {
     });
     return zones.length > 0 ? zones : INITIAL_SERVICE_ZONES;
   } catch (err) {
-    console.warn('Notice loading Firestore service zones, using defaults:', err);
-    return INITIAL_SERVICE_ZONES;
+    console.warn('Unable to load or seed Firestore service zones:', err);
+    return [];
   }
 }
 
@@ -85,18 +85,14 @@ export async function queryServiceZonesFromFirestore(city?: string): Promise<Ser
       zones.push(d.data() as ServiceZone);
     });
 
-    if (zones.length === 0 && city) {
-      // Fallback to all active zones if city specific wasn't found
-      const fallbackSnap = await getDocs(query(zonesRef, where('isActive', '==', true)));
-      fallbackSnap.forEach(d => {
-        zones.push(d.data() as ServiceZone);
-      });
-    }
-
-    return zones.length > 0 ? zones : INITIAL_SERVICE_ZONES;
+    // A requested city must match its own configured zone. Do not silently
+    // authorize against a different city's service area.
+    return zones;
   } catch (err) {
-    console.warn('Firestore query service_zones fallback:', err);
-    return INITIAL_SERVICE_ZONES.filter(z => z.isActive);
+    console.warn('Unable to verify service zones from Firestore:', err);
+    // Geofence checks are an access/dispatch gate: fail closed when the
+    // authoritative zone list cannot be read.
+    return [];
   }
 }
 
