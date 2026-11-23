@@ -19,6 +19,7 @@ import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from '
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
+import { hasDistrictServiceArea, matchesPartnerServiceArea } from './src/utils/serviceArea';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -492,29 +493,30 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const trades = Array.isArray(profile.trades)
       ? profile.trades.filter((trade): trade is string => typeof trade === 'string')
       : [];
-    if (city.length < 2 || trades.length === 0) {
-      return res.status(403).json({ success: false, error: 'Your approved city and service trades are required before job access.' });
-    }
-
-
-    const normalizeAreaValue = (value: unknown) =>
-      typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
     const partnerArea = profile.serviceArea && typeof profile.serviceArea === 'object'
       ? profile.serviceArea as Record<string, unknown>
       : null;
-    const partnerHasArea = Boolean(partnerArea &&
-      ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(partnerArea[key])));
+    const partnerHasDistrictArea = hasDistrictServiceArea(partnerArea);
+    if ((city.length < 2 && !partnerHasDistrictArea) || trades.length === 0) {
+      return res.status(403).json({ success: false, error: 'Your approved service area and service trades are required before job access.' });
+    }
 
-    // Query only the partner's city. Structured area matching is then applied
-    // before returning requests; legacy records without complete area data use city.
+    // Structured partner service areas are district-scoped across India.
+    // Legacy profiles without state/district data continue to use exact city matching.
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : '';
     if (cursor && !/^[A-Za-z0-9_-]{1,150}$/.test(cursor)) {
       return res.status(400).json({ success: false, error: 'Job feed cursor is invalid.' });
     }
     let bookingQuery = db.collection('bookings')
-      .where('status', '==', 'requested')
-      .where('city', '==', city)
-      .orderBy(FieldPath.documentId());
+      .where('status', '==', 'requested');
+    if (partnerHasDistrictArea) {
+      bookingQuery = bookingQuery
+        .where('serviceArea.state', '==', String(partnerArea!.state).trim())
+        .where('serviceArea.district', '==', String(partnerArea!.district).trim());
+    } else {
+      bookingQuery = bookingQuery.where('city', '==', city);
+    }
+    bookingQuery = bookingQuery.orderBy(FieldPath.documentId());
     if (cursor) bookingQuery = bookingQuery.startAfter(cursor);
     const snapshot = await bookingQuery.limit(200).get();
 
@@ -526,15 +528,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
         const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
           ? booking.serviceArea as Record<string, unknown>
           : null;
-        const bookingHasArea = Boolean(bookingArea &&
-          ['state', 'district', 'tehsil'].every((key) => normalizeAreaValue(bookingArea[key])));
-        if (partnerHasArea && bookingHasArea) {
-          return ['state', 'district', 'tehsil'].every((key) =>
-            normalizeAreaValue(partnerArea![key]) === normalizeAreaValue(bookingArea![key])
-          );
-        }
-        // GPS radius is always enforced; city and structured area are additional filters.
-        return true;
+        return matchesPartnerServiceArea(partnerArea, bookingArea, city, booking.city);
       })
       .map((document) => {
         const booking = document.data();
@@ -603,21 +597,13 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const trades = Array.isArray(partner.trades)
         ? partner.trades.filter((trade): trade is string => typeof trade === 'string')
         : [];
-      if (!city || booking.city !== city || !canPartnerReceiveBookingCategory(trades, booking.category)) {
-        throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
-      }
-
-      const normalizeArea = (value: unknown) =>
-        typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
       const partnerArea = partner.serviceArea && typeof partner.serviceArea === 'object'
         ? partner.serviceArea as Record<string, unknown> : null;
       const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
         ? booking.serviceArea as Record<string, unknown> : null;
-      const hasCompleteArea = (area: Record<string, unknown> | null) =>
-        Boolean(area && ['state', 'district', 'tehsil'].every((key) => normalizeArea(area[key])));
-      if (hasCompleteArea(partnerArea) && hasCompleteArea(bookingArea) &&
-          !['state', 'district', 'tehsil'].every((key) =>
-            normalizeArea(partnerArea![key]) === normalizeArea(bookingArea![key]))) {
+      if ((!city && !hasDistrictServiceArea(partnerArea)) ||
+          !canPartnerReceiveBookingCategory(trades, booking.category) ||
+          !matchesPartnerServiceArea(partnerArea, bookingArea, city, booking.city)) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
       if (!isWithinPartnerDispatchRadius(partner, booking)) {
