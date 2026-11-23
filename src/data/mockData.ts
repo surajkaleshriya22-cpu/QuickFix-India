@@ -559,10 +559,7 @@ export const INITIAL_TECHNICIANS: Technician[] = [
     qualificationType: 'Skill India / NSDC Certified',
     qualificationRegNumber: 'NSDC-PL-2022-81992',
     qualificationInstitute: 'National Skill Development Corporation (Plumbing Council)',
-    walletBalance: 1500, // Below ₹2000 mandatory threshold -> Duty blocked
-    securityDepositRequired: 2000,
-    securityDepositPaid: false,
-    withdrawableBalance: 0,
+    walletBalance: 1500, // Legacy demo balance; no reserve-based duty gate
     lifetimeCashCollected: 0,
     lifetimeCommissionPaid: 0,
     kycDocType: 'Aadhaar',
