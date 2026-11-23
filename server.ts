@@ -435,6 +435,56 @@ app.put('/api/partners/dispatch-settings', authenticateFirebaseUser, async (req:
     return res.status(500).json({ success: false, error: 'Partner dispatch settings could not be saved.' });
   }
 });
+app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner duty service is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { online, location } = req.body ?? {};
+    if (typeof online !== 'boolean') return res.status(400).json({ success: false, error: 'A valid online/offline status is required.' });
+    const validPoint = location && typeof location === 'object' && !Array.isArray(location) &&
+      typeof location.latitude === 'number' && Number.isFinite(location.latitude) && location.latitude >= -90 && location.latitude <= 90 &&
+      typeof location.longitude === 'number' && Number.isFinite(location.longitude) && location.longitude >= -180 && location.longitude <= 180;
+    if (online && !validPoint) return res.status(400).json({ success: false, error: 'Live GPS location is required to activate duty.' });
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const result = await db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(userRef);
+      if (!snapshot.exists) throw new Error('PARTNER_PROFILE_NOT_FOUND');
+      const profile = snapshot.data()!;
+      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.role || ''))) throw new Error('PARTNER_PROFILE_REQUIRED');
+      if (profile.isSuspended === true || profile.status === 'suspended') throw new Error('PARTNER_SUSPENDED');
+      if (!online) {
+        transaction.update(userRef, { isOnline: false, dutyStatusUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        return { isOnline: false, walletBalance: Number(profile.walletBalance) || 0, dispatchRadiusKm: Number(profile.dispatchRadiusKm) || 5, location: profile.dispatchLocation || null };
+      }
+      if (profile.isVerified !== true || profile.approvalStatus !== 'approved' || profile.kycStatus === 'rejected') throw new Error('PARTNER_APPROVAL_REQUIRED');
+      const walletBalance = Number(profile.walletBalance);
+      if (!Number.isFinite(walletBalance) || walletBalance < 2000) throw new Error('PARTNER_RESERVE_REQUIRED');
+      const dispatchRadiusKm = [1, 3, 5, 10, 15].includes(profile.dispatchRadiusKm) ? profile.dispatchRadiusKm : 5;
+      transaction.update(userRef, {
+        isOnline: true, dispatchRadiusKm,
+        dispatchLocation: { latitude: location.latitude, longitude: location.longitude },
+        dispatchLocationUpdatedAt: FieldValue.serverTimestamp(),
+        dutyStatusUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+      });
+      return { isOnline: true, walletBalance, dispatchRadiusKm, location: { latitude: location.latitude, longitude: location.longitude } };
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    const known: Record<string, { status: number; message: string }> = {
+      PARTNER_PROFILE_NOT_FOUND: { status: 404, message: 'Channel Partner profile was not found.' },
+      PARTNER_PROFILE_REQUIRED: { status: 403, message: 'A registered Channel Partner profile is required.' },
+      PARTNER_SUSPENDED: { status: 403, message: 'Duty is blocked because this partner account is suspended.' },
+      PARTNER_APPROVAL_REQUIRED: { status: 403, message: 'Admin KYC and trade approval are required before going online.' },
+      PARTNER_RESERVE_REQUIRED: { status: 403, message: 'A verified wallet balance of at least ₹2,000 is required before going online.' }
+    };
+    if (known[code]) return res.status(known[code].status).json({ success: false, error: known[code].message });
+    console.error('Partner duty status update failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner duty status could not be updated securely.' });
+  }
+});
+
 app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) {
