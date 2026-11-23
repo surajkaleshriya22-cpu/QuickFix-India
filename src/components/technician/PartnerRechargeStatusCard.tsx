@@ -6,6 +6,7 @@ type RechargeStatus = {
   status: 'free_trial' | 'recharge_due' | 'activation_date_unavailable';
   freeTrialDays: number;
   currentRechargeAmount: number;
+  availablePlans?: { id: string; durationDays: number; amount: number }[];
   trialEndsAt: string | null;
   daysRemaining?: number;
   paymentEnabled: false;
@@ -59,6 +60,16 @@ export const PartnerRechargeStatusCard: React.FC = () => {
         <IndianRupee className="h-3.5 w-3.5" />
         <span>Recharge after free period: ₹{status.currentRechargeAmount.toLocaleString('en-IN')}</span>
       </div>
+      {status.availablePlans && status.availablePlans.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          {status.availablePlans.map((plan) => (
+            <div key={plan.id} className="rounded-lg border border-slate-200 bg-white/80 p-2 text-center">
+              <div className="text-[10px] font-semibold text-slate-500">{plan.durationDays} days</div>
+              <div className="text-sm font-extrabold text-slate-900">₹{plan.amount.toLocaleString('en-IN')}</div>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="text-[11px] text-slate-600">{status.message || 'Recharge is not yet being collected.'}</p>
       <p className="text-[10px] font-semibold text-slate-500">No payment has been taken. Payment activation will happen only after secure payment setup.</p>
     </section>
