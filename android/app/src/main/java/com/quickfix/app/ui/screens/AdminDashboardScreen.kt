@@ -781,12 +781,12 @@ fun CommissionsTab(
                         }
                     }
                     OutlinedTextField(value = accountHolder, onValueChange = { accountHolder = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = accountNumber, onValueChange = { accountNumber = it.filter(Char::isDigit).take(18) }, label = { Text("New account number (leave blank to keep saved account)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = accountNumber, onValueChange = { accountNumber = it.filter(Char::isDigit).take(18) }, label = { Text("Account number (enter again to save or replace)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                     OutlinedTextField(value = bankIfsc, onValueChange = { bankIfsc = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     Text(bankStatus, color = if (bankStatus.startsWith("Bank settings unavailable") || bankStatus.startsWith("Save failed")) Color(0xFFB45309) else TextSecondary, fontSize = 12.sp)
                     Text("Bank details are encrypted on the server. Only the last four account digits are shown after saving. This does not activate collections or payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
                     Button(
-                        enabled = !bankBusy && selectedBank.isNotBlank() && accountHolder.isNotBlank() && bankIfsc.matches(Regex("^[A-Z]{4}0[A-Z0-9]{6}$")) && (accountNumber.isBlank() || accountNumber.length in 9..18),
+                        enabled = !bankBusy && selectedBank.isNotBlank() && accountHolder.isNotBlank() && bankIfsc.matches(Regex("^[A-Z]{4}0[A-Z0-9]{6}$")) && accountNumber.length in 9..18,
                         onClick = {
                             bankScope.launch {
                                 bankBusy = true
@@ -802,8 +802,7 @@ fun CommissionsTab(
                                             connection.setRequestProperty("Content-Type", "application/json")
                                             connection.connectTimeout = 15000
                                             connection.readTimeout = 15000
-                                            val payload = JSONObject().put("bankName", selectedBank).put("accountHolderName", accountHolder.trim()).put("ifsc", bankIfsc.trim())
-                                            if (accountNumber.isNotBlank()) payload.put("accountNumber", accountNumber)
+                                            val payload = JSONObject().put("bankName", selectedBank).put("accountHolderName", accountHolder.trim()).put("ifsc", bankIfsc.trim()).put("accountNumber", accountNumber)
                                             connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                                             val code = connection.responseCode
                                             val body = (if (code in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
