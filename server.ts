@@ -15,7 +15,7 @@ import path from 'path';
 import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
-import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
@@ -457,10 +457,11 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
         transaction.update(userRef, { isOnline: false, dutyStatusUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
         return { isOnline: false, walletBalance: Number(profile.walletBalance) || 0, dispatchRadiusKm: Number(profile.dispatchRadiusKm) || 5, location: profile.dispatchLocation || null };
       }
-      if (profile.isVerified !== true || profile.approvalStatus !== 'approved' || profile.kycStatus === 'rejected') throw new Error('PARTNER_APPROVAL_REQUIRED');
-      if (profile.securityDepositPaid !== true) throw new Error('PARTNER_RESERVE_REQUIRED');
-      const walletBalance = Number(profile.walletBalance);
-      if (!Number.isFinite(walletBalance) || walletBalance < 2000) throw new Error('PARTNER_RESERVE_REQUIRED');
+      if (!canActivatePartnerDuty(profile)) {
+        if (profile.isVerified !== true || profile.approvalStatus !== 'approved' || profile.kycStatus === 'rejected') throw new Error('PARTNER_APPROVAL_REQUIRED');
+        throw new Error('PARTNER_RESERVE_REQUIRED');
+      }
+      const walletBalance = profile.walletBalance as number;
       const dispatchRadiusKm = [1, 3, 5, 10, 15].includes(profile.dispatchRadiusKm) ? profile.dispatchRadiusKm : 5;
       transaction.update(userRef, {
         isOnline: true, dispatchRadiusKm,
