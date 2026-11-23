@@ -37,6 +37,7 @@ import { TechnicianRouteMap } from '../maps/TechnicianRouteMap';
 import { NearbyStoresModal } from '../customer/NearbyStoresModal';
 import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
+import { PartnerKycPanel } from './PartnerKycPanel';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -657,6 +658,8 @@ export const TechnicianPortal: React.FC = () => {
             </button>
           </div>
         )}
+
+        {!currentTechnician.isVerified && <PartnerKycPanel />}
 
         {/* Trade Qualification Status Banner */}
         {(!currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit') ? (
