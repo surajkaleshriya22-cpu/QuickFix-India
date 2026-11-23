@@ -12,7 +12,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -1464,6 +1464,101 @@ app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, req
     if (code === 'PARTNER_NOT_PENDING') return res.status(409).json({ success: false, error: 'This partner profile is no longer pending review.' });
     console.error('Admin partner review failed:', error);
     return res.status(500).json({ success: false, error: 'Partner review could not be saved securely.' });
+  }
+});
+
+// Scheduled KYC document expiry. This deletes only the exact uploaded file generation;
+// partner/customer profiles, verification decisions, bookings and audit history remain.
+app.post('/api/internal/kyc-document-expiry', async (req: Request, res: Response) => {
+  const configuredToken = process.env.KYC_EXPIRY_JOB_TOKEN || '';
+  const suppliedToken = req.header('authorization')?.replace(/^Bearer\\s+/i, '') || '';
+  const expected = Buffer.from(configuredToken);
+  const supplied = Buffer.from(suppliedToken);
+  if (!configuredToken || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized scheduled job.' });
+  }
+  if (!firebaseAdminApp || !getKycStorageBucket()) {
+    return res.status(503).json({ success: false, error: 'KYC Storage is not configured.' });
+  }
+
+  const db = getFirestore(firebaseAdminApp);
+  const bucket = getKycStorageBucket()!;
+  const now = new Date();
+  let deleted = 0;
+  let alreadyProcessed = 0;
+  let skipped = 0;
+  try {
+    const expired = await db.collection('partner_kyc_submissions')
+      .where('retentionExpiresAt', '<=', now)
+      .limit(100)
+      .get();
+
+    for (const snapshot of expired.docs) {
+      const data = snapshot.data();
+      if (data.documentDeletedAt) {
+        alreadyProcessed++;
+        continue;
+      }
+      const partnerUid = typeof data.partnerUid === 'string' ? data.partnerUid : '';
+      const submissionId = typeof data.submissionId === 'string' ? data.submissionId : '';
+      const documentType = typeof data.documentType === 'string' ? data.documentType : '';
+      const objectPath = typeof data.objectPath === 'string' ? data.objectPath : '';
+      const generation = typeof data.objectGeneration === 'string' ? data.objectGeneration : '';
+      const extension = objectPath.split('.').pop()?.toLowerCase() || '';
+      const valid = /^[A-Za-z0-9_-]{1,128}$/.test(partnerUid) &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionId) &&
+        ['identity_proof', 'address_proof', 'qualification_certificate', 'profile_photo'].includes(documentType) &&
+        ['jpg', 'jpeg', 'png', 'pdf'].includes(extension) &&
+        objectPath === `partner-kyc/${partnerUid}/${submissionId}_${documentType}.${extension}` &&
+        /^\\d+$/.test(generation);
+      if (!valid) {
+        skipped++;
+        console.error('KYC expiry skipped malformed submission metadata:', snapshot.id);
+        continue;
+      }
+
+      try {
+        await bucket.file(objectPath, { generation }).delete({ ignoreNotFound: true });
+      } catch (deleteError) {
+        console.error('KYC document deletion failed:', snapshot.id, deleteError);
+        skipped++;
+        continue;
+      }
+
+      const auditRef = db.collection('partner_kyc_audit').doc(randomUUID());
+      const marked = await db.runTransaction(async (transaction) => {
+        const current = await transaction.get(snapshot.ref);
+        if (!current.exists || current.data()?.documentDeletedAt) return false;
+        transaction.update(snapshot.ref, {
+          documentDeletedAt: FieldValue.serverTimestamp(),
+          documentExpiryStatus: 'deleted_after_retention',
+          documentDeletionReason: '180_day_retention_expired',
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        transaction.create(auditRef, {
+          event: 'document_expired_and_deleted',
+          submissionId,
+          partnerUid,
+          actor: 'scheduled_retention_job',
+          createdAt: FieldValue.serverTimestamp()
+        });
+        return true;
+      });
+      if (marked) deleted++;
+      else alreadyProcessed++;
+    }
+
+    return res.json({
+      success: true,
+      scanned: expired.size,
+      deleted,
+      alreadyProcessed,
+      skipped,
+      note: 'Only expired KYC file objects are deleted; account profiles, verification decisions, bookings and audit records are retained.'
+    });
+  } catch (error) {
+    console.error('KYC document expiry job failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC expiry job failed.' });
   }
 });
 
