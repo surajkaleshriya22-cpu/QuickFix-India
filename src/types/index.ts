@@ -115,6 +115,7 @@ export interface Technician {
   approvalStatus?: 'approved' | 'pending_audit' | 'rejected';
   rejectionReason?: string;
   walletBalance: number; // Current wallet balance (minimum ₹2000 required for duty)
+  dispatchRadiusKm?: 1 | 3 | 5 | 10 | 15;
   securityDepositRequired: number; // Mandatory ₹2,000 security reserve
   securityDepositPaid: boolean;
   withdrawableBalance: number; // walletBalance - 2000 (only balance above ₹2000 can be withdrawn)
