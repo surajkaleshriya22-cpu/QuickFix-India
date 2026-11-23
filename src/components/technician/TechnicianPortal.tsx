@@ -154,14 +154,6 @@ export const TechnicianPortal: React.FC = () => {
   const [regTrades, setRegTrades] = useState<ServiceCategoryType[]>(['electrician']);
   const [regExp, setRegExp] = useState(5);
   const [regCity, setRegCity] = useState('Bengaluru');
-  const [regKycType, setRegKycType] = useState<'Aadhaar' | 'PAN' | 'Skill India Certificate'>('Skill India Certificate');
-  const [regKycDoc, setRegKycDoc] = useState('');
-  const [regQualType, setRegQualType] = useState<'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma'>('ITI Trade Certificate');
-  const [regQualNumber, setRegQualNumber] = useState('');
-  const [regQualInst, setRegQualInst] = useState('');
-  const [regUpi, setRegUpi] = useState('');
-  const [regDeposit, setRegDeposit] = useState<number>(2000);
-  const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
   const [regError, setRegError] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
@@ -424,119 +416,9 @@ export const TechnicianPortal: React.FC = () => {
                 </select>
               </div>
 
-              {/* Trade Qualification Proof */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
-                  Mandatory Trade Certificate
-                </span>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Qualification Type</label>
-                  <select
-                    value={regQualType}
-                    onChange={e => setRegQualType(e.target.value as any)}
-                    className="w-full p-1.5 rounded-lg border border-slate-300 bg-white text-xs"
-                  >
-                    <option value="ITI Trade Certificate">ITI Trade Certificate</option>
-                    <option value="Skill India / NSDC Certified">Skill India / NSDC Certified</option>
-                    <option value="State Wireman/Plumber License">State Wireman / Plumber License</option>
-                    <option value="Govt Polytechnic Diploma">Govt Polytechnic Diploma</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Certificate / Reg Number</label>
-                  <input
-                    type="text"
-                    value={regQualNumber}
-                    onChange={e => setRegQualNumber(e.target.value)}
-                    placeholder="e.g. ITI-MP-2021-9921"
-                    className="w-full p-1.5 rounded-lg border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Issuing Institute / Board</label>
-                  <input
-                    type="text"
-                    value={regQualInst}
-                    onChange={e => setRegQualInst(e.target.value)}
-                    placeholder="e.g. Govt ITI / Skill Center"
-                    className="w-full p-1.5 rounded-lg border border-slate-300 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">KYC Proof Type</label>
-                <select
-                  value={regKycType}
-                  onChange={e => setRegKycType(e.target.value as any)}
-                  className="w-full p-2 rounded-lg border border-slate-300 bg-white"
-                >
-                  <option value="Skill India Certificate">Skill India Certificate</option>
-                  <option value="Aadhaar">Aadhaar Card</option>
-                  <option value="PAN">PAN Card</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Document Number</label>
-                <input
-                  type="text"
-                  value={regKycDoc}
-                  onChange={e => setRegKycDoc(e.target.value)}
-                  placeholder="e.g. SIC-EL-9921"
-                  className="w-full p-2 rounded-lg border border-slate-300"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">UPI ID for Payouts</label>
-                <input
-                  type="text"
-                  value={regUpi}
-                  onChange={e => setRegUpi(e.target.value)}
-                  placeholder="name@okaxis / paytm"
-                  className="w-full p-2 rounded-lg border border-slate-300"
-                />
-              </div>
-
-              {/* Mandatory Security Deposit of ₹2,000 */}
-              <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-950 text-[11px]">
-                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Mandatory Partner Security Deposit</span>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded">
-                    Non-Withdrawable Base
-                  </span>
-                </div>
-                <p className="text-[10px] text-amber-800 leading-tight">
-                  Technicians must maintain a minimum balance of <strong>₹2,000</strong> to complete registration. This initial ₹2,000 deposit is permanently locked to guarantee customer cash commissions and cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.
-                </p>
-                <div className="pt-0.5">
-                  <label className="text-[10px] font-bold text-amber-900 uppercase block mb-1">
-                    Select Initial Wallet Fund:
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[2000, 3000, 5000].map(amt => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setRegDeposit(amt)}
-                        className={`flex-1 py-1 rounded-lg border text-center font-mono font-bold text-xs transition-colors ${
-                          regDeposit === amt
-                            ? 'bg-amber-600 text-white border-amber-700 shadow-2xs'
-                            : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100'
-                        }`}
-                      >
-                        ₹{amt} {amt === 2000 ? '(Min)' : ''}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-sm text-amber-950">
+                <div className="font-bold mb-1">KYC verification is a separate, secure step</div>
+                <p>Abhi sirf basic partner profile submit hoga. Is form mein Aadhaar/PAN number, certificate number, UPI ID ya security deposit collect nahi kiya jayega. Secure document upload aur admin verification available hone tak aapka KYC pending rahega aur aap jobs accept nahi kar sakenge. Kisi ko bhi WhatsApp/chat par apne documents ya OTP na bhejein.</p>
               </div>
 
               {regError && (
@@ -560,14 +442,7 @@ export const TechnicianPortal: React.FC = () => {
                       email: regEmail.trim(),
                       trades: regTrades,
                       experienceYears: Math.max(0, regExp),
-                      city: regCity.trim(),
-                      qualificationType: regQualType,
-                      qualificationRegNumber: regQualNumber,
-                      qualificationInstitute: regQualInst,
-                      kycDocType: regKycType,
-                      kycDocNumber: regKycDoc,
-                      upiId: regUpi,
-                      initialDepositAmount: regDeposit
+                      city: regCity.trim()
                     });
                     if (!res.success) {
                       setRegError(res.message || 'Registration failed');
