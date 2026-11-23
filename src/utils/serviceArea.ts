@@ -8,6 +8,11 @@ export function normalizeServiceAreaValue(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLocaleLowerCase('en-IN') : '';
 }
 
+/** Stable Firestore equality key for state/district queries. */
+export function serviceAreaKey(value: unknown): string {
+  return normalizeServiceAreaValue(value).normalize('NFKC');
+}
+
 export function hasDistrictServiceArea(area: unknown): area is AdministrativeServiceArea {
   if (!area || typeof area !== 'object' || Array.isArray(area)) return false;
   const value = area as AdministrativeServiceArea;
