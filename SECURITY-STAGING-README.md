@@ -83,6 +83,13 @@ The script refuses users without a verified email in the explicit admin allowlis
 Never commit Razorpay keys, webhook secrets, Firebase service-account JSON, admin private credentials, or payment-provider tokens to GitHub. Store them only as server-side environment secrets.
 
 
+## Approved KYC policy choices (configuration remains disabled)
+
+- Privacy contact for questions, correction and deletion requests: **surajkaleshriya22@gmail.com**.
+- Intended maximum retention period selected by the project owner: **730 days**.
+- Privacy notice version to use when the complete notice and deletion workflow are ready: **quickfix-kyc-v1**.
+- These are policy choices, not proof that document deletion is operational. Do not set `KYC_PRIVACY_NOTICE_VERSION` or `KYC_RETENTION_DAYS` on the live server and do not collect real identity documents until the retention/deletion worker is implemented, tested, and its schedule and deletion audit are verified. Also verify the exact Firebase Storage bucket and deploy the reviewed Storage rules first.
+
 ## Partner KYC API implementation (not yet enabled in production)
 
 The server source now includes authenticated routes for:
