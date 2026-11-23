@@ -1134,6 +1134,24 @@ function getKycStorageBucket() {
   return bucketName ? getStorage(firebaseAdminApp).bucket(bucketName) : null;
 }
 
+// Return the server-owned KYC policy contract to the signed-in partner UI.
+// The browser never chooses the privacy notice version or retention period.
+app.get('/api/partners/kyc-config', authenticateFirebaseUser, (_req: Request, res: Response) => {
+  const noticeVersion = process.env.KYC_PRIVACY_NOTICE_VERSION?.trim();
+  const retentionDays = Number(process.env.KYC_RETENTION_DAYS);
+  if (!noticeVersion || !Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650 || !getKycStorageBucket()) {
+    return res.status(503).json({ success: false, error: 'Secure KYC document submission is not configured.' });
+  }
+  return res.json({
+    success: true,
+    privacyNoticeVersion: noticeVersion,
+    retentionDays,
+    maxFileBytes: KYC_MAX_FILE_BYTES,
+    allowedContentTypes: Array.from(KYC_ALLOWED_CONTENT_TYPES),
+    documentTypes: Array.from(KYC_DOCUMENT_TYPES)
+  });
+});
+
 app.post('/api/partners/kyc-submissions', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC service is unavailable.' });
