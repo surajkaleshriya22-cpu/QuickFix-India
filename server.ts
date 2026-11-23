@@ -19,7 +19,7 @@ import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from '
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
-import { hasDistrictServiceArea, matchesPartnerServiceArea } from './src/utils/serviceArea';
+import { hasDistrictServiceArea, matchesPartnerServiceArea, serviceAreaKey } from './src/utils/serviceArea';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -246,6 +246,8 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
             state: serviceArea.state.trim(),
             district: serviceArea.district.trim(),
             tehsil: serviceArea.tehsil.trim(),
+            stateKey: serviceAreaKey(serviceArea.state),
+            districtKey: serviceAreaKey(serviceArea.district),
             ...(serviceArea.stateCode ? { stateCode: serviceArea.stateCode.trim() } : {}),
             ...(serviceArea.districtCode ? { districtCode: serviceArea.districtCode.trim() } : {}),
             ...(serviceArea.tehsilCode ? { tehsilCode: serviceArea.tehsilCode.trim() } : {})
@@ -365,7 +367,9 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       serviceArea: {
         state: serviceArea.state.trim(),
         district: serviceArea.district.trim(),
-        tehsil: serviceArea.tehsil.trim()
+        tehsil: serviceArea.tehsil.trim(),
+        stateKey: serviceAreaKey(serviceArea.state),
+        districtKey: serviceAreaKey(serviceArea.district)
       },
       ...(customerLocation ? {
         customerLocation: {
@@ -511,8 +515,8 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       .where('status', '==', 'requested');
     if (partnerHasDistrictArea) {
       bookingQuery = bookingQuery
-        .where('serviceArea.state', '==', String(partnerArea!.state).trim())
-        .where('serviceArea.district', '==', String(partnerArea!.district).trim());
+        .where('serviceArea.stateKey', '==', serviceAreaKey(partnerArea!.state))
+        .where('serviceArea.districtKey', '==', serviceAreaKey(partnerArea!.district));
     } else {
       bookingQuery = bookingQuery.where('city', '==', city);
     }
