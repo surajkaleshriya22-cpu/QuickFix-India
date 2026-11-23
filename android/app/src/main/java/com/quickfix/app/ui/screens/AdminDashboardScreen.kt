@@ -609,6 +609,7 @@ fun CommissionsTab(
     onIssueRefund: (String, Int, String) -> Unit,
     onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit
 ) {
+    val isEnglish = rememberQuickFixLanguage() == "en"
     var elecPct by remember { mutableStateOf(settings.electricianCommissionPct.toString()) }
     var plumbPct by remember { mutableStateOf(settings.plumberCommissionPct.toString()) }
     var fee by remember { mutableStateOf(settings.convenienceFee.toString()) }
