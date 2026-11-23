@@ -1239,7 +1239,7 @@ export const INITIAL_ADMIN_PAYMENT_CONFIG: AdminMasterPaymentConfig = {
   merchantId: '',
   escrowEnabled: false,
   manualApprovalRequired: true,
-  payoutSchedule: 'manual_admin_approval',
+  payoutSchedule: 'instant_on_admin_approval',
   tdsDeductionPct: 1.0
 };
 
