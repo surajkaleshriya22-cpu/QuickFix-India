@@ -4,32 +4,17 @@
       "collectionGroup": "partner_kyc_submissions",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "documentExpiryStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "retentionExpiresAt",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "documentExpiryStatus", "order": "ASCENDING" },
+        { "fieldPath": "retentionExpiresAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "bookings",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "serviceArea.stateKey",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "serviceArea.districtKey",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "serviceArea.state", "order": "ASCENDING" },
+        { "fieldPath": "serviceArea.district", "order": "ASCENDING" }
       ]
     }
   ],
