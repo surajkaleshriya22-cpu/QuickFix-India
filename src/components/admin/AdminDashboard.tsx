@@ -167,7 +167,6 @@ export const AdminDashboard: React.FC = () => {
   const [plumbRate, setPlumbRate] = useState(commissionSettings.plumberCommissionPct);
   const [acRate, setAcRate] = useState(commissionSettings.acCommissionPct || 15);
   const [fridgeRate, setFridgeRate] = useState(commissionSettings.fridgeCommissionPct || 15);
-  const [minDeposit, setMinDeposit] = useState(commissionSettings.minSecurityDeposit || 2000);
   const [convFee, setConvFee] = useState(commissionSettings.platformConvenienceFee);
   const [minPayout, setMinPayout] = useState(commissionSettings.minPayoutThreshold || 500);
   const [saveMessage, setSaveMessage] = useState('');
@@ -268,7 +267,6 @@ export const AdminDashboard: React.FC = () => {
       plumberCommissionPct: Number(plumbRate),
       acCommissionPct: Number(acRate),
       fridgeCommissionPct: Number(fridgeRate),
-      minSecurityDeposit: Number(minDeposit),
       platformConvenienceFee: Number(convFee),
       minPayoutThreshold: Number(minPayout)
     });
@@ -2466,25 +2464,6 @@ export const AdminDashboard: React.FC = () => {
                         />
                       </div>
 
-                      <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
-                        <label className="font-bold text-amber-300 block flex items-center gap-1.5">
-                          <Lock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Mandatory Security Deposit Reserve (₹)</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="500"
-                            max="5000"
-                            step="100"
-                            value={minDeposit}
-                            onChange={e => setMinDeposit(Number(e.target.value))}
-                            className="w-24 p-2 rounded-xl border border-amber-600/80 bg-slate-950 text-amber-300 font-mono font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                          />
-                          <span className="text-slate-400">Non-withdrawable wallet reserve required for duty</span>
-                        </div>
-                      </div>
-                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
