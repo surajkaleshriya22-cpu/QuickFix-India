@@ -771,23 +771,23 @@ fun CommissionsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
+                    Text(if (isEnglish) "Admin Master Receiving Account & Gateway" else "एडमिन बैंक खाता और पेमेंट गेटवे", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here." else "यहाँ केवल एडमिन बैंक विवरण सुरक्षित होते हैं। अभी कोई पेमेंट गेटवे जुड़ा नहीं है और ग्राहक से भुगतान या बैंक ट्रांसफर नहीं होता।", fontSize = 12.sp, color = TextSecondary)
 
                     Text(savedBankSummary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = TextPrimary)
                     Box {
                         OutlinedButton(onClick = { bankMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (selectedBank.isBlank()) "Choose your bank" else selectedBank)
+                            Text(if (selectedBank.isBlank()) { if (isEnglish) "Choose your bank" else "अपना बैंक चुनें" } else selectedBank)
                         }
                         DropdownMenu(expanded = bankMenuExpanded, onDismissRequest = { bankMenuExpanded = false }) {
                             indianBanks.forEach { bank -> DropdownMenuItem(text = { Text(bank) }, onClick = { selectedBank = bank; bankMenuExpanded = false }) }
                         }
                     }
-                    OutlinedTextField(value = accountHolder, onValueChange = { accountHolder = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = accountNumber, onValueChange = { accountNumber = it.filter(Char::isDigit).take(18) }, label = { Text("Account number (enter again to save or replace)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-                    OutlinedTextField(value = bankIfsc, onValueChange = { bankIfsc = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = accountHolder, onValueChange = { accountHolder = it }, label = { Text(if (isEnglish) "Account holder name" else "खाताधारक का नाम") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = accountNumber, onValueChange = { accountNumber = it.filter(Char::isDigit).take(18) }, label = { Text(if (isEnglish) "Account number (enter again to save or replace)" else "खाता नंबर (सेव/बदलने के लिए दोबारा भरें)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = bankIfsc, onValueChange = { bankIfsc = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(11) }, label = { Text(if (isEnglish) "IFSC code" else "IFSC कोड") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     Text(bankStatus, color = if (bankStatus.startsWith("Bank settings unavailable") || bankStatus.startsWith("Save failed")) Color(0xFFB45309) else TextSecondary, fontSize = 12.sp)
-                    Text("Bank details are encrypted on the server. Only the last four account digits are shown after saving. This does not activate collections or payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
+                    Text(if (isEnglish) "Bank details are encrypted on the server. Only the last four account digits are shown after saving. This does not activate collections or payouts." else "बैंक विवरण सर्वर पर एन्क्रिप्ट होते हैं। सेव करने के बाद केवल खाते के अंतिम चार अंक दिखते हैं। इससे भुगतान लेना या भेजना शुरू नहीं होता।", fontSize = 11.sp, color = Color(0xFFB45309))
                     Button(
                         enabled = !bankBusy && selectedBank.isNotBlank() && accountHolder.isNotBlank() && bankIfsc.matches(Regex("^[A-Z]{4}0[A-Z0-9]{6}$")) && accountNumber.length in 9..18,
                         onClick = {
@@ -823,7 +823,7 @@ fun CommissionsTab(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DeepBlue),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text(if (bankBusy) "Please wait…" else "Save / Replace Bank Account", fontWeight = FontWeight.Bold) }
+                    ) { Text(if (bankBusy) { if (isEnglish) "Please wait…" else "कृपया प्रतीक्षा करें…" } else { if (isEnglish) "Save / Replace Bank Account" else "बैंक खाता सेव / बदलें" }, fontWeight = FontWeight.Bold) }
                 }
             }
         }
