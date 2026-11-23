@@ -505,22 +505,17 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
       return res.status(403).json({ success: false, error: 'Your approved service area and service trades are required before job access.' });
     }
 
-    // Structured partner service areas are district-scoped across India.
-    // Legacy profiles without state/district data continue to use exact city matching.
+    // Scan requested jobs in bounded, cursor-paginated batches, then apply
+    // normalized district/city matching in memory. This also keeps legacy
+    // bookings (which predate stateKey/districtKey) discoverable without an
+    // unsafe unbounded read or a case-sensitive Firestore equality filter.
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : '';
     if (cursor && !/^[A-Za-z0-9_-]{1,150}$/.test(cursor)) {
       return res.status(400).json({ success: false, error: 'Job feed cursor is invalid.' });
     }
     let bookingQuery = db.collection('bookings')
-      .where('status', '==', 'requested');
-    if (partnerHasDistrictArea) {
-      bookingQuery = bookingQuery
-        .where('serviceArea.stateKey', '==', serviceAreaKey(partnerArea!.state))
-        .where('serviceArea.districtKey', '==', serviceAreaKey(partnerArea!.district));
-    } else {
-      bookingQuery = bookingQuery.where('city', '==', city);
-    }
-    bookingQuery = bookingQuery.orderBy(FieldPath.documentId());
+      .where('status', '==', 'requested')
+      .orderBy(FieldPath.documentId());
     if (cursor) bookingQuery = bookingQuery.startAfter(cursor);
     const snapshot = await bookingQuery.limit(200).get();
 
