@@ -1710,15 +1710,20 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner recharge status is temporarily unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const db = getFirestore(firebaseAdminApp);
-    const [userSnapshot, policySnapshot] = await Promise.all([
+    const [userSnapshot, policySnapshot, rechargeAccountSnapshot] = await Promise.all([
       db.collection('users').doc(identity.uid).get(),
-      db.collection('system').doc('partner_recharge_policy').get()
+      db.collection('system').doc('partner_recharge_policy').get(),
+      db.collection('partner_recharge_accounts').doc(identity.uid).get()
     ]);
     if (!userSnapshot.exists || userSnapshot.data()?.role !== 'CHANNEL_PARTNER') {
       return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
     }
     const profile = userSnapshot.data()!;
     const policy = { ...DEFAULT_PARTNER_RECHARGE_POLICY, ...(policySnapshot.exists ? policySnapshot.data() : {}) };
+    const rechargeAccount = rechargeAccountSnapshot.exists ? rechargeAccountSnapshot.data()! : {};
+    const paidUntilValue = rechargeAccount.activeUntil;
+    const paidUntil = paidUntilValue && typeof paidUntilValue.toDate === 'function' ? paidUntilValue.toDate() : null;
+    const paidRechargeActive = paidUntil !== null && paidUntil.getTime() > Date.now();
     const createdAt = profile.createdAt;
     const trialStart = createdAt && typeof createdAt.toDate === 'function' ? createdAt.toDate() : null;
     if (!trialStart) {
@@ -1726,17 +1731,27 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
     }
     const trialEndsAt = new Date(trialStart.getTime() + Number(policy.freeTrialDays) * 86400000);
     const isFreeTrial = Date.now() < trialEndsAt.getTime();
+    const status = paidRechargeActive ? 'recharged' : isFreeTrial ? 'free_trial' : 'recharge_due';
     return res.json({
       success: true,
-      status: isFreeTrial ? 'free_trial' : 'recharge_due',
+      status,
       freeTrialDays: policy.freeTrialDays,
       currentRechargeAmount: policy.currentRechargeAmount,
       availablePlans: Array.isArray(policy.plans) ? policy.plans.filter((plan: any) => plan.enabled).map((plan: any) => ({ id: plan.id, durationDays: plan.durationDays, amount: plan.amount })) : DEFAULT_PARTNER_RECHARGE_POLICY.plans,
       trialStartedAt: trialStart.toISOString(),
       trialEndsAt: trialEndsAt.toISOString(),
-      daysRemaining: Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)),
+      paidRechargeActive,
+      rechargeValidUntil: paidUntil?.toISOString() || null,
+      rechargeWallet: {
+        totalPaid: Number.isFinite(rechargeAccount.totalPaid) ? rechargeAccount.totalPaid : 0,
+        currency: 'INR',
+        walletType: String(profile.partnerType || profile.primaryTrade || 'channel_partner')
+      },
+      daysRemaining: paidRechargeActive
+        ? Math.max(0, Math.ceil((paidUntil!.getTime() - Date.now()) / 86400000))
+        : isFreeTrial ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)) : 0,
       paymentEnabled: false,
-      message: isFreeTrial ? 'Your introductory free period is active.' : 'Your free period has ended. Recharge collection is not yet enabled.'
+      message: paidRechargeActive ? 'Your paid recharge is active.' : isFreeTrial ? 'Your introductory free period is active.' : 'Your free period has ended. Recharge collection is not yet enabled.'
     });
   } catch (error) {
     console.error('Partner recharge status lookup failed:', error);
@@ -1744,6 +1759,40 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
   }
 });
 
+
+// Read-only recharge ledger view. Payment credit can only be written by a verified provider webhook.
+app.get('/api/partner/recharge-ledger', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge ledger is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const [profileSnap, accountSnap, paymentsSnap] = await Promise.all([
+      db.collection('users').doc(identity.uid).get(),
+      db.collection('partner_recharge_accounts').doc(identity.uid).get(),
+      db.collection('partner_recharge_accounts').doc(identity.uid).collection('payments').orderBy('createdAt', 'desc').limit(50).get()
+    ]);
+    if (!profileSnap.exists || profileSnap.data()?.role !== 'CHANNEL_PARTNER') {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
+    }
+    const account = accountSnap.exists ? accountSnap.data()! : {};
+    const payments = paymentsSnap.docs.map((item) => {
+      const data = item.data();
+      return {
+        id: item.id,
+        amount: Number(data.amount || 0),
+        currency: 'INR',
+        status: String(data.status || 'unknown'),
+        validityDays: Number(data.validityDays || 0),
+        paidAt: data.paidAt?.toDate?.()?.toISOString?.() || null,
+        validUntil: data.validUntil?.toDate?.()?.toISOString?.() || null
+      };
+    });
+    return res.json({ success: true, walletType: String(profileSnap.data()?.partnerType || profileSnap.data()?.primaryTrade || 'channel_partner'), totalPaid: Number(account.totalPaid || 0), activeUntil: account.activeUntil?.toDate?.()?.toISOString?.() || null, paymentEnabled: false, payments });
+  } catch (error) {
+    console.error('Partner recharge ledger lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge ledger could not be loaded securely.' });
+  }
+});
 
 // Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
 // Liveness: the HTTP process is running. Dependency readiness is reported separately.
