@@ -38,17 +38,22 @@ data class CommissionSettings(
     val gstPct: Int = 18
 )
 
+/**
+ * Admin bank destination is intentionally blank until the verified admin
+ * config is loaded from the encrypted server endpoint. Never ship demo bank
+ * details, UPI IDs, or masked account numbers as if they belonged to QuickFix.
+ */
 data class AdminMasterPaymentConfig(
-    val corporateEntity: String = "QuickFix Technologies India Pvt Ltd",
-    val masterUpiVpa: String = "quickfix.master@hdfcbank",
-    val receivingBankName: String = "HDFC Bank Ltd",
-    val accountNumberMasked: String = "••••••••4892",
-    val ifscCode: String = "HDFC0000128",
-    val accountHolderName: String = "QuickFix Technologies India Pvt Ltd",
-    val gatewayProvider: String = "Razorpay Smart Escrow Route",
+    val corporateEntity: String = "",
+    val masterUpiVpa: String = "",
+    val receivingBankName: String = "",
+    val accountNumberMasked: String = "",
+    val ifscCode: String = "",
+    val accountHolderName: String = "",
+    val gatewayProvider: String = "Not connected",
     val requireAdminPayoutApproval: Boolean = true,
     val escrowHoldUntilOtpVerified: Boolean = true,
-    val tdsDeductionPct: Double = 1.0
+    val tdsDeductionPct: Double = 0.0
 )
 
 data class PayoutRecord(
