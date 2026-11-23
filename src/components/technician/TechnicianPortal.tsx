@@ -743,15 +743,15 @@ export const TechnicianPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Cash Ledger & Commission Breakdown Stats */}
+          {/* Cash collection history; partner commission is now zero per booking. */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
               <span className="text-[10px] text-slate-400 block">Cash Handed by Customers</span>
               <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
             </div>
-            <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Cash Commission Debited</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
+            <div className="bg-slate-950/40 p-2 rounded-lg border border-emerald-900/50">
+              <span className="text-[10px] text-emerald-300 block">Commission per booking</span>
+              <span className="font-bold text-emerald-300 font-mono">₹0</span>
             </div>
           </div>
 
@@ -778,12 +778,12 @@ export const TechnicianPortal: React.FC = () => {
             </button>
           </div>
 
-          {/* Cash Commission & Safe Payout Transparency Note */}
+          {/* Subscription model & Safe Payout Transparency Note */}
           <div className="text-[10px] text-slate-400 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 leading-relaxed space-y-1">
             <div className="flex items-start gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Wallet status:</strong> This screen currently displays the balance saved on your partner profile. A verified, server-side wallet ledger is not connected yet, so no top-up, commission debit, or reserve movement is confirmed here. Do not transfer money based on this screen.
+                <strong>Wallet status:</strong> This screen currently displays the balance saved on your partner profile. A verified, server-side wallet ledger is not connected yet, so no top-up, subscription recharge, or payout movement is confirmed here. Partner per-booking commission is ₹0. Do not transfer money based on this screen.
               </span>
             </div>
             <div className="flex items-start gap-1.5 text-slate-400 pt-0.5 border-t border-slate-900">
@@ -930,11 +930,11 @@ export const TechnicianPortal: React.FC = () => {
                           <div className="font-semibold text-white flex items-center gap-1.5">
                             {tx.type === 'job_acceptance_commission' ? (
                               <span className="text-amber-400 flex items-center gap-0.5">
-                                <ArrowDownLeft className="w-3 h-3" /> Job Acceptance Commission
+                                <ArrowDownLeft className="w-3 h-3" /> Legacy Commission Record
                               </span>
                             ) : tx.type === 'cash_commission_deduction' ? (
                               <span className="text-rose-400 flex items-center gap-0.5">
-                                <ArrowDownLeft className="w-3 h-3" /> Cash Commission Cut
+                                <ArrowDownLeft className="w-3 h-3" /> Legacy Commission Record
                               </span>
                             ) : tx.type === 'online_payout_credit' ? (
                               <span className="text-emerald-400 flex items-center gap-0.5">
