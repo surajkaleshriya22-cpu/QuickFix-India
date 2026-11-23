@@ -114,10 +114,13 @@ export interface Technician {
   qualificationInstitute?: string;
   approvalStatus?: 'approved' | 'pending_audit' | 'rejected';
   rejectionReason?: string;
-  walletBalance: number; // Current wallet balance (minimum ₹2000 required for duty)
-  securityDepositRequired: number; // Mandatory ₹2,000 security reserve
-  securityDepositPaid: boolean;
-  withdrawableBalance: number; // walletBalance - 2000 (only balance above ₹2000 can be withdrawn)
+  walletBalance: number; // Legacy displayed balance; not an authoritative payout ledger.
+  /** @deprecated Legacy migration field. Never use for duty eligibility or payout calculations. */
+  securityDepositRequired?: number;
+  /** @deprecated Legacy migration field. Never use for duty eligibility. */
+  securityDepositPaid?: boolean;
+  /** @deprecated Legacy migration field. Payout eligibility is server-ledger-only. */
+  withdrawableBalance?: number;
   lifetimeCashCollected?: number;
   lifetimeCommissionPaid?: number;
   bankAccount: {
@@ -195,7 +198,8 @@ export interface CommissionSettings {
   plumberCommissionPct: number;     // e.g. 15%
   acCommissionPct: number;          // e.g. 15%
   fridgeCommissionPct: number;      // e.g. 15%
-  minSecurityDeposit: number;       // ₹2,000 mandatory reserve
+  /** @deprecated Retained only for reading old settings; no reserve is enforced. */
+  minSecurityDeposit?: number;
   platformConvenienceFee: number;   // e.g. ₹29
   gstPct: number;                   // 18%
   minPayoutThreshold: number;       // e.g. ₹500
