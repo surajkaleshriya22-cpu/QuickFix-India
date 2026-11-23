@@ -118,6 +118,7 @@ fun AdminDashboardScreen(
                     }
                 },
                 actions = {
+                    QuickFixLanguageSelector()
                     IconButton(onClick = { viewModel.triggerFirestoreSync() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
                     }
