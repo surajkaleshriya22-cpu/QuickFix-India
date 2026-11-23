@@ -49,6 +49,24 @@ fun QuickFixNavHost(
     val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
 
+    // Session restoration is asynchronous. Redirect after Firebase profile loading finishes;
+    // otherwise the initial customer browsing route can remain visible for a signed-in partner.
+    LaunchedEffect(authState) {
+        val authenticated = authState as? AuthState.Authenticated ?: return@LaunchedEffect
+        val destination = when (authenticated.user.role) {
+            com.quickfix.app.data.model.UserRole.CUSTOMER -> "customer_home"
+            com.quickfix.app.data.model.UserRole.CHANNEL_PARTNER,
+            com.quickfix.app.data.model.UserRole.TECHNICIAN -> "technician_portal"
+            com.quickfix.app.data.model.UserRole.ADMIN -> "admin_dashboard"
+        }
+        if (navController.currentDestination?.route != destination) {
+            navController.navigate(destination) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     // Remember logged in users: if authenticated, start at appropriate screen, otherwise auth_screen
     val startDest = when (val state = authState) {
         is AuthState.Authenticated -> when (state.user.role) {
