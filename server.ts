@@ -1656,9 +1656,13 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
       enabled: plan?.enabled !== false
     })) : DEFAULT_PARTNER_RECHARGE_POLICY.plans;
     const effectiveAt = body.effectiveAt === null || body.effectiveAt === '' ? null : String(body.effectiveAt);
-    const validPlanDurations = plans.length === 3 && [30, 90, 365].every((days) =>
-      plans.some((plan: any) => plan.durationDays === days && /^[a-z0-9-]{1,32}$/.test(plan.id) &&
-        Number.isInteger(plan.amount) && plan.amount >= 0 && plan.amount <= 100000 && typeof plan.enabled === 'boolean'));
+    const validPlanDurations = plans.length === 3 &&
+      new Set(plans.map((plan: any) => plan.id)).size === 3 &&
+      new Set(plans.map((plan: any) => plan.durationDays)).size === 3 &&
+      plans.every((plan: any) => /^[a-z0-9-]{1,32}$/.test(plan.id) &&
+        Number.isInteger(plan.durationDays) && plan.durationDays >= 1 && plan.durationDays <= 3650 &&
+        Number.isInteger(plan.amount) && plan.amount >= 0 && plan.amount <= 100000 &&
+        typeof plan.enabled === 'boolean');
     if (!Number.isInteger(freeTrialDays) || freeTrialDays < 0 || freeTrialDays > 365 ||
         !Number.isInteger(currentRechargeAmount) || currentRechargeAmount < 0 || currentRechargeAmount > 100000 ||
         rolloutAmounts.length !== 3 || rolloutAmounts.some((amount: number) => !Number.isInteger(amount) || amount < 0 || amount > 100000) ||
