@@ -69,6 +69,9 @@ fun TechnicianScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val bookings by viewModel.bookings.collectAsState()
     val partnerJobs by viewModel.partnerJobs.collectAsState()
     val partnerJobsStatus by viewModel.partnerJobsStatus.collectAsState()
