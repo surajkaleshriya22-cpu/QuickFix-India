@@ -355,7 +355,7 @@ export const TechnicianPortal: React.FC = () => {
                 onClick={() => setShowAuthModal(true)}
                 className="w-full text-xs text-blue-600 hover:underline font-semibold text-center block pt-1"
               >
-                New Service Technician? Register Trade & KYC
+                New Channel Partner? Register your services
               </button>
             </div>
           ) : (
@@ -383,7 +383,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
+                <label className="font-bold text-slate-700 block mb-1">Select your service categories</label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     ['electrician','Electrician'],['plumber','Plumber'],['technician','Technician (AC / Fridge / Appliances)'],
@@ -407,7 +407,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Operating City (शहर)</label>
+                <label className="font-bold text-slate-700 block mb-1">Operating City / Service Area (शहर)</label>
                 <select
                   value={regCity}
                   onChange={e => setRegCity(e.target.value)}
@@ -456,7 +456,7 @@ export const TechnicianPortal: React.FC = () => {
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
               >
-                Submit Basic Partner Registration
+                Submit Channel Partner Registration
               </button>
 
               <button
