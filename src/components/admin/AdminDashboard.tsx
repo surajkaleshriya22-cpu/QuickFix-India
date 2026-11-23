@@ -1388,91 +1388,12 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Per-Technician Commission Customizer by Admin HQ */}
-                  {(() => {
-                    const defaultCategoryPct = tech.trades.includes('electrician')
-                      ? commissionSettings.electricianCommissionPct
-                      : tech.trades.includes('plumber')
-                      ? commissionSettings.plumberCommissionPct
-                      : tech.trades.includes('ac_repair')
-                      ? (commissionSettings.acCommissionPct || 15)
-                      : (commissionSettings.fridgeCommissionPct || 15);
-
-                    return (
-                      <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-800 text-amber-400 flex items-center justify-center shrink-0">
-                            <Percent className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-white">Platform Commission Cut:</span>
-                              <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
-                                tech.customCommissionPct !== undefined
-                                  ? 'bg-amber-950 text-amber-300 border border-amber-700'
-                                  : 'bg-slate-800 text-slate-300 border border-slate-700'
-                              }`}>
-                                {tech.customCommissionPct !== undefined ? `${tech.customCommissionPct}% (Admin Custom Override)` : `${defaultCategoryPct}% (Default Category Rate)`}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-400">
-                              Admin can increase or decrease commission percentage for {tech.name}. Deducted upon job acceptance.
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const currentRate = tech.customCommissionPct ?? defaultCategoryPct;
-                              const newRate = Math.max(1, currentRate - 1);
-                              updateTechnicianCustomCommission(tech.id, newRate);
-                            }}
-                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
-                            title="Decrease commission by 1%"
-                          >
-                            - 1%
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const currentRate = tech.customCommissionPct ?? defaultCategoryPct;
-                              const newRate = Math.min(50, currentRate + 1);
-                              updateTechnicianCustomCommission(tech.id, newRate);
-                            }}
-                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
-                            title="Increase commission by 1%"
-                          >
-                            + 1%
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const customPrompt = prompt(`Enter custom commission percentage for ${tech.name} (1 to 50):`, (tech.customCommissionPct ?? defaultCategoryPct).toString());
-                              if (customPrompt !== null && !isNaN(Number(customPrompt))) {
-                                const val = Math.round(Number(customPrompt));
-                                updateTechnicianCustomCommission(tech.id, Math.max(1, Math.min(50, val)));
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-                          >
-                            Set Custom %
-                          </button>
-                          {tech.customCommissionPct !== undefined && (
-                            <button
-                              type="button"
-                              onClick={() => updateTechnicianCustomCommission(tech.id, null)}
-                              className="px-2 py-1.5 bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 rounded-lg text-[10px] font-semibold border border-slate-700 transition-colors cursor-pointer"
-                              title="Reset to category standard commission"
-                            >
-                              Reset Default
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <div className="bg-slate-900/90 p-3 rounded-xl border border-emerald-900/70">
+                    <div className="text-xs font-bold text-emerald-300">Partner subscription model</div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Per-booking partner commission: ₹0. All trades use the same monthly recharge plan; no percentage is deducted from partner earnings.
+                    </p>
+                  </div>
 
                   {/* Sensitive partner actions stay unavailable until backed by audited server APIs. */}
                   <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
