@@ -312,11 +312,11 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
     const db = getFirestore(firebaseAdminApp);
     const profileSnap = await db.collection('users').doc(identity.uid).get();
-    if (!profileSnap.exists || profileSnap.data()?.role !== 'CUSTOMER') {
+    const profile = profileSnap.exists ? profileSnap.data()! : null;
+    const profileRoles = profile && Array.isArray(profile.roles) ? profile.roles : (profile ? [profile.role] : []);
+    if (!profile || !profileRoles.includes('CUSTOMER')) {
       return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
     }
-
-    const profile = profileSnap.data()!;
     const service = INITIAL_SERVICES.find((item) => item.id === serviceId);
     if (!service) {
       return res.status(400).json({ success: false, error: 'Selected service is not available.' });
@@ -458,6 +458,7 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
         return { isOnline: false, walletBalance: Number(profile.walletBalance) || 0, dispatchRadiusKm: Number(profile.dispatchRadiusKm) || 5, location: profile.dispatchLocation || null };
       }
       if (profile.isVerified !== true || profile.approvalStatus !== 'approved' || profile.kycStatus === 'rejected') throw new Error('PARTNER_APPROVAL_REQUIRED');
+      if (profile.securityDepositPaid !== true) throw new Error('PARTNER_RESERVE_REQUIRED');
       const walletBalance = Number(profile.walletBalance);
       if (!Number.isFinite(walletBalance) || walletBalance < 2000) throw new Error('PARTNER_RESERVE_REQUIRED');
       const dispatchRadiusKm = [1, 3, 5, 10, 15].includes(profile.dispatchRadiusKm) ? profile.dispatchRadiusKm : 5;
