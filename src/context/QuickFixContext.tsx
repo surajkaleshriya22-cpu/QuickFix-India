@@ -134,9 +134,9 @@ interface QuickFixContextType {
     qualificationType?: 'ITI Trade Certificate' | 'Skill India / NSDC Certified' | 'State Wireman/Plumber License' | 'Govt Polytechnic Diploma';
     qualificationRegNumber?: string;
     qualificationInstitute?: string;
-    kycDocType: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
-    kycDocNumber: string;
-    upiId: string;
+    kycDocType?: 'Aadhaar' | 'PAN' | 'Skill India Certificate';
+    kycDocNumber?: string;
+    upiId?: string;
     initialDepositAmount?: number;
   }) => Promise<{ success: boolean; message?: string }>;
   logoutTechnician: () => void;
