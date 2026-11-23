@@ -71,7 +71,7 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
       PORT: '3439',
       GCLOUD_PROJECT: projectId,
       FIREBASE_CONFIG: JSON.stringify({ projectId }),
-      FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify(serviceAccount)
+      FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify(serviceAccount),
       KYC_PRIVACY_NOTICE_VERSION: '',
       KYC_RETENTION_DAYS: '',
       FIREBASE_STORAGE_BUCKET: ''
