@@ -86,9 +86,12 @@ Never commit Razorpay keys, webhook secrets, Firebase service-account JSON, admi
 ## Approved KYC policy choices (configuration remains disabled)
 
 - Privacy contact for questions, correction and deletion requests: **surajkaleshriya22@gmail.com**.
-- Intended maximum retention period selected by the project owner: **730 days**.
-- Privacy notice version to use when the complete notice and deletion workflow are ready: **quickfix-kyc-v1**.
-- These are policy choices, not proof that document deletion is operational. Do not set `KYC_PRIVACY_NOTICE_VERSION` or `KYC_RETENTION_DAYS` on the live server and do not collect real identity documents until the retention/deletion worker is implemented, tested, and its schedule and deletion audit are verified. Also verify the exact Firebase Storage bucket and deploy the reviewed Storage rules first.
+- Maximum retention period selected for uploaded KYC document files: **180 days from submission**.
+- While a Channel Partner or customer account remains active, retain the account/profile, verification decision and audit history, bookings/service history, and safety-related records needed to operate and protect the marketplace. These records are distinct from the uploaded identity-document file and must not be automatically erased with that file.
+- If an expired document is still legally or operationally required to verify an active partner, request a refreshed document or apply a documented legal hold; do not silently treat an expired file as current proof.
+- Privacy notice version to use when the complete notice and deletion workflow are ready: **quickfix-kyc-v2**.
+- These are policy choices, not proof that deletion is operational. Do not set `KYC_PRIVACY_NOTICE_VERSION` or `KYC_RETENTION_DAYS` on the live server and do not collect real identity documents until separate document-file expiry and active-account record-retention behavior are implemented, tested, and audited. Also verify the exact Firebase Storage bucket and deploy reviewed Storage rules first.
+
 
 ## Partner KYC API implementation (not yet enabled in production)
 
