@@ -181,7 +181,7 @@ fun ServiceBookingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
+                        Text(if (isEnglish) "Final price" else "अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
                         Text(
                             "काम की पुष्टि के बाद",
                             fontWeight = FontWeight.Bold,
@@ -293,12 +293,12 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("1. सेवा कहाँ चाहिए? ($currentCity)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "1. Where do you need the service? ($currentCity)" else "1. सेवा कहाँ चाहिए? ($currentCity)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("मकान नंबर, गली, मोहल्ला और पूरा पता") }
+                        label = { Text(if (isEnglish) "House number, street, area and full address" else "मकान नंबर, गली, मोहल्ला और पूरा पता") }
                     )
                     OutlinedButton(
                         onClick = {
@@ -323,7 +323,7 @@ fun ServiceBookingScreen(
                     ) {
                         Icon(Icons.Default.MyLocation, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("मेरी वर्तमान लोकेशन इस्तेमाल करें")
+                        Text(if (isEnglish) "Use my current location" else "मेरी वर्तमान लोकेशन इस्तेमाल करें")
                     }
                     locationMessage?.let { message ->
                         Text(message, fontSize = 11.sp, color = TextSecondary)
@@ -374,21 +374,21 @@ fun ServiceBookingScreen(
                         value = state,
                         onValueChange = { state = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("राज्य") },
+                        label = { Text(if (isEnglish) "State" else "राज्य") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = district,
                         onValueChange = { district = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("जिला") },
+                        label = { Text(if (isEnglish) "District" else "जिला") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = tehsil,
                         onValueChange = { tehsil = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("तहसील / तालुका") },
+                        label = { Text(if (isEnglish) "Tehsil / Taluka" else "तहसील / तालुका") },
                         singleLine = true
                     )
                     OutlinedButton(
@@ -451,10 +451,10 @@ fun ServiceBookingScreen(
                                             .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
                                     }
                                     showDatePicker = false
-                                }) { Text("तारीख तय करें") }
+                                }) { Text(if (isEnglish) "Set date" else "तारीख तय करें") }
                             },
                             dismissButton = {
-                                TextButton(onClick = { showDatePicker = false }) { Text("रद्द करें") }
+                                TextButton(onClick = { showDatePicker = false }) { Text(if (isEnglish) "Cancel" else "रद्द करें") }
                             }
                         ) {
                             DatePicker(state = datePickerState)
@@ -471,12 +471,12 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("2. कितना काम है?", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "2. How much work is required?" else "2. कितना काम है?", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = quantity,
                         onValueChange = { quantity = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("मात्रा (घंटे / किलो / किलोमीटर आदि)") },
+                        label = { Text(if (isEnglish) "Quantity (hours / kg / km etc.)" else "मात्रा (घंटे / किलो / किलोमीटर आदि)") },
                         supportingText = { Text("सिर्फ विजिट या जाँच के लिए 1 लिखें") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -492,7 +492,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("3. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "3. What is the problem? (Optional)" else "3. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
