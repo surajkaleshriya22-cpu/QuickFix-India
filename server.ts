@@ -5,13 +5,14 @@ import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -1120,6 +1121,178 @@ app.post('/api/webhooks/payout-confirmation', (_req: Request, res: Response) => 
     verified: false,
     error: 'Payout webhook is not configured. No payout has been settled.'
   });
+});
+
+
+const KYC_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const KYC_DOCUMENT_TYPES = new Set(['identity_proof', 'address_proof', 'qualification_certificate', 'profile_photo']);
+const KYC_ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
+
+function getKycStorageBucket() {
+  if (!firebaseAdminApp) return null;
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET?.trim() || firebaseAdminApp.options.storageBucket;
+  return bucketName ? getStorage(firebaseAdminApp).bucket(bucketName) : null;
+}
+
+app.post('/api/partners/kyc-submissions', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const noticeVersion = process.env.KYC_PRIVACY_NOTICE_VERSION?.trim();
+    const retentionDays = Number(process.env.KYC_RETENTION_DAYS);
+    if (!noticeVersion || !Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+      return res.status(503).json({ success: false, error: 'KYC privacy notice and retention policy are not configured. Document submission is disabled.' });
+    }
+    const { submissionId, documentType, objectPath, privacyNoticeVersion, consentAccepted, retentionNoticeAccepted } = req.body ?? {};
+    const validId = typeof submissionId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionId);
+    const validType = typeof documentType === 'string' && KYC_DOCUMENT_TYPES.has(documentType);
+    const extension = typeof objectPath === 'string' ? objectPath.split('.').pop()?.toLowerCase() : '';
+    const validExtension = ['jpg', 'jpeg', 'png', 'pdf'].includes(extension || '');
+    const expectedPath = validId && validType && validExtension ? `partner-kyc/${identity.uid}/${submissionId}_${documentType}.${extension}` : '';
+    if (!validId || !validType || !validExtension || objectPath !== expectedPath ||
+        privacyNoticeVersion !== noticeVersion || consentAccepted !== true || retentionNoticeAccepted !== true) {
+      return res.status(400).json({ success: false, error: 'KYC submission details, privacy notice version, or consent are invalid.' });
+    }
+    const bucket = getKycStorageBucket();
+    if (!bucket) return res.status(503).json({ success: false, error: 'Private KYC Storage bucket is not configured.' });
+    const file = bucket.file(objectPath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(400).json({ success: false, error: 'The private KYC document was not found. Upload it before submitting.' });
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size);
+    if (!Number.isFinite(size) || size <= 0 || size > KYC_MAX_FILE_BYTES ||
+        !metadata.contentType || !KYC_ALLOWED_CONTENT_TYPES.has(metadata.contentType) ||
+        !metadata.generation || !metadata.timeCreated) {
+      return res.status(400).json({ success: false, error: 'The uploaded document type, size, or object metadata is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const partnerRef = db.collection('users').doc(identity.uid);
+    const submissionRef = db.collection('partner_kyc_submissions').doc(submissionId);
+    const auditRef = db.collection('partner_kyc_audit').doc(randomUUID());
+    await db.runTransaction(async (transaction) => {
+      const [partner, existing] = await Promise.all([transaction.get(partnerRef), transaction.get(submissionRef)]);
+      if (!partner.exists || partner.data()?.role !== 'CHANNEL_PARTNER') throw new Error('PARTNER_PROFILE_REQUIRED');
+      if (existing.exists) throw new Error('KYC_SUBMISSION_ALREADY_EXISTS');
+      if (partner.data()?.kycStatus === 'approved') throw new Error('KYC_ALREADY_APPROVED');
+      transaction.create(submissionRef, {
+        submissionId, partnerUid: identity.uid, documentType, objectPath,
+        objectGeneration: String(metadata.generation), contentType: metadata.contentType, sizeBytes: size,
+        status: 'pending_review', privacyNoticeVersion: noticeVersion,
+        consentAcceptedAt: FieldValue.serverTimestamp(),
+        retentionExpiresAt: new Date(Date.now() + retentionDays * 86400000),
+        submittedAt: FieldValue.serverTimestamp(), reviewedAt: null, reviewedBy: null
+      });
+      transaction.update(partnerRef, { kycStatus: 'submitted', updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(auditRef, {
+        event: 'document_submitted', submissionId, partnerUid: identity.uid,
+        actorUid: identity.uid, createdAt: FieldValue.serverTimestamp()
+      });
+    });
+    return res.status(201).json({ success: true, submissionId, status: 'pending_review', message: 'Document received securely and queued for review.' });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'PARTNER_PROFILE_REQUIRED') return res.status(403).json({ success: false, error: 'A Channel Partner profile is required to submit KYC.' });
+    if (code === 'KYC_SUBMISSION_ALREADY_EXISTS') return res.status(409).json({ success: false, error: 'This KYC submission already exists.' });
+    if (code === 'KYC_ALREADY_APPROVED') return res.status(409).json({ success: false, error: 'KYC is already approved for this partner.' });
+    console.error('Partner KYC submission failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC document submission could not be completed securely.' });
+  }
+});
+
+app.get('/api/partners/kyc-status', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('partner_kyc_submissions').where('partnerUid', '==', uid).limit(20).get();
+    const submissions = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return { submissionId: doc.id, documentType: data.documentType, status: data.status,
+        submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() ?? null,
+        reviewedAt: data.reviewedAt?.toDate?.()?.toISOString?.() ?? null,
+        reviewReason: data.partnerVisibleReason ?? null };
+    });
+    return res.json({ success: true, submissions });
+  } catch (error) {
+    console.error('Partner KYC status lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC status could not be loaded.' });
+  }
+});
+
+app.get('/api/admin/kyc-submissions', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC admin service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('partner_kyc_submissions').where('status', '==', 'pending_review').limit(50).get();
+    const submissions = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return { submissionId: doc.id, partnerUid: data.partnerUid, documentType: data.documentType,
+        objectPath: data.objectPath, contentType: data.contentType, sizeBytes: data.sizeBytes,
+        submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() ?? null };
+    });
+    return res.json({ success: true, submissions });
+  } catch (error) {
+    console.error('Admin KYC queue lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC review queue could not be loaded.' });
+  }
+});
+
+app.get('/api/admin/kyc-submissions/:submissionId/document-url', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC admin service is unavailable.' });
+    const id = req.params.submissionId;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ success: false, error: 'KYC submission ID is invalid.' });
+    const submission = await getFirestore(firebaseAdminApp).collection('partner_kyc_submissions').doc(id).get();
+    if (!submission.exists) return res.status(404).json({ success: false, error: 'KYC submission was not found.' });
+    const objectPath = submission.data()?.objectPath;
+    if (typeof objectPath !== 'string' || !objectPath.startsWith('partner-kyc/')) return res.status(409).json({ success: false, error: 'KYC document reference is invalid.' });
+    const bucket = getKycStorageBucket();
+    if (!bucket) return res.status(503).json({ success: false, error: 'Private KYC Storage bucket is not configured.' });
+    const [url] = await bucket.file(objectPath).getSignedUrl({ action: 'read', expires: Date.now() + 5 * 60 * 1000, version: 'v4' });
+    return res.json({ success: true, url, expiresInSeconds: 300 });
+  } catch (error) {
+    console.error('Admin KYC document access failed:', error);
+    return res.status(500).json({ success: false, error: 'A temporary KYC document link could not be created.' });
+  }
+});
+
+app.post('/api/admin/kyc-submissions/:submissionId/decision', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure KYC admin service is unavailable.' });
+    const id = req.params.submissionId;
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const { decision, reason } = req.body ?? {};
+    const validDecision = ['approved', 'rejected', 'needs_resubmission'].includes(decision);
+    const cleanReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
+        !validDecision || cleanReason.length > 500 || (decision !== 'approved' && cleanReason.length < 5)) {
+      return res.status(400).json({ success: false, error: 'Review decision or reason is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const submissionRef = db.collection('partner_kyc_submissions').doc(id);
+    const auditRef = db.collection('partner_kyc_audit').doc(randomUUID());
+    await db.runTransaction(async (transaction) => {
+      const submission = await transaction.get(submissionRef);
+      if (!submission.exists) throw new Error('KYC_SUBMISSION_NOT_FOUND');
+      const data = submission.data()!;
+      if (data.status !== 'pending_review') throw new Error('KYC_SUBMISSION_ALREADY_REVIEWED');
+      const partnerRef = db.collection('users').doc(data.partnerUid);
+      const partner = await transaction.get(partnerRef);
+      if (!partner.exists || partner.data()?.role !== 'CHANNEL_PARTNER') throw new Error('PARTNER_PROFILE_REQUIRED');
+      const nextStatus = decision === 'approved' ? 'approved' : decision;
+      transaction.update(submissionRef, { status: nextStatus, reviewedAt: FieldValue.serverTimestamp(),
+        reviewedBy: identity.uid, ...(cleanReason ? { partnerVisibleReason: cleanReason } : {}) });
+      transaction.update(partnerRef, { kycStatus: nextStatus, isVerified: false, updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(auditRef, { event: 'review_decision', submissionId: id, partnerUid: data.partnerUid,
+        actorUid: identity.uid, decision: nextStatus, reason: cleanReason || null, createdAt: FieldValue.serverTimestamp() });
+    });
+    return res.json({ success: true, submissionId: id, decision, partnerActivated: false });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'KYC_SUBMISSION_NOT_FOUND') return res.status(404).json({ success: false, error: 'KYC submission was not found.' });
+    if (code === 'KYC_SUBMISSION_ALREADY_REVIEWED') return res.status(409).json({ success: false, error: 'This KYC submission has already been reviewed.' });
+    if (code === 'PARTNER_PROFILE_REQUIRED') return res.status(409).json({ success: false, error: 'The Channel Partner profile is unavailable.' });
+    console.error('Admin KYC review decision failed:', error);
+    return res.status(500).json({ success: false, error: 'KYC review decision could not be saved securely.' });
+  }
 });
 
 // Admin-only directory for all registered Channel Partners and legacy Technicians.
