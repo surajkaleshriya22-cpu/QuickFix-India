@@ -1195,7 +1195,7 @@ app.post('/api/partners/kyc-submissions', authenticateFirebaseUser, async (req: 
       transaction.create(submissionRef, {
         submissionId, partnerUid: identity.uid, documentType, objectPath,
         objectGeneration: String(metadata.generation), contentType: metadata.contentType, sizeBytes: size,
-        status: 'pending_review', privacyNoticeVersion: noticeVersion,
+        status: 'pending_review', documentExpiryStatus: 'pending_expiry', privacyNoticeVersion: noticeVersion,
         consentAcceptedAt: FieldValue.serverTimestamp(),
         retentionExpiresAt: new Date(Date.now() + retentionDays * 86400000),
         submittedAt: FieldValue.serverTimestamp(), reviewedAt: null, reviewedBy: null
@@ -1489,13 +1489,14 @@ app.post('/api/internal/kyc-document-expiry', async (req: Request, res: Response
   let skipped = 0;
   try {
     const expired = await db.collection('partner_kyc_submissions')
+      .where('documentExpiryStatus', '==', 'pending_expiry')
       .where('retentionExpiresAt', '<=', now)
       .limit(100)
       .get();
 
     for (const snapshot of expired.docs) {
       const data = snapshot.data();
-      if (data.documentDeletedAt) {
+      if (data.documentDeletedAt || data.documentExpiryStatus !== 'pending_expiry') {
         alreadyProcessed++;
         continue;
       }
