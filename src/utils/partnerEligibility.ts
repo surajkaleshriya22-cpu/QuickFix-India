@@ -4,21 +4,20 @@ export type PartnerDispatchProfile = {
   isVerified?: unknown;
   isOnline?: unknown;
   isSuspended?: unknown;
-  securityDepositPaid?: unknown;
-  walletBalance?: unknown;
 };
 
-/** Fail-closed dispatch eligibility shared by partner job-feed and acceptance APIs. */
+/**
+ * Dispatch eligibility is based on verified partner status only.
+ * Legacy security-deposit and wallet-balance fields are deliberately ignored:
+ * recharge is informational until a trusted payment provider and server ledger
+ * are deployed, and must never block duty or booking access.
+ */
 export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): boolean {
   return (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
-    profile.isSuspended !== true &&
-    profile.securityDepositPaid === true &&
-    typeof profile.walletBalance === 'number' &&
-    Number.isFinite(profile.walletBalance) &&
-    profile.walletBalance >= 2000;
+    profile.isSuspended !== true;
 }
 
 const DISPATCHABLE_PARTNER_TRADES = new Set([
@@ -47,7 +46,6 @@ export function getPartnerServiceCategories(trades: unknown): Set<string> {
   }
   return categories;
 }
-
 
 /** A partner can receive a booking only when its exact service category is covered by their registered trades. */
 export function canPartnerReceiveBookingCategory(trades: unknown, bookingCategory: unknown): boolean {
