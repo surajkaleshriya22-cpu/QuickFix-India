@@ -13,20 +13,22 @@ This repository now contains safer authentication and booking flows, but it is *
 - Service zones are public read-only; only admins can edit them.
 - Wallet, payout, refund and ledger collections remain closed to client access.
 - Client-side code no longer fabricates payout UTRs, marks refunds as paid, or reports a fake Firestore connection.
+- Private partner KYC Storage rules are defined in `storage.rules`: an authenticated partner may create/read files only in their own UID folder; only a trusted admin claim may read or delete them; uploads are limited to 10 MB JPEG, PNG or PDF; overwrite and listing are denied.
+- Firebase CLI configuration now explicitly includes both Firestore and Storage rules.
 - Debug APK and web TypeScript/Vite build have passed GitHub Actions after the code changes.
 
-## Deploy Firestore rules
+## Deploy Firestore and Storage rules
 
-The rules in `firestore.rules` are not active in Firebase until they are published.
+The rules in `firestore.rules` and `storage.rules` are source files only. They are **not active in Firebase until published**. Storage uploads must not be enabled in the app until the Storage rules have been reviewed and deployed to the correct Firebase project.
 
-From a PC with Firebase CLI installed and signed in:
+From a trusted PC with Firebase CLI installed and signed in:
 
 ```bash
 firebase login
-firebase deploy --only firestore:rules --project quickfix-india
+firebase deploy --only firestore:rules,storage --project quickfix-india
 ```
 
-The root `firebase.json` points Firebase CLI to `firestore.rules`. Check the Firebase Console after deployment and confirm the published rules match this file.
+The root `firebase.json` maps Firestore to `firestore.rules` and Storage to `storage.rules`. After deployment, verify the published rules in Firebase Console. Do not upload actual identity documents until the complete KYC submission, consent, retention/deletion, admin review and audit workflow is implemented and tested.
 
 ## Grant the first administrator claim (one-time trusted PC step)
 
@@ -63,17 +65,18 @@ The script refuses users without a verified email in the explicit admin allowlis
 
 1. Provision the real administrator account with an Admin SDK custom claim `admin: true`. Never set this claim from the browser or Android client. Keep the service-account key off GitHub and out of the APK.
 2. Implement trusted backend endpoints for technician registration review, job acceptance/assignment, OTP creation/verification, SLA enforcement, and partner status updates.
-3. Implement atomic server-side wallet ledger transactions, deposit reservation, payout approval/reversal, and idempotency protection.
-4. Connect a real payment provider. Verify webhook signatures using the raw request body and a server-only secret; deduplicate provider event IDs. Never mark payment paid/refunded or payout settled from a client.
-5. Add real-time Firestore listeners and role-scoped rules for partner bookings and admin operations as those server workflows are introduced.
-6. Add Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, and denied financial writes.
-7. Configure Firebase Phone Auth SHA-1/SHA-256 fingerprints, authorized domains, reCAPTCHA/Play Integrity and SMS settings in Firebase Console.
+3. Implement a complete KYC workflow: authenticated document metadata submission, server-side object existence/type/size validation, admin-only review decisions, immutable audit events, consent and retention/deletion handling. The Storage rules alone do not implement KYC review and do not mean KYC is live.
+4. Implement atomic server-side wallet ledger transactions, deposit reservation, payout approval/reversal, and idempotency protection.
+5. Connect a real payment provider. Verify webhook signatures using the raw request body and a server-only secret; deduplicate provider event IDs. Never mark payment paid/refunded or payout settled from a client.
+6. Add real-time Firestore listeners and role-scoped rules for partner bookings and admin operations as those server workflows are introduced.
+7. Add Firebase Emulator tests for profile access, booking ownership, cancellation, admin claims, denied financial writes, and private KYC Storage access.
+8. Configure Firebase Phone Auth SHA-1/SHA-256 fingerprints, authorized domains, reCAPTCHA/Play Integrity and SMS settings in Firebase Console.
 
 ## Important limits
 
 - The current Spark Firebase plan does not provide deployable Cloud Functions. A trusted backend can be hosted separately (for example, on the existing server host), but it must use a server-only service account and verify Firebase ID tokens.
 - The app does not currently send or settle real payouts/refunds. Wallet top-ups and withdrawals are deliberately disabled rather than showing fake success.
-- A successful APK build proves compilation only; it does not prove SMS delivery, Firestore rule deployment, production authentication, or payment-provider operation.
+- A successful APK build proves compilation only; it does not prove SMS delivery, Firestore/Storage rule deployment, production authentication, or payment-provider operation.
 
 ## Secrets
 
