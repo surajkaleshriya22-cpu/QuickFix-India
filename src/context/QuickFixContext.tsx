@@ -727,21 +727,13 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const taxes = Math.round((taxableSubtotal * commissionSettings.gstPct) / 100);
     const totalAmount = taxableSubtotal + taxes;
 
-    const categoryCommissionPct =
-      service.category === 'electrician'
-        ? commissionSettings.electricianCommissionPct
-        : service.category === 'plumber'
-        ? commissionSettings.plumberCommissionPct
-        : service.category === 'ac_repair'
-        ? (commissionSettings.acCommissionPct || 15)
-        : (commissionSettings.fridgeCommissionPct || 15);
-
-    // Partner-specific commission overrides are applied by the trusted backend
-    // after a real partner has been assigned.
-    const commissionPct = categoryCommissionPct;
-
-    const adminCommission = Math.round((price * commissionPct) / 100) + visitingCharges;
-    const technicianPayout = totalAmount - adminCommission;
+    // QuickFix partner monetization is subscription-only:
+    // never calculate or reserve a per-booking partner commission.
+    // Customer convenience charges and GST remain separate customer-side
+    // booking components; they are not deducted from partner earnings.
+    const commissionPct = 0;
+    const adminCommission = 0;
+    const technicianPayout = totalAmount;
 
     const newBookingId = `QF-${Math.floor(7050 + Math.random() * 900)}`;
 
