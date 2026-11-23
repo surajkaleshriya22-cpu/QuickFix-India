@@ -22,7 +22,7 @@
     },
     "Technician": {
       "title": "Technician",
-      "description": "Technician profile with verification, trade qualification, and wallet balance with 2000 INR mandatory reserve",
+      "description": "Technician profile with verification, trade qualification, and wallet balance; legacy reserve fields are deprecated",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
