@@ -209,12 +209,12 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string') ||
        ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
     );
-    const allowedTrades = new Set(['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'ac_fridge', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'bike_rider', 'kaamkaaj_partner', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'labour']);
+    const allowedTrades = new Set(['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'ac_fridge', 'appliance_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'bike_rider', 'kaamkaaj_partner', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'labour']);
 
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()) ||
         !Array.isArray(trades) || trades.length < 1 || trades.length > 22 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
@@ -229,17 +229,26 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const userRef = db.collection('users').doc(identity.uid);
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
-      if (existing.exists) {
-        throw new Error('PROFILE_ALREADY_EXISTS');
+      const existingData = existing.exists ? existing.data()! : undefined;
+      if (existingData) {
+        const roles = Array.isArray(existingData.roles) ? existingData.roles : [existingData.role];
+        const isEligibleCustomerProfile = existingData.role === 'CUSTOMER' &&
+          existingData.isVerified === false &&
+          existingData.phoneNumber === verifiedPhone &&
+          roles.includes('CUSTOMER') &&
+          !roles.includes('CHANNEL_PARTNER');
+        if (!isEligibleCustomerProfile) throw new Error('PROFILE_ALREADY_EXISTS');
       }
-      transaction.create(userRef, {
+
+      const partnerFields = {
         uid: identity.uid,
         phoneNumber: verifiedPhone,
         displayName: displayName.trim(),
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
+        roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
         city: city.trim(),
-        address: typeof address === 'string' ? address.trim() : '',
+        address: typeof address === 'string' ? address.trim() : (existingData?.address || ''),
         ...(validServiceArea && serviceArea ? {
           serviceArea: {
             state: serviceArea.state.trim(),
@@ -256,19 +265,21 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         approvalStatus: 'pending_audit',
         kycStatus: 'not_submitted',
         securityDepositPaid: false,
-        createdAt: FieldValue.serverTimestamp(),
+        ...(existingData?.createdAt ? {} : { createdAt: FieldValue.serverTimestamp() }),
         updatedAt: FieldValue.serverTimestamp()
-      });
+      };
+      if (existing.exists) transaction.update(userRef, partnerFields);
+      else transaction.create(userRef, partnerFields);
     });
 
     return res.status(201).json({
       success: true,
       approvalStatus: 'pending_audit',
-      message: 'Basic partner profile created. KYC and approval are still pending; no deposit was collected.'
+      message: 'Channel Partner profile created. Customer access is preserved; KYC and approval are still pending.'
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'PROFILE_ALREADY_EXISTS') {
-      return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
+      return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please sign in with that account; existing profile data was not changed.' });
     }
     console.error('Secure partner registration failed:', error);
     return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
@@ -312,7 +323,10 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
     const db = getFirestore(firebaseAdminApp);
     const profileSnap = await db.collection('users').doc(identity.uid).get();
-    if (!profileSnap.exists || profileSnap.data()?.role !== 'CUSTOMER') {
+    const customerProfile = profileSnap.exists ? profileSnap.data() : undefined;
+    const hasCustomerAccess = customerProfile?.role === 'CUSTOMER' ||
+      (Array.isArray(customerProfile?.roles) && customerProfile.roles.includes('CUSTOMER'));
+    if (!customerProfile || !hasCustomerAccess) {
       return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
     }
 
