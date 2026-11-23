@@ -66,6 +66,14 @@ import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { AdminKycReviewSection } from './AdminKycReviewSection';
 import { auth } from '../../lib/firebase';
 
+const INDIAN_BANK_OPTIONS = [
+  'State Bank of India (SBI)', 'HDFC Bank', 'ICICI Bank', 'Punjab National Bank (PNB)',
+  'Axis Bank', 'Bank of Baroda', 'Canara Bank', 'Union Bank of India',
+  'Bank of India', 'Indian Bank', 'Central Bank of India', 'Indian Overseas Bank',
+  'UCO Bank', 'Bank of Maharashtra', 'IDBI Bank', 'Yes Bank', 'Kotak Mahindra Bank',
+  'IndusInd Bank', 'Federal Bank', 'AU Small Finance Bank', 'Other'
+] as const;
+
 export const AdminDashboard: React.FC = () => {
   const {
     bookings,
@@ -2698,13 +2706,15 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-slate-400 block mb-1">Settlement Bank Name</label>
-                      <input
-                        type="text"
+                      <label className="text-[11px] font-bold text-slate-400 block mb-1">Select Settlement Bank</label>
+                      <select
                         value={adminBankName}
                         onChange={e => setAdminBankName(e.target.value)}
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                      />
+                      >
+                        <option value="">Choose your bank</option>
+                        {INDIAN_BANK_OPTIONS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+                      </select>
                     </div>
 
                     <div>
@@ -2778,18 +2788,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="pt-2 flex justify-end">
                     <button
                       onClick={() => {
-                        updateAdminPaymentConfig({
-                          merchantName: adminMerchantName,
-                          merchantVpa: adminVpa,
-                          bankName: adminBankName,
-                          bankAccountNumber: adminAccountNo,
-                          bankIfsc: adminIfsc,
-                          gatewayProvider: adminGateway,
-                          manualApprovalRequired: adminManualApproval,
-                          escrowEnabled: adminEscrowEnabled
-                        });
-                        setAdminConfigSavedMsg('Admin Master Account & Gateway Settings updated successfully!');
-                        setTimeout(() => setAdminConfigSavedMsg(''), 4000);
+                        setAdminConfigSavedMsg('Bank details are editable in this form, but secure admin-only server storage is not deployed yet. Nothing has been saved or activated.');
                       }}
                       className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
                     >
