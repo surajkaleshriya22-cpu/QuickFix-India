@@ -1269,7 +1269,7 @@ app.get('/api/admin/kyc-submissions/:submissionId/document-url', authenticateFir
     if (!expectedObjectPrefix || typeof objectPath !== 'string' ||
         !objectPath.startsWith(expectedObjectPrefix) ||
         !/^[0-9a-f-]{36}_(identity_proof|address_proof|qualification_certificate|profile_photo)\\.(jpg|jpeg|png|pdf)$/i.test(objectPath.slice(`partner-kyc/${partnerUid}/`.length)) ||
-        typeof submissionData.objectGeneration !== 'string' || !/^\\d+$/.test(submissionData.objectGeneration)) {
+        typeof submissionData.objectGeneration !== 'string' || !/^\d+$/.test(submissionData.objectGeneration)) {
       return res.status(409).json({ success: false, error: 'KYC document reference is invalid.' });
     }
     const bucket = getKycStorageBucket();
@@ -1471,7 +1471,7 @@ app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, req
 // partner/customer profiles, verification decisions, bookings and audit history remain.
 app.post('/api/internal/kyc-document-expiry', async (req: Request, res: Response) => {
   const configuredToken = process.env.KYC_EXPIRY_JOB_TOKEN || '';
-  const suppliedToken = req.header('authorization')?.replace(/^Bearer\\s+/i, '') || '';
+  const suppliedToken = req.header('authorization')?.replace(/^Bearer\s+/i, '') || '';
   const expected = Buffer.from(configuredToken);
   const supplied = Buffer.from(suppliedToken);
   if (!configuredToken || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
@@ -1511,7 +1511,7 @@ app.post('/api/internal/kyc-document-expiry', async (req: Request, res: Response
         ['identity_proof', 'address_proof', 'qualification_certificate', 'profile_photo'].includes(documentType) &&
         ['jpg', 'jpeg', 'png', 'pdf'].includes(extension) &&
         objectPath === `partner-kyc/${partnerUid}/${submissionId}_${documentType}.${extension}` &&
-        /^\\d+$/.test(generation);
+        /^\d+$/.test(generation);
       if (!valid) {
         skipped++;
         console.error('KYC expiry skipped malformed submission metadata:', snapshot.id);
@@ -1588,10 +1588,10 @@ app.put('/api/admin/payment-bank', authenticateFirebaseUser, requireServerAdmin,
     const { bankName, accountHolderName, accountNumber, ifsc } = req.body ?? {};
     const cleanBank = typeof bankName === 'string' ? bankName.trim() : '';
     const cleanHolder = typeof accountHolderName === 'string' ? accountHolderName.trim() : '';
-    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\\s/g, '') : '';
+    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\s/g, '') : '';
     const cleanIfsc = typeof ifsc === 'string' ? ifsc.trim().toUpperCase() : '';
     if (!cleanBank || cleanBank.length > 100 || cleanHolder.length < 2 || cleanHolder.length > 100 ||
-        !/^\\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+        !/^\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
       return res.status(400).json({ success: false, error: 'Enter a valid bank, account holder name, 9–18 digit account number and IFSC.' });
     }
     const iv = randomBytes(12);
@@ -1663,7 +1663,7 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
         !Number.isInteger(currentRechargeAmount) || currentRechargeAmount < 0 || currentRechargeAmount > 100000 ||
         rolloutAmounts.length !== 3 || rolloutAmounts.some((amount: number) => !Number.isInteger(amount) || amount < 0 || amount > 100000) ||
         !validPlanDurations ||
-        (effectiveAt !== null && !/^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveAt))) {
+        (effectiveAt !== null && !/^\d{4}-\d{2}-\d{2}$/.test(effectiveAt))) {
       return res.status(400).json({ success: false, error: 'Recharge policy values are invalid.' });
     }
     const db = getFirestore(firebaseAdminApp);
