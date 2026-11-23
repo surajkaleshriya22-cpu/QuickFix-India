@@ -38,6 +38,7 @@ fun ProfileScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = { QuickFixLanguageSelector() },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
