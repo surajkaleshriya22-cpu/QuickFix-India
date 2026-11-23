@@ -1126,8 +1126,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 totalEarnings: prev.totalEarnings + payout,
                 pendingPayout: prev.pendingPayout + payout,
                 walletBalance: newBal,
-                securityDepositPaid: newBal >= 2000,
-                withdrawableBalance: Math.max(0, newBal - 2000)
               };
             });
           }
