@@ -1794,6 +1794,48 @@ app.get('/api/partner/recharge-ledger', authenticateFirebaseUser, async (req: Re
   }
 });
 
+// Admin-only recharge reconciliation view. This is read-only: payment credit and
+// settlement must come from a verified gateway webhook and provider settlement reports.
+app.get('/api/admin/partner-recharge-ledger', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin recharge ledger is temporarily unavailable.' });
+    const db = getFirestore(firebaseAdminApp);
+    const accountsSnapshot = await db.collection('partner_recharge_accounts').limit(100).get();
+    const partners = await Promise.all(accountsSnapshot.docs.map(async (accountDoc) => {
+      const [profileSnap, paymentsSnap] = await Promise.all([
+        db.collection('users').doc(accountDoc.id).get(),
+        accountDoc.ref.collection('payments').orderBy('createdAt', 'desc').limit(10).get()
+      ]);
+      const profile = profileSnap.exists ? profileSnap.data()! : {};
+      const account = accountDoc.data();
+      return {
+        partnerUid: accountDoc.id,
+        partnerName: String(profile.displayName || 'Unknown partner').slice(0, 100),
+        partnerPhone: String(profile.phoneNumber || '').slice(0, 30),
+        partnerType: String(profile.partnerType || profile.primaryTrade || 'channel_partner'),
+        totalRechargePaid: Number(account.totalPaid || 0),
+        activeUntil: account.activeUntil?.toDate?.()?.toISOString?.() || null,
+        payments: paymentsSnap.docs.map((paymentDoc) => {
+          const payment = paymentDoc.data();
+          return {
+            paymentId: paymentDoc.id,
+            amount: Number(payment.amount || 0),
+            status: String(payment.status || 'unknown'),
+            validityDays: Number(payment.validityDays || 0),
+            paidAt: payment.paidAt?.toDate?.()?.toISOString?.() || null,
+            provider: String(payment.provider || 'unknown'),
+            providerPaymentId: String(payment.providerPaymentId || '')
+          };
+        })
+      };
+    }));
+    return res.json({ success: true, readOnly: true, paymentEnabled: false, currency: 'INR', partners });
+  } catch (error) {
+    console.error('Admin partner recharge ledger lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Admin recharge ledger could not be loaded securely.' });
+  }
+});
+
 // Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
 // Liveness: the HTTP process is running. Dependency readiness is reported separately.
 app.get('/healthz', (_req: Request, res: Response) => {
