@@ -81,3 +81,23 @@ The script refuses users without a verified email in the explicit admin allowlis
 ## Secrets
 
 Never commit Razorpay keys, webhook secrets, Firebase service-account JSON, admin private credentials, or payment-provider tokens to GitHub. Store them only as server-side environment secrets.
+
+
+## Partner KYC API implementation (not yet enabled in production)
+
+The server source now includes authenticated routes for:
+- Partner submission metadata after a private Storage upload is confirmed to exist.
+- Partner-only status lookup.
+- Admin-only pending review queue and five-minute signed document viewing links.
+- Admin-only approve/reject/request-resubmission decisions with server-timestamped audit events.
+
+KYC approval deliberately leaves `isVerified=false`; it does not approve the partner's basic profile, activate duty, or permit job acceptance. Client Firestore access to the KYC submission and audit collections remains denied by the default-deny rule.
+
+The submission endpoint fails closed until the hosting environment has all of these server-only settings:
+- `FIREBASE_STORAGE_BUCKET`: exact bucket name for the `quickfix-india` project.
+- `KYC_PRIVACY_NOTICE_VERSION`: version identifier of the actual privacy notice shown to the partner.
+- `KYC_RETENTION_DAYS`: approved retention period as an integer from 1 to 3650.
+
+Do not set these values until the notice states the purpose, document categories, who can review, retention/deletion process, and a contact for privacy requests. The API checks consent booleans and the notice version; that is not a substitute for a legally reviewed notice or a deployed upload UI. The current API accepts only JPEG, PNG, or PDF objects up to 10 MB and document categories `identity_proof`, `address_proof`, `qualification_certificate`, and `profile_photo`. It does not specifically request Aadhaar or PAN.
+
+These routes are source code only until the updated server is deployed with a trusted Firebase Admin service account and the Storage rules are published. No KYC upload, review or activation is live merely because this code is merged. A scheduled retention/deletion worker, partner upload UI, Firebase Emulator tests, and a formal privacy/legal review are still required before collecting real identity documents.
