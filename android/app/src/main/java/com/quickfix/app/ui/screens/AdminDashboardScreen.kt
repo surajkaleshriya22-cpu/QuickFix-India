@@ -66,6 +66,9 @@ fun AdminDashboardScreen(
     navController: NavController,
     viewModel: QuickFixViewModel
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val bookings by viewModel.bookings.collectAsState()
     val technicians by viewModel.technicians.collectAsState()
     val customers by viewModel.customers.collectAsState()
