@@ -89,7 +89,7 @@ fun CustomerHomeScreen(
                             )
                         }
                         Text(
-                            "Choose your service city",
+                            "अपना शहर चुनें",
                             color = Color(0xFF94A3B8),
                             fontSize = 10.sp
                         )
@@ -191,13 +191,13 @@ fun CustomerHomeScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "Book local service partners",
+                            "आपको कौन-सा काम करवाना है?",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Text(
-                            "Availability, visit time and final price are confirmed before work starts.",
+                            "अपना काम चुनें। बाकी जानकारी हम आसान तरीके से पूछेंगे।",
                             color = Color(0xFFDBEAFE),
                             fontSize = 11.sp
                         )
@@ -272,24 +272,24 @@ fun CustomerHomeScreen(
             // All partner categories from the canonical Android service catalogue.
             item {
                 val categoryOptions = listOf(
-                    "all" to "सभी सेवाएँ",
-                    "electrician" to "⚡ Electrician",
-                    "plumber" to "🔧 Plumber",
-                    "ac_repair" to "❄️ AC Repair",
-                    "fridge_repair" to "🧊 Fridge Repair",
-                    "appliance_repair" to "🛠️ Appliance Repair",
-                    "welder" to "Welder",
-                    "mechanic" to "Mechanic",
-                    "driver" to "Driver",
-                    "tourist_guide" to "Tourist Guide",
-                    "contractor" to "Contractor",
-                    "bike_taxi" to "🏍️ Bike Taxi",
-                    "kaamkaaj_partner" to "🏠 Kaam-Kaaj / Home Help",
-                    "carpenter" to "Carpenter",
-                    "painter" to "Painter",
-                    "gardener" to "Gardener",
-                    "pest_control" to "Pest Control",
-                    "house_shifting" to "House Shifting"
+                    "all" to "सभी काम",
+                    "electrician" to "⚡ बिजली का काम",
+                    "plumber" to "🔧 नल-पाइप का काम",
+                    "ac_repair" to "❄️ AC ठीक करवाएँ",
+                    "fridge_repair" to "🧊 फ्रिज ठीक करवाएँ",
+                    "appliance_repair" to "🛠️ घर के सामान की मरम्मत",
+                    "welder" to "वेल्डिंग का काम",
+                    "mechanic" to "गाड़ी ठीक करवाएँ",
+                    "driver" to "ड्राइवर बुलाएँ",
+                    "tourist_guide" to "घूमने के लिए गाइड",
+                    "contractor" to "ठेकेदार",
+                    "bike_taxi" to "🏍️ बाइक से सफर",
+                    "kaamkaaj_partner" to "🏠 घर के काम में मदद",
+                    "carpenter" to "बढ़ई का काम",
+                    "painter" to "पेंट का काम",
+                    "gardener" to "माली का काम",
+                    "pest_control" to "कीड़े-मकोड़े हटाएँ",
+                    "house_shifting" to "घर का सामान शिफ्ट करें"
                 )
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -354,14 +354,14 @@ fun CustomerHomeScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Rate on confirmation", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
+                            Text("कीमत काम देखकर बताएँगे", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
                             Button(
                                 onClick = { navController.navigate("service_booking/${service.id}") },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Book", fontSize = 11.sp)
+                                Text("काम चुनें", fontSize = 11.sp)
                             }
                         }
                     }
