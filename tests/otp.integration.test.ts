@@ -72,6 +72,9 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
       GCLOUD_PROJECT: projectId,
       FIREBASE_CONFIG: JSON.stringify({ projectId }),
       FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify(serviceAccount)
+      KYC_PRIVACY_NOTICE_VERSION: '',
+      KYC_RETENTION_DAYS: '',
+      FIREBASE_STORAGE_BUCKET: ''
     },
     stdio: 'ignore'
   });
@@ -108,6 +111,35 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
     customerLocation: { latitude: 22.7196, longitude: 75.8577 },
     createdAt: new Date().toISOString()
   });
+
+  // KYC remains fail-closed until the reviewed privacy notice, retention policy,
+  // private Storage bucket and deployed server configuration are explicitly set.
+  const kycId = '550e8400-e29b-41d4-a716-446655440000';
+  const kycBlocked = await request('/api/partners/kyc-submissions', partner.token, 'POST', {
+    submissionId: kycId,
+    documentType: 'identity_proof',
+    objectPath: `partner-kyc/${partner.uid}/${kycId}_identity_proof.pdf`,
+    privacyNoticeVersion: 'test-notice',
+    consentAccepted: true,
+    retentionNoticeAccepted: true
+  });
+  assert.equal(kycBlocked.status, 503, 'KYC submission must remain disabled without configured privacy and retention gates');
+  assert.match(String(kycBlocked.body.error), /privacy notice and retention policy/i);
+  assert.equal((await db.collection('partner_kyc_submissions').doc(kycId).get()).exists, false,
+    'blocked KYC submission must not create a document record');
+
+  const kycStatus = await request('/api/partners/kyc-status', partner.token);
+  assert.equal(kycStatus.status, 200, 'authenticated partner may inspect their own KYC status');
+  assert.deepEqual(kycStatus.body.submissions, []);
+
+  const partnerCannotReadKycQueue = await request('/api/admin/kyc-submissions', partner.token);
+  assert.equal(partnerCannotReadKycQueue.status, 403, 'a partner must not read the admin KYC queue');
+  const partnerCannotCreateDocumentLink = await request(`/api/admin/kyc-submissions/${kycId}/document-url`, partner.token);
+  assert.equal(partnerCannotCreateDocumentLink.status, 403, 'a partner must not create admin document links');
+  const partnerCannotReviewKyc = await request(`/api/admin/kyc-submissions/${kycId}/decision`, partner.token, 'POST', {
+    decision: 'approved'
+  });
+  assert.equal(partnerCannotReviewKyc.status, 403, 'a partner must not approve KYC submissions');
 
   const accepted = await request('/api/partners/bookings/otp-valid/accept', partner.token, 'POST', {});
   assert.equal(accepted.status, 200, 'eligible partner must be able to accept the test booking');
