@@ -5,7 +5,7 @@ type RechargePolicy = {
   freeTrialDays: number;
   currentRechargeAmount: number;
   rolloutAmounts: number[];
-  plans: { id: string; durationDays: 30 | 90 | 365; amount: number; enabled: boolean }[];
+  plans: { id: string; durationDays: number; amount: number; enabled: boolean }[];
   effectiveAt: string | null;
   enabled: boolean;
 };
@@ -119,11 +119,11 @@ export const AdminPartnerRechargePolicySection: React.FC = () => {
           </div>
         </div>
         <div className="space-y-2">
-          <div className="text-xs font-semibold text-slate-300">SIM-style validity plans (Admin editable)</div>
+          <div className="text-xs font-semibold text-slate-300">Recharge validity stages (Admin editable)</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {policy.plans.map((plan, index) => (
               <div key={plan.id} className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-2">
-                <div className="text-sm font-bold text-white">{plan.durationDays} days</div>
+                <label className="block space-y-1">\n                  <span className="text-[11px] text-slate-400">Validity (days)</span>\n                  <input type="number" min="1" max="3650" step="1" value={plan.durationDays} onChange={(e) => setPolicy((p) => ({ ...p, plans: p.plans.map((item, i) => i === index ? { ...item, durationDays: Number(e.target.value) } : item) }))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-white" required />\n                </label>
                 <label className="block space-y-1">
                   <span className="text-[11px] text-slate-400">Plan price (₹)</span>
                   <input type="number" min="0" max="100000" step="1" value={plan.amount} onChange={(e) => setPolicy((p) => ({ ...p, plans: p.plans.map((item, i) => i === index ? { ...item, amount: Number(e.target.value) } : item) }))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-white" required />
@@ -135,7 +135,7 @@ export const AdminPartnerRechargePolicySection: React.FC = () => {
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">The 30-day launch price is ₹500. 90-day and 365-day plans start disabled until Admin sets and approves their prices. These are policy settings only; checkout and wallet credit remain disabled until verified payment integration is live.</p>
+          <p className="text-[11px] text-slate-500">Default stages are ₹500, ₹1,000 and ₹2,000. Admin can change each stage amount and validity in days. These are policy settings only; checkout and wallet credit remain disabled until verified payment integration is live.</p>
         </div>
         <label className="block space-y-1">
           <span className="text-xs font-semibold text-slate-300">Policy effective date (optional)</span>
