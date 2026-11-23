@@ -37,6 +37,9 @@ fun AuthScreen(
     authViewModel: AuthViewModel,
     initialRole: UserRole = UserRole.CUSTOMER
 ) {
+    val appLanguage = rememberQuickFixLanguage()
+    val isEnglish = appLanguage == "en"
+
     val context = LocalContext.current
     val activity = context as? Activity
     val authState by authViewModel.authState.collectAsState()
