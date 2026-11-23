@@ -1616,6 +1616,74 @@ app.get('/api/admin/health', authenticateFirebaseUser, requireServerAdmin, (_req
   res.json({ success: true, authenticated: true, authorization: 'server_verified_admin_claim' });
 });
 
+const DEFAULT_PARTNER_RECHARGE_POLICY = {
+  freeTrialDays: 30,
+  currentRechargeAmount: 500,
+  rolloutAmounts: [500, 1000, 2000],
+  effectiveAt: null as string | null,
+  enabled: true,
+  currency: 'INR'
+};
+
+// Partner pricing policy is server-owned. Client access is restricted to verified admins.
+app.get('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin configuration is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('system').doc('partner_recharge_policy').get();
+    return res.json({ success: true, policy: snapshot.exists ? snapshot.data() : DEFAULT_PARTNER_RECHARGE_POLICY });
+  } catch (error) {
+    console.error('Partner recharge policy read failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge policy could not be loaded.' });
+  }
+});
+
+app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin configuration is unavailable.' });
+    const body = req.body || {};
+    const freeTrialDays = Number(body.freeTrialDays);
+    const currentRechargeAmount = Number(body.currentRechargeAmount);
+    const rolloutAmounts = Array.isArray(body.rolloutAmounts) ? body.rolloutAmounts.map(Number) : [];
+    const effectiveAt = body.effectiveAt === null || body.effectiveAt === '' ? null : String(body.effectiveAt);
+    if (!Number.isInteger(freeTrialDays) || freeTrialDays < 0 || freeTrialDays > 365 ||
+        !Number.isInteger(currentRechargeAmount) || currentRechargeAmount < 0 || currentRechargeAmount > 100000 ||
+        rolloutAmounts.length !== 3 || rolloutAmounts.some((amount: number) => !Number.isInteger(amount) || amount < 0 || amount > 100000) ||
+        (effectiveAt !== null && !/^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveAt))) {
+      return res.status(400).json({ success: false, error: 'Recharge policy values are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const policyRef = db.collection('system').doc('partner_recharge_policy');
+    const previous = await policyRef.get();
+    const policy = {
+      freeTrialDays,
+      currentRechargeAmount,
+      rolloutAmounts,
+      effectiveAt,
+      enabled: body.enabled !== false,
+      currency: 'INR',
+      updatedBy: (req as AuthenticatedRequest).firebaseUser?.uid || 'unknown',
+      updatedAt: FieldValue.serverTimestamp()
+    };
+    await db.runTransaction(async (transaction) => {
+      const current = await transaction.get(policyRef);
+      if (current.exists) {
+        const auditRef = db.collection('system').doc('partner_recharge_policy_audit').collection('changes').doc(randomUUID());
+        transaction.set(auditRef, {
+          previous: current.data(),
+          changedBy: policy.updatedBy,
+          changedAt: FieldValue.serverTimestamp()
+        });
+      }
+      transaction.set(policyRef, policy);
+    });
+    return res.json({ success: true, policy: { ...policy, updatedAt: new Date().toISOString() }, hadPreviousPolicy: previous.exists });
+  } catch (error) {
+    console.error('Partner recharge policy save failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge policy could not be saved.' });
+  }
+});
+
+
 // Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
 // Liveness: the HTTP process is running. Dependency readiness is reported separately.
 app.get('/healthz', (_req: Request, res: Response) => {
