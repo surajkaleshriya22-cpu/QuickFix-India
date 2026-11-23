@@ -25,6 +25,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import com.quickfix.app.data.model.AdminMasterPaymentConfig
 import com.quickfix.app.data.model.Booking
 import com.quickfix.app.data.model.PayoutRecord
@@ -601,9 +609,46 @@ fun CommissionsTab(
     var plumbPct by remember { mutableStateOf(settings.plumberCommissionPct.toString()) }
     var fee by remember { mutableStateOf(settings.convenienceFee.toString()) }
 
-    var masterUpi by remember { mutableStateOf(adminConfig.masterUpiVpa) }
-    var masterBank by remember { mutableStateOf(adminConfig.receivingBankName) }
-    var configSavedMsg by remember { mutableStateOf(false) }
+    var selectedBank by remember { mutableStateOf("") }
+    var accountHolder by remember { mutableStateOf("") }
+    var accountNumber by remember { mutableStateOf("") }
+    var bankIfsc by remember { mutableStateOf("") }
+    var savedBankSummary by remember { mutableStateOf("Bank account not configured") }
+    var bankStatus by remember { mutableStateOf("Loading secure bank settings…") }
+    var bankBusy by remember { mutableStateOf(false) }
+    var bankMenuExpanded by remember { mutableStateOf(false) }
+    val bankScope = rememberCoroutineScope()
+    val indianBanks = listOf("State Bank of India", "HDFC Bank", "ICICI Bank", "Punjab National Bank", "Bank of Baroda", "Axis Bank", "Canara Bank", "Union Bank of India", "Kotak Mahindra Bank", "IDFC FIRST Bank", "IndusInd Bank", "Yes Bank", "Indian Bank", "Central Bank of India", "Bank of India", "Other")
+    LaunchedEffect(Unit) {
+        bankBusy = true
+        bankStatus = try {
+            val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token ?: throw IllegalStateException("Admin sign-in required")
+            val response = withContext(Dispatchers.IO) {
+                val connection = URL("https://quickfix-india.onrender.com/api/admin/payment-bank").openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "GET"
+                    connection.setRequestProperty("Authorization", "Bearer $token")
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 15000
+                    val code = connection.responseCode
+                    val body = (if (code in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
+                    if (code !in 200..299) throw IllegalStateException(JSONObject(body).optString("error", "Could not load bank settings ($code)"))
+                    JSONObject(body)
+                } finally { connection.disconnect() }
+            }
+            if (response.optBoolean("configured")) {
+                selectedBank = response.optString("bankName")
+                accountHolder = response.optString("accountHolderName")
+                bankIfsc = response.optString("ifsc")
+                savedBankSummary = "Saved: " + response.optString("bankName") + " • A/C ending " + response.optString("accountLast4") + " • IFSC " + response.optString("ifsc")
+                "Saved bank account loaded securely. Enter a new account number only to replace it."
+            } else {
+                savedBankSummary = "No bank account saved yet"
+                "Add your verified bank account below."
+            }
+        } catch (error: Exception) { "Bank settings unavailable: " + (error.message ?: "connection error") }
+        bankBusy = false
+    }
 
     var activeSubTab by remember { mutableStateOf("master_account") } // "master_account", "payouts", "history", "reports", "settings"
     var statusFilter by remember { mutableStateOf("all") } // "all", "paid", "pending", "failed"
@@ -726,49 +771,57 @@ fun CommissionsTab(
                     Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
 
-                    OutlinedTextField(
-                        value = masterUpi,
-                        onValueChange = { masterUpi = it },
-                        label = { Text("Master UPI VPA (Customer Collections)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = masterBank,
-                        onValueChange = { masterBank = it },
-                        label = { Text("Receiving Bank & Account Details") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Surface(
-                        color = Color(0xFFF8FAFC),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Corporate Entity: ${adminConfig.corporateEntity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
-                            Text("Account: ${adminConfig.accountNumberMasked} • IFSC: ${adminConfig.ifscCode}", fontSize = 11.sp, color = TextSecondary)
-                            Text("Payment provider: Not connected", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
-                            Text("Payouts, escrow, and bank transfers are not active. Saving details below does not move money.", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
+                    Text(savedBankSummary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = TextPrimary)
+                    Box {
+                        OutlinedButton(onClick = { bankMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (selectedBank.isBlank()) "Choose your bank" else selectedBank)
+                        }
+                        DropdownMenu(expanded = bankMenuExpanded, onDismissRequest = { bankMenuExpanded = false }) {
+                            indianBanks.forEach { bank -> DropdownMenuItem(text = { Text(bank) }, onClick = { selectedBank = bank; bankMenuExpanded = false }) }
                         }
                     }
-
+                    OutlinedTextField(value = accountHolder, onValueChange = { accountHolder = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = accountNumber, onValueChange = { accountNumber = it.filter(Char::isDigit).take(18) }, label = { Text("New account number (leave blank to keep saved account)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = bankIfsc, onValueChange = { bankIfsc = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Text(bankStatus, color = if (bankStatus.startsWith("Bank settings unavailable") || bankStatus.startsWith("Save failed")) Color(0xFFB45309) else TextSecondary, fontSize = 12.sp)
+                    Text("Bank details are encrypted on the server. Only the last four account digits are shown after saving. This does not activate collections or payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
                     Button(
+                        enabled = !bankBusy && selectedBank.isNotBlank() && accountHolder.isNotBlank() && bankIfsc.matches(Regex("^[A-Z]{4}0[A-Z0-9]{6}$")) && (accountNumber.isBlank() || accountNumber.length in 9..18),
                         onClick = {
-                            val updated = adminConfig.copy(masterUpiVpa = masterUpi, receivingBankName = masterBank)
-                            onUpdateAdminConfig(updated)
-                            configSavedMsg = true
+                            bankScope.launch {
+                                bankBusy = true
+                                bankStatus = "Saving securely…"
+                                bankStatus = try {
+                                    val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token ?: throw IllegalStateException("Admin sign-in required")
+                                    val result = withContext(Dispatchers.IO) {
+                                        val connection = URL("https://quickfix-india.onrender.com/api/admin/payment-bank").openConnection() as HttpURLConnection
+                                        try {
+                                            connection.requestMethod = "PUT"
+                                            connection.doOutput = true
+                                            connection.setRequestProperty("Authorization", "Bearer $token")
+                                            connection.setRequestProperty("Content-Type", "application/json")
+                                            connection.connectTimeout = 15000
+                                            connection.readTimeout = 15000
+                                            val payload = JSONObject().put("bankName", selectedBank).put("accountHolderName", accountHolder.trim()).put("ifsc", bankIfsc.trim())
+                                            if (accountNumber.isNotBlank()) payload.put("accountNumber", accountNumber)
+                                            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                            val code = connection.responseCode
+                                            val body = (if (code in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() } ?: "{}"
+                                            val json = JSONObject(body)
+                                            if (code !in 200..299) throw IllegalStateException(json.optString("error", "Server rejected save ($code)"))
+                                            json
+                                        } finally { connection.disconnect() }
+                                    }
+                                    accountNumber = ""
+                                    savedBankSummary = "Saved: " + selectedBank + " • A/C ending " + result.optString("accountLast4") + " • IFSC " + bankIfsc
+                                    "Bank account saved securely. No payment or payout was activated."
+                                } catch (error: Exception) { "Save failed: " + (error.message ?: "server connection error") }
+                                bankBusy = false
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DeepBlue),
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save Gateway Configuration", fontWeight = FontWeight.Bold)
-                    }
-
-                    if (configSavedMsg) {
-                        Text("Admin reference details saved. This does not activate a payment gateway or transfer funds.", color = Color(0xFFB45309), fontSize = 12.sp)
-                    }
+                    ) { Text(if (bankBusy) "Please wait…" else "Save / Replace Bank Account", fontWeight = FontWeight.Bold) }
                 }
             }
         }
