@@ -225,6 +225,7 @@ fun OverviewTab(
     firestoreStatus: String,
     onNavigateToTab: (AdminTab) -> Unit
 ) {
+    val isEnglish = rememberQuickFixLanguage() == "en"
     Column(
         modifier = Modifier
             .fillMaxSize()
