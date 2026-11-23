@@ -5,7 +5,7 @@ import type { BillingUnit } from '../../data/pricing';
 import type { LocationRateCard, RateApprovalStatus } from '../../data/rateCards';
 
 const units: BillingUnit[] = ['per_visit', 'per_point', 'per_piece', 'per_hour', 'per_day', 'per_sqft', 'per_kg', 'per_km', 'per_trip', 'per_job', 'quote'];
-const categories = ['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'kaamkaaj_partner', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'];
+const categories = ['electrician', 'plumber', 'technician', 'ac_repair', 'fridge_repair', 'appliance_repair', 'welder', 'mechanic', 'driver', 'tourist_guide', 'contractor', 'bike_taxi', 'kaamkaaj_partner', 'house_cleaning', 'cook', 'laundry', 'maid', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting'];
 
 const blank = {
   state: 'Madhya Pradesh', district: 'Indore', city: '', tehsil: '',
