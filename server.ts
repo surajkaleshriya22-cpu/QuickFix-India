@@ -214,7 +214,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     if (!verifiedPhone || typeof displayName !== 'string' || displayName.trim().length < 2 ||
         displayName.trim().length > 100 ||
         typeof email !== 'string' || email.trim().length > 254 ||
-        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()) ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
         !Array.isArray(trades) || trades.length < 1 || trades.length > 22 ||
         new Set(trades).size !== trades.length ||
         trades.some((trade: unknown) => typeof trade !== 'string' || !allowedTrades.has(trade)) ||
