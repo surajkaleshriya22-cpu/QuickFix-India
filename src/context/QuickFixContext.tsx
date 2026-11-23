@@ -1074,7 +1074,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setCurrentTechnician(prev => {
               const currentBal = prev.walletBalance ?? 0;
               const newBal = currentBal - commission;
-              const isDepositMet = newBal >= 2000;
               return {
                 ...prev,
                 totalJobsCompleted: prev.totalJobsCompleted + 1,
@@ -1112,8 +1111,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 totalEarnings: t.totalEarnings + payout,
                 pendingPayout: t.pendingPayout + payout,
                 walletBalance: newBal,
-                securityDepositPaid: newBal >= 2000,
-                withdrawableBalance: Math.max(0, newBal - 2000)
               };
             })
           );
