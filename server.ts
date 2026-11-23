@@ -1622,8 +1622,8 @@ const DEFAULT_PARTNER_RECHARGE_POLICY = {
   rolloutAmounts: [500, 1000, 2000],
   plans: [
     { id: '30-days', durationDays: 30, amount: 500, enabled: true },
-    { id: '90-days', durationDays: 90, amount: 1350, enabled: true },
-    { id: '365-days', durationDays: 365, amount: 5000, enabled: true }
+    { id: '90-days', durationDays: 90, amount: 0, enabled: false },
+    { id: '365-days', durationDays: 365, amount: 0, enabled: false }
   ],
   effectiveAt: null as string | null,
   enabled: true,
