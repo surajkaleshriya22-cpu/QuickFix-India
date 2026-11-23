@@ -7,6 +7,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -74,6 +76,8 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
+    var tradesLoadMessage by remember { mutableStateOf("आपकी सेवाएँ लोड हो रही हैं...") }
     var selectedDispatchRadius by remember(savedDispatchRadius) { mutableIntStateOf(savedDispatchRadius) }
     var locationSaveMessage by remember { mutableStateOf("") }
     var isLiveLocationSharing by remember { mutableStateOf(false) }
@@ -132,7 +136,21 @@ fun TechnicianScreen(
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.loadPartnerDispatchSettings(); viewModel.refreshPartnerJobs() }
+    LaunchedEffect(Unit) {
+        viewModel.loadPartnerDispatchSettings()
+        viewModel.refreshPartnerJobs()
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) {
+            tradesLoadMessage = "Partner खाते में लॉगिन करें।"
+        } else {
+            FirebaseFirestore.getInstance().collection("users").document(uid).get()
+                .addOnSuccessListener { profile ->
+                    registeredTrades = (profile.get("trades") as? List<*>)?.filterIsInstance<String>().orEmpty()
+                    tradesLoadMessage = if (registeredTrades.isEmpty()) "आपकी सेवाएँ अभी प्रोफ़ाइल में दर्ज नहीं हैं।" else ""
+                }
+                .addOnFailureListener { tradesLoadMessage = "सेवाएँ लोड नहीं हो सकीं। इंटरनेट जाँचें।" }
+        }
+    }
 
     LaunchedEffect(isLiveLocationSharing, hasActiveAssignedJob) {
         if (isLiveLocationSharing && hasActiveAssignedJob) {
@@ -204,6 +222,29 @@ fun TechnicianScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("मेरी सेवाएँ / मेरा काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    if (registeredTrades.isNotEmpty()) {
+                        registeredTrades.chunked(2).forEach { rowTrades ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                rowTrades.forEach { trade ->
+                                    Surface(color = Color(0xFFEFF6FF), shape = RoundedCornerShape(20.dp)) {
+                                        Text(partnerCategoryHindi(trade), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF1E40AF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Text(tradesLoadMessage, fontSize = 12.sp, color = TextSecondary)
+                    }
+                }
+            }
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
