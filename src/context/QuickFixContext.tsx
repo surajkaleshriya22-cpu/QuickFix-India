@@ -239,9 +239,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     kycDocType: 'PAN',
     kycDocNumber: '',
     walletBalance: 0,
-    securityDepositRequired: 2000,
-    securityDepositPaid: false,
-    withdrawableBalance: 0,
     bankAccount: { accountNumber: '', ifsc: '', upiId: '' },
     todayEarnings: 0,
     totalEarnings: 0,
@@ -899,8 +896,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         const commissionAmount = Math.round((booking.price * effectivePct) / 100) + booking.visitingCharges;
         const newBal = currentTechBal - commissionAmount;
-        const isDepositMet = newBal >= 2000;
-        const newWithdrawable = Math.max(0, newBal - 2000);
 
         // Deduct from technician's wallet
         setTechnicians(prev =>
@@ -909,8 +904,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               ? {
                   ...t,
                   walletBalance: newBal,
-                  securityDepositPaid: isDepositMet,
-                  withdrawableBalance: newWithdrawable,
                   lifetimeCommissionPaid: (t.lifetimeCommissionPaid ?? 0) + commissionAmount
                 }
               : t
@@ -921,8 +914,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setCurrentTechnician(prev => ({
             ...prev,
             walletBalance: newBal,
-            securityDepositPaid: isDepositMet,
-            withdrawableBalance: newWithdrawable,
             lifetimeCommissionPaid: (prev.lifetimeCommissionPaid ?? 0) + commissionAmount
           }));
         }
@@ -1027,8 +1018,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 totalEarnings: t.totalEarnings + payout,
                 pendingPayout: t.pendingPayout + payout,
                 walletBalance: newBal,
-                securityDepositPaid: newBal >= 2000,
-                withdrawableBalance: Math.max(0, newBal - 2000)
               };
             })
           );
@@ -1044,8 +1033,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 totalEarnings: prev.totalEarnings + payout,
                 pendingPayout: prev.pendingPayout + payout,
                 walletBalance: newBal,
-                securityDepositPaid: newBal >= 2000,
-                withdrawableBalance: Math.max(0, newBal - 2000)
               };
             });
           }
@@ -1070,9 +1057,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               if (t.id !== booking.technicianId) return t;
               const currentBal = t.walletBalance ?? 0;
               const newBal = currentBal - commission;
-              const isDepositMet = newBal >= 2000;
-              const newWithdrawable = Math.max(0, newBal - 2000);
-              const droppedBelowReserve = !isDepositMet;
 
               return {
                 ...t,
@@ -1080,9 +1064,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 todayEarnings: t.todayEarnings + payout,
                 totalEarnings: t.totalEarnings + payout,
                 walletBalance: newBal,
-                securityDepositPaid: isDepositMet,
-                withdrawableBalance: newWithdrawable,
-                isOnline: droppedBelowReserve ? false : t.isOnline,
                 lifetimeCashCollected: (t.lifetimeCashCollected ?? 0) + booking.totalAmount,
                 lifetimeCommissionPaid: (t.lifetimeCommissionPaid ?? 0) + commission
               };
@@ -1100,9 +1081,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 todayEarnings: prev.todayEarnings + payout,
                 totalEarnings: prev.totalEarnings + payout,
                 walletBalance: newBal,
-                securityDepositPaid: isDepositMet,
-                withdrawableBalance: Math.max(0, newBal - 2000),
-                isOnline: !isDepositMet ? false : prev.isOnline,
                 lifetimeCashCollected: (prev.lifetimeCashCollected ?? 0) + booking.totalAmount,
                 lifetimeCommissionPaid: (prev.lifetimeCommissionPaid ?? 0) + commission
               };
