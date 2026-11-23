@@ -2464,7 +2464,7 @@ export const AdminDashboard: React.FC = () => {
                           className="w-full accent-blue-500 mt-1"
                         />
                       </div>
-
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
