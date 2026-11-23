@@ -1,10 +1,19 @@
-# QuickFix India — staging application
+# QuickFix-India — one app, many services
 
-QuickFix India is a home-services marketplace with customer, Channel Partner, and admin experiences.
+**Product vision:** QuickFix-India is one unified India-wide services and everyday-work platform. Customers should not need a separate app for each kind of work. One QuickFix-India app should let them discover, book, track, and pay for supported services through a consistent, simple experience.
 
-- Customer: browse services, create service requests, and view booking information.
-- Channel Partner: manage partner details and service work.
-- Admin: review marketplace operations and partner activity.
+The platform brings many service verticals together under one product and one account system:
+- **Home repair:** electrician, plumber, AC, refrigerator and appliance repair.
+- **Home and daily help:** cleaning, cooking, laundry, carpenter, painter, gardening and pest control.
+- **Mobility and delivery:** QuickFix Bike Taxi Captain, driver and future delivery/rider services.
+- **Local expertise and projects:** mechanic, welder/fabricator, tourist guide, contractor, house shifting and additional verified services.
+- **Future categories:** new work types can be added to the same service catalogue without creating a separate QuickFix app for each vertical.
+
+One shared platform should provide customer accounts, Channel Partner accounts, service discovery, location and service zones, booking, safety, support, payments and Admin operations. Each service category may have its own workflow, pricing, partner qualifications and wallet rules, while remaining inside the single QuickFix-India app.
+
+- Customer: one place to discover and request all supported services.
+- Channel Partner: one partner app experience with category-specific work, availability, earnings and wallet.
+- Admin: one control centre for categories, coverage, verification, rates, safety and marketplace operations.
 
 This repository contains the existing React + Vite application and Android source tree. It is a **staging build**, not a production-ready release. A successful build does not prove that live OTP delivery, booking assignment, payments, or payouts work end to end.
 
