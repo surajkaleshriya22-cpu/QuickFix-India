@@ -915,7 +915,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="text-2xl font-extrabold text-emerald-400 font-mono">₹{totalRevenueGMV}</div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-                  <span>Platform Commission Cut: <strong className="text-blue-400 font-mono">₹{totalCommissionCut}</strong></span>
+                  <span>Legacy commission in historical records: <strong className="text-blue-400 font-mono">₹{totalCommissionCut}</strong></span>
                   <span>Disbursed to Partners: <strong className="text-emerald-400 font-mono">₹{totalDisbursedNet}</strong></span>
                 </div>
               </div>
@@ -1323,7 +1323,7 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        Cash Coll: ₹{tech.lifetimeCashCollected ?? 0} · Comm Cut: ₹{tech.lifetimeCommissionPaid ?? 0}
+                        Cash Collected: ₹{tech.lifetimeCashCollected ?? 0}
                       </div>
                     </div>
                   </div>
@@ -1466,7 +1466,7 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                         {b.acceptanceCommissionDebited && (
                           <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.2 rounded font-mono">
-                            Upfront Commission Debited
+                            Legacy commission record (historical)
                           </span>
                         )}
                         {(b.status === 'technician_en_route' || b.status === 'in_progress') && (
@@ -1485,7 +1485,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 uppercase block">Total / Cut</span>
                       <span className="font-mono font-bold text-emerald-400 text-base">₹{b.totalAmount}</span>
-                      <span className="text-[10px] text-blue-400 block font-mono">Platform: ₹{b.adminCommission}</span>
+                      <span className="text-[10px] text-blue-400 block font-mono">Historical: ₹{b.adminCommission}</span>
                     </div>
                   </div>
 
@@ -1698,7 +1698,7 @@ export const AdminDashboard: React.FC = () => {
                 className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-md cursor-pointer hover:border-purple-500 transition-all space-y-1.5"
               >
                 <div className="flex items-center justify-between text-slate-400">
-                  <span className="text-[10px] uppercase font-bold tracking-wider">Platform Commission</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Legacy Commission (Historical)</span>
                   <div className="w-7 h-7 rounded-lg bg-purple-950 text-purple-400 flex items-center justify-center">
                     <Percent className="w-4 h-4" />
                   </div>
@@ -1707,7 +1707,7 @@ export const AdminDashboard: React.FC = () => {
                   ₹{totalPlatformCommission.toLocaleString('en-IN')}
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-                  <span className="text-purple-300 font-semibold">Net Platform Margin</span>
+                  <span className="text-purple-300 font-semibold">Historical records only</span>
                   <span className="text-[10px] text-slate-500">Elec {elecRate}% · Plumb {plumbRate}%</span>
                 </div>
               </div>
@@ -1975,7 +1975,7 @@ export const AdminDashboard: React.FC = () => {
                             <span className="text-[10px] text-slate-400 uppercase block font-semibold">Total Invoiced</span>
                             <span className="font-mono font-bold text-white text-base">₹{b.totalAmount}</span>
                             <div className="flex items-center justify-end gap-2 text-[10px] mt-0.5 font-mono">
-                              <span className="text-purple-400">Commission: ₹{b.adminCommission} ({b.commissionRate}%)</span>
+                              <span className="text-purple-400">Legacy commission record: ₹{b.adminCommission}</span>
                               <span className="text-slate-600">|</span>
                               <span className="text-emerald-400">Tech: ₹{b.technicianPayout}</span>
                             </div>
@@ -2037,7 +2037,7 @@ export const AdminDashboard: React.FC = () => {
                       <span>Revenue Intelligence & Financial Audit Reports</span>
                     </h4>
                     <p className="text-xs text-slate-400">
-                      Aggregated GMV, platform commission splits, technician earnings and volume analytics
+                      Aggregated GMV, historical booking records, partner earnings and volume analytics
                     </p>
                   </div>
 
@@ -2137,7 +2137,7 @@ export const AdminDashboard: React.FC = () => {
                             {/* Metrics Grid */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 font-mono">
                               <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                <span className="text-[10px] text-slate-500 uppercase font-sans block">Platform Commission</span>
+                                <span className="text-[10px] text-slate-500 uppercase font-sans block">Legacy Commission (Historical)</span>
                                 <span className="text-sm font-bold text-purple-400">₹{group.commission}</span>
                               </div>
                               <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
@@ -2216,10 +2216,10 @@ export const AdminDashboard: React.FC = () => {
                             </div>
 
                             <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                              <span className="text-[10px] text-slate-500 uppercase font-sans font-bold block">Platform Net Commission</span>
+                              <span className="text-[10px] text-slate-500 uppercase font-sans font-bold block">Legacy Commission (Historical)</span>
                               <span className="text-base font-bold text-purple-400">₹{m.commission.toLocaleString('en-IN')}</span>
                               <span className="text-[10px] text-slate-400 font-sans block mt-0.5">
-                                {Math.round((m.commission / (m.paidGmv || 1)) * 100)}% Platform Margin
+                                {Math.round((m.commission / (m.paidGmv || 1)) * 100)}% Historical Ratio
                               </span>
                             </div>
 
@@ -2949,7 +2949,7 @@ export const AdminDashboard: React.FC = () => {
                   <strong className="text-blue-300">{selectedReceiptBooking.transactionRef || 'Not recorded'}</strong>
                 </div>
                 <div className="flex justify-between text-purple-300 pt-1 border-t border-slate-800">
-                  <span className="font-sans">Platform Retained Commission:</span>
+                  <span className="font-sans">Legacy commission in this historical booking:</span>
                   <strong>₹{selectedReceiptBooking.adminCommission} ({selectedReceiptBooking.commissionRate}%)</strong>
                 </div>
                 <div className="flex justify-between text-emerald-400">
