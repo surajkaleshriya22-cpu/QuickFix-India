@@ -160,6 +160,7 @@ fun ServiceBookingScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
+                actions = { QuickFixLanguageSelector() },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepNavy)
             )
         },
