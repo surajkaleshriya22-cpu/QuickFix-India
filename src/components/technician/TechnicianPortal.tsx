@@ -155,6 +155,7 @@ export const TechnicianPortal: React.FC = () => {
   const [regExp, setRegExp] = useState(5);
   const [regCity, setRegCity] = useState('Bengaluru');
   const [regError, setRegError] = useState('');
+  const [qualificationAlertMsg, setQualificationAlertMsg] = useState('');
   const [showNearbyStores, setShowNearbyStores] = useState(false);
 
   // Active dispatch is sourced only from the authenticated, ownership-filtered server feed.
