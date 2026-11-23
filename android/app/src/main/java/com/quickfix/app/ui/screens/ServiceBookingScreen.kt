@@ -224,7 +224,8 @@ fun ServiceBookingScreen(
                                 }
                             }
                         },
-                        enabled = !isBooking && address.isNotBlank() && isValidBookingDate && isValidQuantity && scheduledTimeSlot.isNotBlank(),
+                        // Keep the action tappable so the form can explain which required field is missing.
+                        enabled = !isBooking,
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
