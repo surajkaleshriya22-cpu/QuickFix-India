@@ -259,13 +259,13 @@ export const TechnicianPortal: React.FC = () => {
     finally { setJobActionLoading(false); }
   };
 
-  const withdrawableAmount = currentTechnician.withdrawableBalance ?? Math.max(0, (currentTechnician.walletBalance ?? 0) - 2000);
+  const withdrawableAmount = 0; // Real payouts stay disabled until the server ledger is implemented.
 
   const handleWithdrawPayout = () => {
     setPayoutError('');
     setPayoutSuccess('');
     if (withdrawableAmount <= 0) {
-      setPayoutError('Withdrawal Blocked: Base ₹2,000 security reserve cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.');
+      setPayoutError('Payouts are disabled until the verified server-side wallet ledger and payment provider are connected.');
       setTimeout(() => setPayoutError(''), 6000);
       return;
     }
@@ -713,19 +713,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
-                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>Profile balance ≥ ₹2,000 (unverified ledger)</span>
-                </span>
-              ) : (
-                <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-rose-400" />
-                  <span>Reserve not confirmed</span>
-                </span>
-              )}
-            </div>
+            <span className="rounded-full border border-amber-700 bg-amber-950 px-2 py-1 text-[10px] font-bold text-amber-300">Ledger not verified</span>
           </div>
 
           {/* Wallet Balances Grid */}
