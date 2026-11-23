@@ -1727,6 +1727,7 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
       status: isFreeTrial ? 'free_trial' : 'recharge_due',
       freeTrialDays: policy.freeTrialDays,
       currentRechargeAmount: policy.currentRechargeAmount,
+      availablePlans: Array.isArray(policy.plans) ? policy.plans.filter((plan: any) => plan.enabled).map((plan: any) => ({ id: plan.id, durationDays: plan.durationDays, amount: plan.amount })) : DEFAULT_PARTNER_RECHARGE_POLICY.plans,
       trialStartedAt: trialStart.toISOString(),
       trialEndsAt: trialEndsAt.toISOString(),
       daysRemaining: Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)),
