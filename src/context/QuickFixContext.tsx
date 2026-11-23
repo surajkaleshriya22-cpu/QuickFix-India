@@ -19,6 +19,7 @@ import {
   GeofenceValidationResult
 } from '../types';
 import { isAuthorizedAdminEmail } from '../types';
+import { calculatePartnerBookingCommission, calculatePartnerServiceEarning } from '../utils/partnerMonetization';
 import {
   CURRENT_CUSTOMER,
   INITIAL_COMMISSION_SETTINGS,
@@ -732,8 +733,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Customer convenience charges and GST remain separate customer-side
     // booking components; they are not deducted from partner earnings.
     const commissionPct = 0;
-    const adminCommission = 0;
-    const technicianPayout = totalAmount;
+    const adminCommission = calculatePartnerBookingCommission(price);
+    const technicianPayout = calculatePartnerServiceEarning(price);
 
     const newBookingId = `QF-${Math.floor(7050 + Math.random() * 900)}`;
 
