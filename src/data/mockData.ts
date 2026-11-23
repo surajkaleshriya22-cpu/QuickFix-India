@@ -1192,11 +1192,13 @@ export const INITIAL_BOOKINGS: Booking[] = [
 ];
 
 export const INITIAL_COMMISSION_SETTINGS: CommissionSettings = {
-  electricianCommissionPct: 12,
-  plumberCommissionPct: 15,
-  acCommissionPct: 15,
-  fridgeCommissionPct: 15,
-  minSecurityDeposit: 2000,
+  // Partner monetization is monthly subscription/recharge only.
+  // Per-booking partner commission and legacy reserve requirements are disabled.
+  electricianCommissionPct: 0,
+  plumberCommissionPct: 0,
+  acCommissionPct: 0,
+  fridgeCommissionPct: 0,
+  minSecurityDeposit: 0,
   platformConvenienceFee: 29,
   gstPct: 18,
   minPayoutThreshold: 500
