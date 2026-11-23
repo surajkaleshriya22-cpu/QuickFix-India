@@ -564,7 +564,7 @@ export const TechnicianPortal: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <PartnerRechargeStatusCard />
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900">
-          <strong>Policy transition notice:</strong> Recharge collection is disabled. The older ₹2,000 wallet-reserve and online-eligibility rules are still present and have not yet been migrated. Do not pay anyone to activate duty.
+          <strong>Policy transition notice:</strong> Recharge collection is disabled. Some legacy wallet calculations remain in older client-side context code and have not yet been migrated. This status card does not authorize duty or payment. Do not pay anyone to activate duty.
         </div>
         {/* Geo-fence Operating Perimeter Status Banner */}
         <div
