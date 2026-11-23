@@ -29,6 +29,32 @@ import androidx.navigation.NavController
 import com.quickfix.app.viewmodel.QuickFixViewModel
 import kotlinx.coroutines.delay
 
+
+private fun partnerCategoryHindi(category: String): String = when (category.trim().lowercase()) {
+    "electrician" -> "इलेक्ट्रीशियन (बिजली मिस्त्री)"
+    "plumber" -> "प्लंबर (नलसाज़)"
+    "technician", "ac_repair" -> "एसी / उपकरण मैकेनिक"
+    "fridge_repair" -> "फ्रिज मैकेनिक"
+    "appliance_repair" -> "घरेलू उपकरण मरम्मत"
+    "welder" -> "वेल्डर / फैब्रिकेटर"
+    "mechanic" -> "मैकेनिक (वाहन मिस्त्री)"
+    "driver" -> "ड्राइवर"
+    "tourist_guide" -> "पर्यटक गाइड"
+    "contractor" -> "ठेकेदार"
+    "bike_taxi", "bike_rider" -> "बाइक टैक्सी कैप्टन"
+    "kaamkaaj_partner" -> "कामकाज पार्टनर"
+    "house_cleaning" -> "घर की सफाई"
+    "cook" -> "रसोइया"
+    "laundry" -> "कपड़े धोने की सेवा"
+    "maid" -> "घरेलू सहायिका / सहायक"
+    "carpenter" -> "बढ़ई"
+    "painter" -> "पेंटर (रंगाई-पुताई)"
+    "gardener" -> "माली"
+    "pest_control" -> "कीट नियंत्रण सेवा"
+    "house_shifting" -> "घर शिफ्टिंग सेवा"
+    else -> category.replace("_", " ").replaceFirstChar { it.uppercase() }
+}
+
 private val BrandBlue = Color(0xFF2563EB)
 private val DeepNavy = Color(0xFF0F172A)
 private val CardBg = Color(0xFFFFFFFF)
@@ -320,7 +346,7 @@ fun TechnicianScreen(
                         Divider(color = Color(0xFFE2E8F0))
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
-                            Text("Category: ${job.category} · Customer: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
+                            Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
                             Button(
                                 onClick = {
