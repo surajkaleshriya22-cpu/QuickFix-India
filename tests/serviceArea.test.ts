@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesPartnerServiceArea } from '../src/utils/serviceArea';
+import { matchesPartnerServiceArea, serviceAreaKey } from '../src/utils/serviceArea';
 
 const partnerArea = { state: 'Madhya Pradesh', district: 'Bhopal', tehsil: 'Huzur' };
 
@@ -48,4 +48,9 @@ test('uses exact city matching for legacy records without district data', () => 
 
 test('fails closed when neither structured area nor city is available', () => {
   assert.equal(matchesPartnerServiceArea(null, null, '', 'Bhopal'), false);
+});
+
+test('creates stable Firestore keys for case and whitespace variants', () => {
+  assert.equal(serviceAreaKey(' Madhya Pradesh '), 'madhya pradesh');
+  assert.equal(serviceAreaKey('BHOPAL'), serviceAreaKey('Bhopal'));
 });
