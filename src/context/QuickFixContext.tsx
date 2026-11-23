@@ -141,6 +141,7 @@ interface QuickFixContextType {
   }) => Promise<{ success: boolean; message?: string }>;
   logoutTechnician: () => void;
   serviceZones: ServiceZone[];
+  updatePartnerDutyStatus: (online: boolean, location?: { latitude: number; longitude: number }) => Promise<{ success: boolean; message: string }>;
   toggleTechnicianOnline: (
     techId: string,
     coords?: { lat: number; lng: number }
@@ -471,7 +472,13 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
       setCurrentUser(partnerUser);
       setIsAuthenticated(true);
-      setIsTechnicianLoggedIn(false);
+      setCurrentTechnician(prev => ({
+        ...prev, id: firebaseUser.uid, name: partnerUser.displayName, phone: partnerUser.phoneNumber,
+        email: partnerUser.email, trades: params.trades, experienceYears: params.experienceYears,
+        city: params.city, isOnline: false, isVerified: false, approvalStatus: 'pending_audit',
+        walletBalance: 0, securityDepositRequired: 2000, securityDepositPaid: false
+      }));
+      setIsTechnicianLoggedIn(true);
       setActiveRole('technician');
       return { success: true, message: result.message || 'Basic partner profile created. KYC approval is pending.' };
     } catch (error) {
@@ -576,6 +583,31 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const logoutTechnician = () => {
     setIsTechnicianLoggedIn(false);
+  };
+
+  const updatePartnerDutyStatus: QuickFixContextType['updatePartnerDutyStatus'] = async (online, location) => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return { success: false, message: 'Please sign in again with your verified Channel Partner account.' };
+    if (online && !location) return { success: false, message: 'Live GPS location is required to go online.' };
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/partners/duty-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ online, ...(location ? { location } : {}) })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) return { success: false, message: result.error || 'Partner duty status could not be updated.' };
+      setCurrentTechnician(prev => ({
+        ...prev, id: firebaseUser.uid, isOnline: result.isOnline === true,
+        walletBalance: typeof result.walletBalance === 'number' ? result.walletBalance : prev.walletBalance,
+        dispatchRadiusKm: result.dispatchRadiusKm,
+        currentLocation: result.location ? { lat: result.location.latitude, lng: result.location.longitude, lastUpdated: new Date().toISOString() } : prev.currentLocation
+      }));
+      return { success: true, message: online ? 'You are now online and eligible to receive nearby service requests.' : 'You are now offline.' };
+    } catch {
+      return { success: false, message: 'Network/server error. Duty status was not confirmed; please retry.' };
+    }
   };
 
   const toggleTechnicianOnline = (
@@ -1300,6 +1332,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         registerTechnician,
         logoutTechnician,
         serviceZones,
+        updatePartnerDutyStatus,
         toggleTechnicianOnline,
         validateAndSetTechnicianOnline,
         updateServiceZoneRadius,
