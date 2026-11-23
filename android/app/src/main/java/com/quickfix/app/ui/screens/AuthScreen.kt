@@ -321,21 +321,21 @@ fun AuthScreen(
                                 Text("KYC details will be reviewed before activation. A ₹2,000 reserve is required only through a verified payment flow; this screen does not collect money.", fontSize = 11.sp, color = Color(0xFF92400E))
                                 Text("Select Channel Partner Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 val partnerTrades = listOf(
-                                    "electrician" to "Electrician",
-                                    "plumber" to "Plumber",
-                                    "technician" to "Technician (AC / Fridge)",
-                                    "welder" to "Welder / Fabricator",
-                                    "mechanic" to "Mechanic",
-                                    "driver" to "Driver",
-                                    "tourist_guide" to "Tourist Guide",
-                                    "contractor" to "Contractor",
-                                    "bike_taxi" to "QuickFix Bike Taxi Captain",
-                                    "kaamkaaj_partner" to "Kaamkaaj Partner (सभी घरेलू काम)",
-                                    "carpenter" to "Carpenter",
-                                    "painter" to "Painter",
-                                    "gardener" to "Gardener",
-                                    "pest_control" to "Pest Control",
-                                    "house_shifting" to "House Shifting"
+                                    "electrician" to "इलेक्ट्रीशियन (बिजली मिस्त्री)",
+                                    "plumber" to "प्लंबर (नलसाज़)",
+                                    "technician" to "एसी / फ्रिज मैकेनिक",
+                                    "welder" to "वेल्डर / फैब्रिकेटर",
+                                    "mechanic" to "मैकेनिक (वाहन मिस्त्री)",
+                                    "driver" to "ड्राइवर",
+                                    "tourist_guide" to "पर्यटक गाइड",
+                                    "contractor" to "ठेकेदार",
+                                    "bike_taxi" to "क्विकफिक्स बाइक टैक्सी कैप्टन",
+                                    "kaamkaaj_partner" to "कामकाज पार्टनर (सभी घरेलू काम)",
+                                    "carpenter" to "बढ़ई",
+                                    "painter" to "पेंटर (रंगाई-पुताई)",
+                                    "gardener" to "माली",
+                                    "pest_control" to "कीट नियंत्रण सेवा",
+                                    "house_shifting" to "घर शिफ्टिंग सेवा"
 
                                 )
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
