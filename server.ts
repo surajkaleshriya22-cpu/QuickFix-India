@@ -1620,6 +1620,11 @@ const DEFAULT_PARTNER_RECHARGE_POLICY = {
   freeTrialDays: 30,
   currentRechargeAmount: 500,
   rolloutAmounts: [500, 1000, 2000],
+  plans: [
+    { id: '30-days', durationDays: 30, amount: 500, enabled: true },
+    { id: '90-days', durationDays: 90, amount: 1350, enabled: true },
+    { id: '365-days', durationDays: 365, amount: 5000, enabled: true }
+  ],
   effectiveAt: null as string | null,
   enabled: true,
   currency: 'INR'
@@ -1644,10 +1649,20 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
     const freeTrialDays = Number(body.freeTrialDays);
     const currentRechargeAmount = Number(body.currentRechargeAmount);
     const rolloutAmounts = Array.isArray(body.rolloutAmounts) ? body.rolloutAmounts.map(Number) : [];
+    const plans = Array.isArray(body.plans) ? body.plans.map((plan: any) => ({
+      id: String(plan?.id || ''),
+      durationDays: Number(plan?.durationDays),
+      amount: Number(plan?.amount),
+      enabled: plan?.enabled !== false
+    })) : DEFAULT_PARTNER_RECHARGE_POLICY.plans;
     const effectiveAt = body.effectiveAt === null || body.effectiveAt === '' ? null : String(body.effectiveAt);
+    const validPlanDurations = plans.length === 3 && [30, 90, 365].every((days) =>
+      plans.some((plan: any) => plan.durationDays === days && /^[a-z0-9-]{1,32}$/.test(plan.id) &&
+        Number.isInteger(plan.amount) && plan.amount >= 0 && plan.amount <= 100000 && typeof plan.enabled === 'boolean'));
     if (!Number.isInteger(freeTrialDays) || freeTrialDays < 0 || freeTrialDays > 365 ||
         !Number.isInteger(currentRechargeAmount) || currentRechargeAmount < 0 || currentRechargeAmount > 100000 ||
         rolloutAmounts.length !== 3 || rolloutAmounts.some((amount: number) => !Number.isInteger(amount) || amount < 0 || amount > 100000) ||
+        !validPlanDurations ||
         (effectiveAt !== null && !/^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveAt))) {
       return res.status(400).json({ success: false, error: 'Recharge policy values are invalid.' });
     }
@@ -1658,6 +1673,7 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
       freeTrialDays,
       currentRechargeAmount,
       rolloutAmounts,
+      plans,
       effectiveAt,
       enabled: body.enabled !== false,
       currency: 'INR',
