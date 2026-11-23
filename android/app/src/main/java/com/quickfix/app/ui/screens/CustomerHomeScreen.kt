@@ -3,6 +3,8 @@ package com.quickfix.app.ui.screens
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,27 @@ fun CustomerHomeScreen(
     var showCityMenu by remember { mutableStateOf(false) }
     var cityInput by remember(currentCity) { mutableStateOf(currentCity) }
     var voiceMessage by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    var hindiSpeaker by remember { mutableStateOf<TextToSpeech?>(null) }
+    DisposableEffect(context) {
+        val speaker = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                hindiSpeaker?.language = Locale("hi", "IN")
+            }
+        }
+        hindiSpeaker = speaker
+        onDispose {
+            speaker.stop()
+            speaker.shutdown()
+            hindiSpeaker = null
+        }
+    }
+    LaunchedEffect(voiceMessage) {
+        if (voiceMessage.isNotBlank()) {
+            hindiSpeaker?.language = Locale("hi", "IN")
+            hindiSpeaker?.speak(voiceMessage, TextToSpeech.QUEUE_FLUSH, null, "quickfix_voice_feedback")
+        }
+    }
     val voiceBookingLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
