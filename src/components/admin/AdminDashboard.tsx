@@ -1204,10 +1204,10 @@ export const AdminDashboard: React.FC = () => {
                   <p className="text-[11px] text-slate-400">Area: {[partner.serviceArea?.tehsil, partner.serviceArea?.district, partner.serviceArea?.state].filter(Boolean).join(', ') || partner.city || 'Not provided'}</p>
                   <p className="text-[11px] text-slate-300">KYC: {partner.kycStatus || 'not submitted'} · Verified: {partner.isVerified ? 'Yes' : 'No'} · Online: {partner.isOnline ? 'Yes' : 'No'}</p>
                   <p className="text-[11px] text-slate-300">Booking radius: {partner.dispatchRadiusKm ? `${partner.dispatchRadiusKm} km` : 'Not set'} · GPS pin: {partner.dispatchLocationConfigured ? 'Saved' : 'Not saved'}</p>
-                  <p className="text-[10px] text-slate-500">Wallet: {partner.walletBalance === null || partner.walletBalance === undefined ? 'Not available' : `₹${partner.walletBalance}`} · Reserve paid: {partner.securityDepositPaid ? 'Yes' : 'No'} · Account: {partner.role || 'CHANNEL_PARTNER'}</p>
+                  <p className="text-[10px] text-slate-500">Wallet: {partner.walletBalance === null || partner.walletBalance === undefined ? 'Not available' : `₹${partner.walletBalance}`} · Account: {partner.role || 'CHANNEL_PARTNER'}</p>
                 </div>
               ))}
-              <p className="text-[10px] text-slate-500">Dispatch ready means the server eligibility checks pass: approved, KYC verified, online, not suspended, reserve paid and wallet balance at least ₹2,000. GPS is shown separately.</p>
+              <p className="text-[10px] text-slate-500">Dispatch ready means the server eligibility checks pass: approved, KYC verified, online and not suspended. GPS is shown separately.</p>
             </section>
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-2">
