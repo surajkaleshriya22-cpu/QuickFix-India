@@ -43,10 +43,7 @@
         "qualificationInstitute": { "type": "string" },
         "kycDocType": { "type": "string" },
         "kycDocNumber": { "type": "string" },
-        "walletBalance": { "type": "number", "minimum": 2000 },
-        "securityDepositRequired": { "type": "number", "minimum": 2000 },
-        "securityDepositPaid": { "type": "boolean" },
-        "withdrawableBalance": { "type": "number", "minimum": 0 },
+        "walletBalance": { "type": "number" },
         "todayEarnings": { "type": "number" },
         "totalEarnings": { "type": "number" },
         "pendingPayout": { "type": "number" },
@@ -54,7 +51,7 @@
         "lifetimeCommissionPaid": { "type": "number" },
         "bankAccount": { "type": "object" }
       },
-      "required": ["id", "name", "phone", "trades", "city", "walletBalance", "securityDepositPaid"]
+      "required": ["id", "name", "phone", "trades", "city", "walletBalance"]
     },
     "Booking": {
       "title": "Booking",
