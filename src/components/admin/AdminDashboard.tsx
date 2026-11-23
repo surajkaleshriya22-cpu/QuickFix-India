@@ -152,6 +152,7 @@ export const AdminDashboard: React.FC = () => {
   const [adminEscrowEnabled, setAdminEscrowEnabled] = useState(adminPaymentConfig.escrowEnabled);
   const [adminManualApproval, setAdminManualApproval] = useState(adminPaymentConfig.manualApprovalRequired);
   const [adminConfigSavedMsg, setAdminConfigSavedMsg] = useState('');
+  const [savedBankSummary, setSavedBankSummary] = useState<{ bankName: string; accountLast4: string; ifsc: string; accountHolderName: string } | null>(null);
 
   // Refund & Hold state
   const [refundBookingTarget, setRefundBookingTarget] = useState<Booking | null>(null);
@@ -532,6 +533,34 @@ export const AdminDashboard: React.FC = () => {
       setPartnerReviewBusyUid(null);
     }
   };
+
+  React.useEffect(() => {
+    if (currentUser?.role !== 'admin' || paymentSubTab !== 'admin_account') return;
+    let cancelled = false;
+    const loadSavedBank = async () => {
+      try {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) return;
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/admin/payment-bank', { headers: { Authorization: 'Bearer ' + token } });
+        const result = await response.json();
+        if (!response.ok || !result.success || cancelled) return;
+        if (result.configured) {
+          setSavedBankSummary({ bankName: result.bankName, accountLast4: result.accountLast4, ifsc: result.ifsc, accountHolderName: result.accountHolderName });
+          setAdminBankName(result.bankName || '');
+          setAdminAccountHolder(result.accountHolderName || '');
+          setAdminIfsc(result.ifsc || '');
+          setAdminAccountNo('');
+        } else {
+          setSavedBankSummary(null);
+        }
+      } catch {
+        if (!cancelled) setAdminConfigSavedMsg('Saved bank details could not be loaded. Please retry.');
+      }
+    };
+    void loadSavedBank();
+    return () => { cancelled = true; };
+  }, [paymentSubTab, currentUser?.uid, currentUser?.role]);
 
   React.useEffect(() => {
     if (currentUser?.role !== 'admin') return;
@@ -2665,9 +2694,9 @@ export const AdminDashboard: React.FC = () => {
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Settlement Bank Account</div>
-                    <div className="text-sm font-bold text-white">{adminPaymentConfig.bankName}</div>
-                    <div className="text-xs font-mono text-slate-300">A/C: {adminPaymentConfig.bankAccountNumber}</div>
-                    <div className="text-[11px] font-mono text-slate-500">IFSC: {adminPaymentConfig.bankIfsc}</div>
+                    <div className="text-sm font-bold text-white">{savedBankSummary?.bankName || 'No bank account saved'}</div>
+                    <div className="text-xs font-mono text-slate-300">A/C: {savedBankSummary ? '•••• ' + savedBankSummary.accountLast4 : 'Not configured'}</div>
+                    <div className="text-[11px] font-mono text-slate-500">IFSC: {savedBankSummary?.ifsc || 'Not configured'}</div>
                   </div>
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
@@ -2723,11 +2752,14 @@ export const AdminDashboard: React.FC = () => {
                       <input type="text" value={adminAccountHolder} onChange={e => setAdminAccountHolder(e.target.value)} maxLength={100} autoComplete="off" className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium" />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-slate-400 block mb-1">Current Bank Account Number</label>
+                      <label className="text-[11px] font-bold text-slate-400 block mb-1">New Bank Account Number</label>
                       <input
                         type="text"
                         value={adminAccountNo}
                         onChange={e => setAdminAccountNo(e.target.value)}
+                        placeholder={savedBankSummary ? "Enter new number to replace •••• " + savedBankSummary.accountLast4 : "Enter account number"}
+                        inputMode="numeric"
+                        autoComplete="off"
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
                       />
                     </div>
