@@ -82,6 +82,7 @@ fun AuthScreen(
                         }
                     }
                 },
+                actions = { QuickFixLanguageSelector() },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
