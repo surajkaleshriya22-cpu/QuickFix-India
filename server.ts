@@ -1242,11 +1242,21 @@ app.get('/api/admin/kyc-submissions/:submissionId/document-url', authenticateFir
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ success: false, error: 'KYC submission ID is invalid.' });
     const submission = await getFirestore(firebaseAdminApp).collection('partner_kyc_submissions').doc(id).get();
     if (!submission.exists) return res.status(404).json({ success: false, error: 'KYC submission was not found.' });
-    const objectPath = submission.data()?.objectPath;
-    if (typeof objectPath !== 'string' || !objectPath.startsWith('partner-kyc/')) return res.status(409).json({ success: false, error: 'KYC document reference is invalid.' });
+    const submissionData = submission.data()!;
+    const objectPath = submissionData.objectPath;
+    const partnerUid = submissionData.partnerUid;
+    const expectedObjectPrefix = typeof partnerUid === 'string' && partnerUid.length > 0
+      ? `partner-kyc/${partnerUid}/${id}_`
+      : '';
+    if (!expectedObjectPrefix || typeof objectPath !== 'string' ||
+        !objectPath.startsWith(expectedObjectPrefix) ||
+        !/^[0-9a-f-]{36}_(identity_proof|address_proof|qualification_certificate|profile_photo)\\.(jpg|jpeg|png|pdf)$/i.test(objectPath.slice(`partner-kyc/${partnerUid}/`.length)) ||
+        typeof submissionData.objectGeneration !== 'string' || !/^\\d+$/.test(submissionData.objectGeneration)) {
+      return res.status(409).json({ success: false, error: 'KYC document reference is invalid.' });
+    }
     const bucket = getKycStorageBucket();
     if (!bucket) return res.status(503).json({ success: false, error: 'Private KYC Storage bucket is not configured.' });
-    const [url] = await bucket.file(objectPath).getSignedUrl({ action: 'read', expires: Date.now() + 5 * 60 * 1000, version: 'v4' });
+    const [url] = await bucket.file(objectPath, { generation: submissionData.objectGeneration }).getSignedUrl({ action: 'read', expires: Date.now() + 5 * 60 * 1000, version: 'v4' });
     return res.json({ success: true, url, expiresInSeconds: 300 });
   } catch (error) {
     console.error('Admin KYC document access failed:', error);
