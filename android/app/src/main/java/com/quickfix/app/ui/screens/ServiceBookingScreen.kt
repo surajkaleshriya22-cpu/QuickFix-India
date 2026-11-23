@@ -68,6 +68,9 @@ fun ServiceBookingScreen(
     val isValidQuantity = quantityValue != null && quantityValue.isFinite() && quantityValue > 0.0 && quantityValue <= 100000.0
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var scheduledTimeSlot by remember { mutableStateOf("10:00 AM - 12:00 PM") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimeOptions by remember { mutableStateOf(false) }
+    val timeOptions = listOf("सुबह 8:00 - 10:00", "सुबह 10:00 - दोपहर 12:00", "दोपहर 12:00 - 2:00", "दोपहर 2:00 - शाम 4:00", "शाम 4:00 - 6:00", "शाम 6:00 - 8:00")
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     var locationMessage by remember { mutableStateOf<String?>(null) }
@@ -384,24 +387,75 @@ fun ServiceBookingScreen(
                         label = { Text("तहसील / तालुका") },
                         singleLine = true
                     )
-                    OutlinedTextField(
-                        value = scheduledDate,
-                        onValueChange = { scheduledDate = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("काम की तारीख (साल-महीना-दिन)") },
-                        supportingText = {
-                            Text(if (isValidBookingDate) "आज या आगे की तारीख चुनें" else "सही तारीख लिखें, जैसे ${java.time.LocalDate.now()}")
-                        },
-                        singleLine = true
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("काम की तारीख: $scheduledDate")
+                    }
+                    Text(
+                        if (isValidBookingDate) "आज या आगे की तारीख चुनें" else "कृपया सही तारीख चुनें",
+                        color = if (isValidBookingDate) TextSecondary else Color(0xFFDC2626),
+                        fontSize = 11.sp
                     )
-                    OutlinedTextField(
-                        value = scheduledTimeSlot,
-                        onValueChange = { scheduledTimeSlot = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("किस समय काम करवाना है?") },
-                        supportingText = { Text("उदाहरण: सुबह 10 से दोपहर 12 बजे") },
-                        singleLine = true
-                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { showTimeOptions = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Schedule, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("समय चुनें: $scheduledTimeSlot")
+                        }
+                        DropdownMenu(
+                            expanded = showTimeOptions,
+                            onDismissRequest = { showTimeOptions = false },
+                            modifier = Modifier.fillMaxWidth(0.88f)
+                        ) {
+                            timeOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        scheduledTimeSlot = option
+                                        showTimeOptions = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    if (showDatePicker) {
+                        val todayMillis = java.time.LocalDate.now()
+                            .toEpochDay() * 24L * 60L * 60L * 1000L
+                        val initialMillis = runCatching {
+                            java.time.LocalDate.parse(scheduledDate).toEpochDay() * 24L * 60L * 60L * 1000L
+                        }.getOrDefault(todayMillis)
+                        val datePickerState = rememberDatePickerState(
+                            initialSelectedDateMillis = initialMillis,
+                            selectableDates = object : SelectableDates {
+                                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                                    utcTimeMillis >= todayMillis
+                            }
+                        )
+                        DatePickerDialog(
+                            onDismissRequest = { showDatePicker = false },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    datePickerState.selectedDateMillis?.let { millis ->
+                                        scheduledDate = java.time.Instant.ofEpochMilli(millis)
+                                            .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
+                                    }
+                                    showDatePicker = false
+                                }) { Text("तारीख तय करें") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDatePicker = false }) { Text("रद्द करें") }
+                            }
+                        ) {
+                            DatePicker(state = datePickerState)
+                        }
+                    }
                 }
             }
 
