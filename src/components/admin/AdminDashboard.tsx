@@ -1323,19 +1323,6 @@ export const AdminDashboard: React.FC = () => {
                         <span className="font-mono font-bold text-white text-xs">
                           ₹{tech.walletBalance ?? 0}
                         </span>
-                        {(tech.walletBalance ?? 0) >= 2000 ? (
-                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                            ₹2K Reserve OK
-                          </span>
-                        ) : (
-                          <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                            -₹{2000 - (tech.walletBalance ?? 0)} Deficit
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        Withdrawable: <strong className="text-emerald-400 font-mono">₹{Math.max(0, (tech.walletBalance ?? 0) - 2000)}</strong>
-                      </div>
                       <div className="text-[10px] text-slate-500 font-mono">
                         Cash Coll: ₹{tech.lifetimeCashCollected ?? 0} · Comm Cut: ₹{tech.lifetimeCommissionPaid ?? 0}
                       </div>
