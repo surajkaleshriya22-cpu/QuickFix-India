@@ -89,7 +89,7 @@ fun LiveTrackingScreen(
     ) { paddingValues ->
         if (booking == null) {
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text("Booking not found.")
+                Text(if (isEnglish) "Booking not found." else "बुकिंग नहीं मिली।")
             }
         } else {
             Column(
@@ -211,7 +211,7 @@ fun LiveTrackingScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("Live Job Milestones", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(if (isEnglish) "Live Job Milestones" else "काम की लाइव स्थिति", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
 
                         val steps = listOf(
                             "Booking Request Saved" to true,
@@ -259,7 +259,7 @@ fun LiveTrackingScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Service Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(if (isEnglish) "Service Details" else "सेवा का विवरण", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = BrandBlue)
                         Text("Service address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
                         if (booking.customerLatitude != null && booking.customerLongitude != null) {
@@ -332,7 +332,7 @@ fun LiveTrackingScreen(
                         ) {
                             Icon(Icons.Default.Map, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("View service address on map")
+                            Text(if (isEnglish) "View service address on map" else "सेवा का पता नक्शे पर देखें")
                         }
                         Text(
                             if (booking.paymentStatus == "paid") "Payment confirmed: ₹${booking.totalAmount}"
@@ -350,7 +350,7 @@ fun LiveTrackingScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Return to Home")
+                    Text(if (isEnglish) "Return to Home" else "होम पर वापस जाएँ")
                 }
             }
         }
