@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canPartnerReceiveBookingCategory, getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
+import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
 
 const eligible = {
   role: 'CHANNEL_PARTNER',
@@ -11,6 +11,31 @@ const eligible = {
   securityDepositPaid: true,
   walletBalance: 2500
 };
+
+const activationEligible = {
+  role: 'CHANNEL_PARTNER',
+  approvalStatus: 'approved',
+  isVerified: true,
+  isSuspended: false,
+  securityDepositPaid: true,
+  walletBalance: 2000
+};
+
+test('allows online duty only for approved, verified partners with paid reserve and ₹2,000 balance', () => {
+  assert.equal(canActivatePartnerDuty(activationEligible), true);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: 1999 }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, securityDepositPaid: false }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, approvalStatus: 'pending_audit' }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, isVerified: false }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, isSuspended: true }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, role: 'CUSTOMER' }), false);
+});
+
+test('rejects malformed wallet balances for online duty activation', () => {
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: '2500' }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: Number.NaN }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: Number.POSITIVE_INFINITY }), false);
+});
 
 test('allows a fully approved and funded active partner', () => {
   assert.equal(isPartnerEligibleForDispatch(eligible), true);
