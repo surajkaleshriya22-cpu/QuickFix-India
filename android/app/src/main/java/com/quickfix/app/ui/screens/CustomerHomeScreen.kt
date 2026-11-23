@@ -62,7 +62,7 @@ fun CustomerHomeScreen(
     DisposableEffect(context) {
         val speaker = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                hindiSpeaker?.language = Locale("hi", "IN")
+                hindiSpeaker?.language = if (appLanguage == "en") Locale.US else Locale("hi", "IN")
             }
         }
         hindiSpeaker = speaker
@@ -111,8 +111,8 @@ fun CustomerHomeScreen(
     fun startVoiceBooking() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "बताइए, आपको कौन-सा काम करवाना है?")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (isEnglish) "en-IN" else "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, if (isEnglish) "Tell us what service you need." else "बताइए, आपको कौन-सा काम करवाना है?")
         }
         try {
             voiceBookingLauncher.launch(intent)
