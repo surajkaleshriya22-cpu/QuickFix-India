@@ -2,9 +2,6 @@ name: Repair Bun Lock and Set Admin Claim
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/repair-bun-lock-and-admin.yml'
 
 permissions:
   contents: write
@@ -14,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - name: Regenerate lockfile from package.json
         run: bun install
