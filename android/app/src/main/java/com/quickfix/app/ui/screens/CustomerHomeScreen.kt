@@ -278,7 +278,6 @@ fun CustomerHomeScreen(
                     "ac_repair" to "❄️ AC Repair",
                     "fridge_repair" to "🧊 Fridge Repair",
                     "appliance_repair" to "🛠️ Appliance Repair",
-                    "technician" to "🧰 Technician",
                     "welder" to "Welder",
                     "mechanic" to "Mechanic",
                     "driver" to "Driver",
