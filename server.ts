@@ -1684,6 +1684,46 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
 });
 
 
+// Signed-in Channel Partner can view their own server-calculated free-trial/recharge status.
+app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner recharge status is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const db = getFirestore(firebaseAdminApp);
+    const [userSnapshot, policySnapshot] = await Promise.all([
+      db.collection('users').doc(identity.uid).get(),
+      db.collection('system').doc('partner_recharge_policy').get()
+    ]);
+    if (!userSnapshot.exists || userSnapshot.data()?.role !== 'CHANNEL_PARTNER') {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
+    }
+    const profile = userSnapshot.data()!;
+    const policy = { ...DEFAULT_PARTNER_RECHARGE_POLICY, ...(policySnapshot.exists ? policySnapshot.data() : {}) };
+    const createdAt = profile.createdAt;
+    const trialStart = createdAt && typeof createdAt.toDate === 'function' ? createdAt.toDate() : null;
+    if (!trialStart) {
+      return res.json({ success: true, status: 'activation_date_unavailable', freeTrialDays: policy.freeTrialDays, currentRechargeAmount: policy.currentRechargeAmount, trialEndsAt: null, paymentEnabled: false });
+    }
+    const trialEndsAt = new Date(trialStart.getTime() + Number(policy.freeTrialDays) * 86400000);
+    const isFreeTrial = Date.now() < trialEndsAt.getTime();
+    return res.json({
+      success: true,
+      status: isFreeTrial ? 'free_trial' : 'recharge_due',
+      freeTrialDays: policy.freeTrialDays,
+      currentRechargeAmount: policy.currentRechargeAmount,
+      trialStartedAt: trialStart.toISOString(),
+      trialEndsAt: trialEndsAt.toISOString(),
+      daysRemaining: Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)),
+      paymentEnabled: false,
+      message: isFreeTrial ? 'Your introductory free period is active.' : 'Your free period has ended. Recharge collection is not yet enabled.'
+    });
+  } catch (error) {
+    console.error('Partner recharge status lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner recharge status could not be loaded.' });
+  }
+});
+
+
 // Lightweight public liveness endpoint: confirms the web process can answer HTTP requests.
 // Liveness: the HTTP process is running. Dependency readiness is reported separately.
 app.get('/healthz', (_req: Request, res: Response) => {
