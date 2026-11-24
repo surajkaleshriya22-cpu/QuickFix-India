@@ -19,8 +19,26 @@ import com.quickfix.app.data.model.AuthState
 import com.quickfix.app.ui.screens.*
 import com.quickfix.app.viewmodel.AuthViewModel
 import com.quickfix.app.viewmodel.QuickFixViewModel
+import com.razorpay.PaymentData
+import com.razorpay.PaymentResultWithDataListener
+import com.quickfix.app.ui.screens.PartnerRechargePaymentResult
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
+    override fun onPaymentSuccess(razorpayPaymentID: String?, paymentData: PaymentData?) {
+        val paymentId = razorpayPaymentID ?: paymentData?.paymentId
+        val orderId = paymentData?.orderId
+        val signature = paymentData?.signature
+        if (!paymentId.isNullOrBlank() && !orderId.isNullOrBlank() && !signature.isNullOrBlank()) {
+            PartnerRechargePaymentResult.success(paymentId, orderId, signature)
+        } else {
+            PartnerRechargePaymentResult.failure("Razorpay payment response incomplete; subscription not activated.")
+        }
+    }
+
+    override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
+        PartnerRechargePaymentResult.failure(response ?: "Payment cancelled or failed (code $code).")
+    }
+
     private val quickFixViewModel: QuickFixViewModel by viewModels()
     private val authViewModel: AuthViewModel by viewModels()
 
