@@ -227,7 +227,45 @@ class QuickFixViewModel : ViewModel() {
     }
 
     fun updateAdminPaymentConfig(updated: AdminMasterPaymentConfig) {
-        _firestoreSyncStatus.value = "Payment settings not saved: trusted admin backend is not configured."
+        _firestoreSyncStatus.value = "Use the secure Admin bank account form to save verified bank details."
+    }
+
+    fun saveAdminBankDetails(bankName: String, accountHolderName: String, accountNumber: String, ifsc: String) {
+        val user = auth.currentUser ?: run { _firestoreSyncStatus.value = "Authorized Admin sign-in required."; return }
+        val cleanAccount = accountNumber.filterNot { it.isWhitespace() }
+        val cleanIfsc = ifsc.trim().uppercase()
+        if (bankName.isBlank() || accountHolderName.trim().length < 2 ||
+            !cleanAccount.matches(Regex("\\d{9,18}")) || !cleanIfsc.matches(Regex("[A-Z]{4}0[A-Z0-9]{6}"))) {
+            _firestoreSyncStatus.value = "Enter bank, account holder, valid 9–18 digit account number and IFSC."
+            return
+        }
+        viewModelScope.launch {
+            _firestoreSyncStatus.value = "Saving bank details securely..."
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/admin/payment-bank").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "PUT"
+                        connection.doOutput = true
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        val payload = org.json.JSONObject().put("bankName", bankName.trim())
+                            .put("accountHolderName", accountHolderName.trim()).put("accountNumber", cleanAccount).put("ifsc", cleanIfsc)
+                        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val result = org.json.JSONObject(body)
+                        if (status !in 200..299 || !result.optBoolean("success")) error(result.optString("error").ifBlank { "Bank save failed (HTTP $status)." })
+                        "Bank account securely updated •••• " + result.optString("accountLast4")
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { _firestoreSyncStatus.value = it }
+                .onFailure { _firestoreSyncStatus.value = it.message ?: "Bank details save failed." }
+        }
     }
 
     fun adminApprovePayout(payoutId: String) {
