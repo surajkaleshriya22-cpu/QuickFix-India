@@ -1560,18 +1560,6 @@ app.use('/api/places', authenticateFirebaseUser);
 app.use('/api/audio', authenticateFirebaseUser);
 app.use('/api/music', authenticateFirebaseUser);
 
-// Create Gemini client lazily so the web app can boot before an API key is configured.
-const getAI = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured on the server.');
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: { headers: { 'User-Agent': 'quickfix-india' } },
-  });
-};
-
-// 1. Maps Grounding API with gemini-3.8-flash & googleMaps tool
-
 app.post('/api/places/grounding', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const { query, city, lat, lng } = req.body;
