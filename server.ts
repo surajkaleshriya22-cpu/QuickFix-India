@@ -281,6 +281,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
   try {
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity, customerLocation } = req.body ?? {};
+    const requestedLines = Array.isArray(req.body?.lineItems) ? req.body.lineItems : [{ serviceId, quantity }];
     const validCustomerLocation = customerLocation === undefined || (
       customerLocation !== null && typeof customerLocation === 'object' && !Array.isArray(customerLocation) &&
       typeof customerLocation.latitude === 'number' && Number.isFinite(customerLocation.latitude) &&
@@ -288,116 +289,115 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       typeof customerLocation.longitude === 'number' && Number.isFinite(customerLocation.longitude) &&
       customerLocation.longitude >= -180 && customerLocation.longitude <= 180
     );
-    const validServiceArea = serviceArea === undefined || (
-      serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
+    const validServiceArea = serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined || (typeof serviceArea[key] === 'string' && serviceArea[key].trim().length <= 30)) &&
       (['stateCode', 'districtCode', 'tehsilCode'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0) ||
-       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined))
-    );
-
-    if (!validCustomerLocation || !validServiceArea || !serviceArea || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || typeof serviceId !== 'string' || typeof scheduledDate !== 'string' ||
-        typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' ||
-        !address.trim() || address.length > 500 ||
-        !isValidBookingDate(scheduledDate) ||
-        !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
-        !['upi', 'cash'].includes(paymentMethod) ||
-        (notes !== undefined && typeof notes !== 'string')) {
-      return res.status(400).json({ success: false, error: 'Booking details are invalid. Please check service, date, time, address and payment method.' });
+       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined));
+    const validLines = Array.isArray(requestedLines) && requestedLines.length >= 1 && requestedLines.length <= 20 &&
+      requestedLines.every((line: any) => line && typeof line.serviceId === 'string' && line.serviceId.length <= 120 &&
+        Number.isFinite(line.quantity) && line.quantity > 0 && line.quantity <= 100000);
+    if (!validCustomerLocation || !validServiceArea || !validLines || typeof scheduledDate !== 'string' ||
+        typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' || !address.trim() || address.length > 500 ||
+        !isValidBookingDate(scheduledDate) || !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
+        !['upi', 'cash'].includes(paymentMethod) || (notes !== undefined && typeof notes !== 'string')) {
+      return res.status(400).json({ success: false, error: 'Booking details are invalid. Please check each work item, date, time, address and payment method.' });
     }
-
-    if (!firebaseAdminApp) {
-      return res.status(503).json({ success: false, error: 'Secure booking is temporarily unavailable.' });
-    }
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking is temporarily unavailable.' });
 
     const db = getFirestore(firebaseAdminApp);
     const profileSnap = await db.collection('users').doc(identity.uid).get();
     if (!profileSnap.exists || profileSnap.data()?.role !== 'CUSTOMER') {
       return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
     }
-
     const profile = profileSnap.data()!;
-    const service = INITIAL_SERVICES.find((item) => item.id === serviceId);
-    if (!service) {
-      return res.status(400).json({ success: false, error: 'Selected service is not available.' });
-    }
-
-    const approvedRateSnapshot = await db.collection('rate_cards')
-      .where('approvalStatus', '==', 'approved')
-      .limit(200)
-      .get();
-    const approvedCards = approvedRateSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
-      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN')
-        && card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN')
-        && card.serviceCategory === service.category
-        && card.unit === getBillingProfile(service).unit);
-    const bookingRateCard = resolveLocationRateCard(
-      approvedCards,
-      { state: serviceArea.state, district: serviceArea.district, city: String(profile.city || ''), tehsil: serviceArea.tehsil },
-      service.category,
-      service.id,
-      getBillingProfile(service).unit,
-      scheduledDate
-    );
-    const approvedQuote = bookingRateCard ? calculateRateQuote(bookingRateCard, quantity) : null;
-    // No fallback to legacy mockData.startingPrice: without an approved card,
-    // the request is saved as quote_required with zero payable amount.
-    const price = approvedQuote?.totalMinimum ?? 0;
-    const totalAmount = approvedQuote?.totalMinimum ?? 0;
+    const resolvedLines = requestedLines.map((line: any) => {
+      const service = INITIAL_SERVICES.find((item) => item.id === line.serviceId);
+      if (!service) throw new Error('INVALID_BOOKING_SERVICE');
+      return { service, quantity: Number(line.quantity), billing: getBillingProfile(service) };
+    });
+    const approvedRateSnapshot = await db.collection('rate_cards').where('approvalStatus', '==', 'approved').limit(500).get();
+    const approvedCards = approvedRateSnapshot.docs.map(item => ({ id: item.id, ...item.data() } as LocationRateCard));
+    const lineItems = resolvedLines.map(({ service, quantity, billing }) => {
+      const matchingCards = approvedCards.filter(card =>
+        card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN') &&
+        card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN') &&
+        card.serviceCategory === service.category && card.unit === billing.unit);
+      const card = resolveLocationRateCard(
+        matchingCards,
+        { state: serviceArea.state, district: serviceArea.district, city: String(profile.city || ''), tehsil: serviceArea.tehsil },
+        service.category, service.id, billing.unit, scheduledDate
+      );
+      const quote = card ? calculateRateQuote(card, quantity) : null;
+      return {
+        serviceId: service.id,
+        serviceTitle: service.title,
+        category: service.category,
+        quantity,
+        billingUnit: billing.unit,
+        pricingStatus: quote && card ? 'priced_from_published_rate' : 'inspection_quote_required',
+        ...(card && quote ? {
+          rateCardId: card.id,
+          unitRateMinimum: card.minimumRate,
+          unitRateMaximum: card.maximumRate,
+          lineTotalMinimum: quote.totalMinimum,
+          lineTotalMaximum: quote.totalMaximum,
+          materialsIncluded: quote.materialsIncluded,
+          rateSourceName: card.sourceName,
+          rateSourceUrl: card.sourceUrl || null,
+          rateEffectiveFrom: card.effectiveFrom,
+          rateEffectiveTo: card.effectiveTo || null
+        } : { lineTotalMinimum: 0, lineTotalMaximum: 0 })
+      };
+    });
+    const allLinesPriced = lineItems.every(line => line.pricingStatus === 'priced_from_published_rate');
+    const totalMinimum = lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0);
+    const totalMaximum = lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0);
+    const primary = resolvedLines[0];
+    const rateCardIds = [...new Set(lineItems.map(line => line.rateCardId).filter(Boolean))];
     const bookingRef = db.collection('bookings').doc();
-
     await bookingRef.create({
       id: bookingRef.id,
       customerUid: identity.uid,
       customerName: String(profile.displayName || '').slice(0, 100),
       customerPhone: identity.phone_number || String(profile.phoneNumber || '').slice(0, 30),
       customerAddress: address.trim(),
-      serviceId: service.id,
-      serviceTitle: service.title,
-      category: service.category,
+      serviceId: primary.service.id,
+      serviceTitle: primary.service.title,
+      category: primary.service.category,
+      lineItems,
       notes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '',
       scheduledDate,
       scheduledTimeSlot,
       city: String(profile.city || '').slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
-      serviceArea: {
-        state: serviceArea.state.trim(),
-        district: serviceArea.district.trim(),
-        tehsil: serviceArea.tehsil.trim()
-      },
-      ...(customerLocation ? {
-        customerLocation: {
-          latitude: customerLocation.latitude,
-          longitude: customerLocation.longitude,
-          capturedAt: FieldValue.serverTimestamp()
-        }
-      } : {}),
-      quantity,
-      billingUnit: bookingRateCard?.unit || getBillingProfile(service).unit,
-      pricingStatus: approvedQuote ? 'estimated_from_approved_rate_card' : 'quote_required',
-      ...(approvedQuote && bookingRateCard ? {
-        rateCardId: bookingRateCard.id,
-        quoteRange: { minimum: approvedQuote.totalMinimum, maximum: approvedQuote.totalMaximum, materialsIncluded: approvedQuote.materialsIncluded, sourceName: bookingRateCard.sourceName }
-      } : {}),
+      serviceArea: { state: serviceArea.state.trim(), district: serviceArea.district.trim(), tehsil: serviceArea.tehsil.trim() },
+      ...(customerLocation ? { customerLocation: { latitude: customerLocation.latitude, longitude: customerLocation.longitude, capturedAt: FieldValue.serverTimestamp() } } : {}),
+      quantity: primary.quantity,
+      billingUnit: primary.billing.unit,
+      pricingStatus: allLinesPriced ? 'estimated_from_approved_rate_card' : 'quote_required',
+      ...(allLinesPriced ? {
+        rateCardId: rateCardIds[0],
+        rateCardIds,
+        quoteRange: { minimum: totalMinimum, maximum: totalMaximum, materialsIncluded: lineItems.every(line => line.materialsIncluded === true), lineItems }
+      } : { rateCardIds, quoteRange: { minimum: totalMinimum, maximum: totalMaximum, lineItems } }),
       paymentMethod,
       status: 'requested',
       startOtp: '',
-      price,
-      totalAmount,
+      price: allLinesPriced ? totalMinimum : 0,
+      totalAmount: allLinesPriced ? totalMinimum : 0,
       paymentCollectionEnabled: false,
       paymentStatus: 'pending',
       escrowStatus: 'not_funded',
       createdAt: FieldValue.serverTimestamp()
     });
-
-    return res.status(201).json({ success: true, bookingId: bookingRef.id });
+    return res.status(201).json({ success: true, bookingId: bookingRef.id, pricingStatus: allLinesPriced ? 'priced' : 'inspection_quote_required', quoteRange: { minimum: totalMinimum, maximum: totalMaximum }, lineItems });
   } catch (error) {
+    if (error instanceof Error && error.message === 'INVALID_BOOKING_SERVICE') return res.status(400).json({ success: false, error: 'One or more selected services are unavailable.' });
     console.error('Secure booking creation failed:', error);
     return res.status(500).json({ success: false, error: 'Booking could not be saved securely. Please retry.' });
   }
 });
-
 
 const razorpayConfig = () => {
   const keyId = process.env.RAZORPAY_KEY_ID?.trim() || '';
