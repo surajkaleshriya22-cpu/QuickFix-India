@@ -238,6 +238,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         displayName: displayName.trim(),
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
+        subscriptionStatus: 'trial',
+        subscriptionTrialStartedAt: FieldValue.serverTimestamp(),
+        subscriptionExpiresAt: new Date(Date.now() + (Number.isInteger((await db.collection('settings').doc('partner_recharge').get()).data()?.trialDays) ? Number((await db.collection('settings').doc('partner_recharge').get()).data()?.trialDays) : 30) * 86400000),
         city: city.trim(),
         address: typeof address === 'string' ? address.trim() : '',
         ...(validServiceArea && serviceArea ? {
@@ -281,12 +284,13 @@ app.get('/api/partners/recharge/packages', authenticateFirebaseUser, async (_req
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge is temporarily unavailable.' });
     const snap = await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').get();
     const configured = snap.data()?.packages;
+    const trialDays = Number.isInteger(snap.data()?.trialDays) ? snap.data()!.trialDays : 30;
     const packages = Array.isArray(configured) ? configured.filter((p: any) =>
       p && p.active === true && typeof p.id === 'string' && typeof p.name === 'string' &&
       Number.isInteger(p.amountPaise) && p.amountPaise >= 100 && p.amountPaise <= 100000000 &&
       Number.isInteger(p.durationDays) && p.durationDays >= 1 && p.durationDays <= 3650
     ).map((p: any) => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, currency: 'INR' })) : [];
-    return res.json({ success: true, packages });
+    return res.json({ success: true, trialDays, packages });
   } catch (error) {
     console.error('Recharge packages read failed:', error);
     return res.status(500).json({ success: false, error: 'Recharge packages could not be loaded.' });
@@ -297,6 +301,8 @@ app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requir
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge settings are unavailable.' });
     const packages = req.body?.packages;
+    const trialDays = req.body?.trialDays;
+    if (!Number.isInteger(trialDays) || trialDays < 0 || trialDays > 365) return res.status(400).json({ success: false, error: 'Free trial limit must be between 0 and 365 days.' });
     if (!Array.isArray(packages) || packages.length < 1 || packages.length > 20) return res.status(400).json({ success: false, error: 'Provide between 1 and 20 packages.' });
     const ids = new Set<string>();
     const clean = [];
@@ -309,8 +315,8 @@ app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requir
       ids.add(p.id);
       clean.push({ id: p.id, name: p.name.trim(), amountPaise: p.amountRupees * 100, durationDays: p.durationDays, active: p.active });
     }
-    await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').set({ packages: clean, updatedAt: FieldValue.serverTimestamp(), updatedBy: (req as AuthenticatedRequest).firebaseUser!.uid }, { merge: true });
-    return res.json({ success: true, packages: clean.map(p => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, active: p.active })) });
+    await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').set({ packages: clean, trialDays, updatedAt: FieldValue.serverTimestamp(), updatedBy: (req as AuthenticatedRequest).firebaseUser!.uid }, { merge: true });
+    return res.json({ success: true, trialDays, packages: clean.map(p => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, active: p.active })) });
   } catch (error) {
     console.error('Recharge packages update failed:', error);
     return res.status(500).json({ success: false, error: 'Recharge packages could not be saved.' });
