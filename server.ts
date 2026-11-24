@@ -415,7 +415,7 @@ const validHmac = (secret: string, message: Buffer | string, supplied: string) =
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 };
 const razorpayFetch = (url: string, cfg: {keyId:string;keySecret:string}, init?: RequestInit) =>
-  fetch(url, { ...init, headers: { Authorization: 'Basic ' + Buffer.from(cfg.keyId + ':' + cfg.keySecret).toString('base64'), 'Content-Type':'application/json', ...(init?.headers || {}) } });
+  fetch(url, { ...init, signal: init?.signal || AbortSignal.timeout(15000), headers: { Authorization: 'Basic ' + Buffer.from(cfg.keyId + ':' + cfg.keySecret).toString('base64'), 'Content-Type':'application/json', ...(init?.headers || {}) } });
 
 app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: Request, res: Response) => {
   const cfg = razorpayConfig();
@@ -425,6 +425,7 @@ app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: 
   if (!bookingId || bookingId.length > 128) return res.status(400).json({success:false,error:'Valid booking ID required.'});
   const db = getFirestore(firebaseAdminApp), bookingRef = db.collection('bookings').doc(bookingId);
   const attemptRef = db.collection('razorpay_payment_attempts').doc(bookingId);
+  let ownsAttemptLock = false;
   try {
     const snap = await bookingRef.get();
     if (!snap.exists) return res.status(404).json({success:false,error:'Booking not found.'});
@@ -434,16 +435,19 @@ app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: 
     if (b.pricingStatus !== 'estimated_from_approved_rate_card' || !b.rateCardId) return res.status(409).json({success:false,error:'Payment requires an approved local rate card.'});
     const rupees = Number(b.totalAmount), paise = Math.round(rupees * 100);
     if (!Number.isFinite(rupees) || paise < 100 || paise > 100000000 || Math.abs(paise / 100 - rupees) > 0.000001) return res.status(409).json({success:false,error:'Approved booking amount is invalid.'});
-    if (b.paymentOrderId && b.paymentOrderStatus === 'created') return res.json({success:true,orderId:b.paymentOrderId,amount:paise,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
+    if (b.paymentOrderId && b.paymentOrderStatus === 'created' && b.paymentOrderAmount === paise && b.paymentOrderCurrency === 'INR') return res.json({success:true,orderId:b.paymentOrderId,amount:b.paymentOrderAmount,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
     const reserved = await db.runTransaction(async tx => {
       const [fresh, attempt] = await Promise.all([tx.get(bookingRef),tx.get(attemptRef)]);
       if (!fresh.exists || fresh.data()?.customerUid !== uid) throw new Error('BOOKING_NOT_FOUND');
-      if (fresh.data()?.paymentOrderId && fresh.data()?.paymentOrderStatus === 'created') return String(fresh.data()!.paymentOrderId);
-      if (attempt.exists && attempt.data()?.status === 'creating') throw new Error('ORDER_IN_PROGRESS');
+      if (fresh.data()?.paymentOrderId && fresh.data()?.paymentOrderStatus === 'created' && fresh.data()?.paymentOrderAmount === paise && fresh.data()?.paymentOrderCurrency === 'INR') return String(fresh.data()!.paymentOrderId);
+      const lockUpdatedAt = attempt.data()?.updatedAt;
+      const lockAgeMs = lockUpdatedAt && typeof lockUpdatedAt.toMillis === 'function' ? Date.now() - lockUpdatedAt.toMillis() : Number.POSITIVE_INFINITY;
+      if (attempt.exists && attempt.data()?.status === 'creating' && lockAgeMs < 120000) throw new Error('ORDER_IN_PROGRESS');
       tx.set(attemptRef,{status:'creating',customerUid:uid,bookingId,updatedAt:FieldValue.serverTimestamp()},{merge:true});
       return '';
     });
     if (reserved) return res.json({success:true,orderId:reserved,amount:paise,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
+    ownsAttemptLock = true;
     const response = await razorpayFetch('https://api.razorpay.com/v1/orders',cfg,{method:'POST',body:JSON.stringify({amount:paise,currency:'INR',receipt:'qf_'+bookingId.slice(0,32),notes:{bookingId,customerUid:uid}})});
     const order = await response.json().catch(()=>({})) as any;
     if (!response.ok || typeof order.id !== 'string' || order.amount !== paise || order.currency !== 'INR') {
@@ -462,6 +466,7 @@ app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: 
     const msg = e instanceof Error ? e.message : '';
     if (msg === 'ORDER_IN_PROGRESS') return res.status(409).json({success:false,error:'Order creation is in progress. Retry shortly.'});
     if (msg === 'BOOKING_NOT_FOUND') return res.status(404).json({success:false,error:'Booking not found.'});
+    if (ownsAttemptLock) await attemptRef.set({status:'failed',updatedAt:FieldValue.serverTimestamp()},{merge:true}).catch(() => undefined);
     console.error('Razorpay order route failed:',e);
     return res.status(500).json({success:false,error:'Order creation failed. No payment was collected.'});
   }
