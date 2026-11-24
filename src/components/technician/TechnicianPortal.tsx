@@ -454,10 +454,16 @@ export const TechnicianPortal: React.FC = () => {
                     setRegError('Please enter your name, email, city and select at least one trade.');
                     return;
                   }
+                  const verifiedPhone = auth.currentUser?.phoneNumber;
+                  if (!verifiedPhone) {
+                    setRegError('Please verify your mobile number with Firebase OTP first.');
+                    setShowAuthModal(true);
+                    return;
+                  }
                   try {
                     const res = await registerTechnician({
                       name: regName.trim(),
-                      phone: auth.currentUser.phoneNumber || regPhone,
+                      phone: verifiedPhone,
                       email: regEmail.trim(),
                       trades: regTrades,
                       experienceYears: Math.max(0, regExp),
