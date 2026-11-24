@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { extractBearerToken } from './src/lib/serverAuth.ts';
 import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
@@ -98,13 +99,12 @@ const authenticateFirebaseUser = async (req: Request, res: Response, next: NextF
   if (!firebaseAdminApp) {
     return res.status(503).json({ success: false, error: 'Secure authentication is temporarily unavailable.' });
   }
-  const header = req.headers.authorization || '';
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
+  const token = extractBearerToken(req.headers.authorization);
+  if (!token) {
     return res.status(401).json({ success: false, error: 'A valid Firebase ID token is required.' });
   }
   try {
-    (req as AuthenticatedRequest).firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+    (req as AuthenticatedRequest).firebaseUser = await getAuth(firebaseAdminApp).verifyIdToken(token, true);
     return next();
   } catch {
     return res.status(401).json({ success: false, error: 'Firebase ID token is invalid or expired.' });
@@ -1359,7 +1359,7 @@ app.post('/api/places/grounding', authenticateFirebaseUser, async (req: Request,
 });
 
 // 2. Audio Transcription API with gemini-3.5-transcribe
-app.post('/api/audio/transcribe', async (req: Request, res: Response) => {
+app.post('/api/audio/transcribe', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const { audioBase64, mimeType = 'audio/webm' } = req.body;
 
