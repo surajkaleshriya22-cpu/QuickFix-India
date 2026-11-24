@@ -1,6 +1,8 @@
 package com.quickfix.app.ui.screens
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +27,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 private data class RechargePackage(val id: String, val name: String, val amountPaise: Int, val days: Int)
 
@@ -146,8 +154,11 @@ fun PartnerRechargeCard() {
                                     } finally { busy = false }
                                 }
                             }
-                            checkout.open(context as Activity, options)
+                            val activity = context.findActivity()
+                                ?: throw IllegalStateException("Payment screen could not be opened. Please reopen the partner app.")
+                            checkout.open(activity, options)
                         } catch (error: Exception) {
+                            PartnerRechargePaymentResult.callback = null
                             busy = false
                             status = error.message ?: "Recharge शुरू नहीं हो सका।"
                         }
