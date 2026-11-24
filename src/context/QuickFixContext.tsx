@@ -311,8 +311,10 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const existing = await getDoc(profileRef);
       if (existing.exists()) {
         const data = existing.data();
-        if (data.role !== 'CUSTOMER' || data.isVerified !== false) {
-          return { success: false, message: 'This phone number is not registered as a customer account. Please contact support.' };
+        const hasCustomerAccess = data.role === 'CUSTOMER' ||
+          (Array.isArray(data.roles) && data.roles.includes('CUSTOMER'));
+        if (!hasCustomerAccess || data.isVerified !== false) {
+          return { success: false, message: 'This phone number is not registered for customer access. Please contact support.' };
         }
       } else {
         const profile: Record<string, unknown> = {
@@ -321,6 +323,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           displayName: displayName.trim() || 'QuickFix Customer',
           email: email.trim(),
           role: 'CUSTOMER',
+          roles: ['CUSTOMER'],
           isVerified: false,
           // Firestore rules require a native timestamp, not an ISO string.
           createdAt: Timestamp.now()
