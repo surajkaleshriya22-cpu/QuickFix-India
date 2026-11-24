@@ -3,11 +3,13 @@ import { CalendarDays, Clock, IndianRupee, ShieldCheck } from 'lucide-react';
 import { auth } from '../../lib/firebase';
 
 type RechargeStatus = {
-  status: 'free_trial' | 'recharge_due' | 'activation_date_unavailable';
+  status: 'free_trial' | 'recharged' | 'recharge_due' | 'activation_date_unavailable';
   freeTrialDays: number;
   currentRechargeAmount: number;
   availablePlans?: { id: string; durationDays: number; amount: number }[];
   trialEndsAt: string | null;
+  rechargeValidUntil?: string | null;
+  paidRechargeActive?: boolean;
   daysRemaining?: number;
   paymentEnabled: false;
   message?: string;
@@ -40,14 +42,16 @@ export const PartnerRechargeStatusCard: React.FC = () => {
   if (!status) return <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">Loading free trial details…</div>;
 
   const free = status.status === 'free_trial';
+  const recharged = status.status === 'recharged' || status.paidRechargeActive === true;
+  const active = free || recharged;
   return (
-    <section className={`rounded-2xl border p-4 space-y-2 ${free ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+    <section className={`rounded-2xl border p-4 space-y-2 ${active ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-          {free ? <ShieldCheck className="h-4 w-4 text-emerald-700" /> : <Clock className="h-4 w-4 text-amber-700" />}
-          <span>{free ? 'Your free launch period is active' : status.status === 'recharge_due' ? 'Free period completed' : 'Trial date pending verification'}</span>
+          {active ? <ShieldCheck className="h-4 w-4 text-emerald-700" /> : <Clock className="h-4 w-4 text-amber-700" />}
+          <span>{free ? 'Your free launch period is active' : recharged ? 'Your partner recharge is active' : status.status === 'recharge_due' ? 'Free period completed' : 'Trial date pending verification'}</span>
         </div>
-        <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-slate-700">{status.freeTrialDays} days free</span>
+        <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-slate-700">{free ? `${status.freeTrialDays} days free` : recharged ? 'Recharge active' : 'Recharge status'}</span>
       </div>
       {status.trialEndsAt && (
         <div className="flex items-center gap-1.5 text-xs text-slate-700">
@@ -55,7 +59,13 @@ export const PartnerRechargeStatusCard: React.FC = () => {
           <span>Free period ends: {new Date(status.trialEndsAt).toLocaleDateString('en-IN')}</span>
         </div>
       )}
-      {free && typeof status.daysRemaining === 'number' && <p className="text-xs font-semibold text-emerald-800">{status.daysRemaining} days remaining</p>}
+      {recharged && status.rechargeValidUntil && (
+        <div className="flex items-center gap-1.5 text-xs text-slate-700">
+          <CalendarDays className="h-3.5 w-3.5" />
+          <span>Recharge valid until: {new Date(status.rechargeValidUntil).toLocaleDateString('en-IN')}</span>
+        </div>
+      )}
+      {active && typeof status.daysRemaining === 'number' && <p className="text-xs font-semibold text-emerald-800">{status.daysRemaining} days remaining</p>}
       <div className="flex items-center gap-1.5 text-xs text-slate-700">
         <IndianRupee className="h-3.5 w-3.5" />
         <span>Recharge after free period: ₹{status.currentRechargeAmount.toLocaleString('en-IN')}</span>
