@@ -5,6 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { extractBearerToken } from './src/lib/serverAuth.ts';
+import { areBothLocationConsentsEnabled, getBookingLocationParticipantRole, isLiveLocationBookingStatus } from './src/utils/liveLocation';
 import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
@@ -1410,7 +1411,6 @@ const getAI = () => {
 // 1. Maps Grounding API with gemini-3.8-flash & googleMaps tool
 // Consent-based live location API. Coordinates are server-owned and never exposed
 // through direct client Firestore access. Both booking participants must opt in.
-const liveLocationStatuses = new Set(['assigned', 'technician_en_route', 'in_progress']);
 const validCoordinates = (lat: unknown, lng: unknown) =>
   typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
   typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
@@ -1421,10 +1421,9 @@ async function getLiveLocationParticipant(bookingId: string, uid: string) {
   const snap = await ref.get();
   if (!snap.exists) return { error: 'BOOKING_NOT_FOUND' as const };
   const booking = snap.data()!;
-  const role = booking.customerUid === uid ? 'customer'
-    : (booking.technicianUid === uid || booking.assignedPartnerUid === uid) ? 'partner' : null;
+  const role = getBookingLocationParticipantRole(booking, uid);
   if (!role) return { error: 'NOT_A_BOOKING_PARTICIPANT' as const };
-  if (!liveLocationStatuses.has(String(booking.status))) {
+  if (!isLiveLocationBookingStatus(booking.status)) {
     // A completed/cancelled booking must not retain readable GPS points.
     // Cleanup is idempotent and runs whenever either participant next accesses tracking.
     const partnerUid = booking.technicianUid || booking.assignedPartnerUid;
@@ -1501,7 +1500,7 @@ app.post('/api/bookings/:bookingId/location', authenticateFirebaseUser, async (r
     const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
     if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
     const sharing = participant.booking.locationSharing || {};
-    if (sharing.customerEnabled !== true || sharing.partnerEnabled !== true) {
+    if (!areBothLocationConsentsEnabled(sharing)) {
       return res.status(403).json({ success: false, error: 'Both customer and Channel Partner must enable location sharing first.' });
     }
     const db = getFirestore(firebaseAdminApp!);
