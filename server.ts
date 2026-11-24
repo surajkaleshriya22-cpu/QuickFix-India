@@ -12,7 +12,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt, randomUUID, timingSafeEqual, createCipheriv, randomBytes } from 'node:crypto';
+import { randomInt, randomUUID, timingSafeEqual, createCipheriv, randomBytes, createHmac } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -67,7 +67,7 @@ app.use(helmet({
     },
   },
 }));
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '12mb', verify: (req, _res, buffer) => { (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer); } }));
 
 let firebaseAdminApp: App | null = null;
 try {
@@ -396,6 +396,135 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     console.error('Secure booking creation failed:', error);
     return res.status(500).json({ success: false, error: 'Booking could not be saved securely. Please retry.' });
   }
+});
+
+
+const razorpayConfig = () => {
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim() || '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim() || '';
+  const mode = (process.env.RAZORPAY_MODE || 'test').trim().toLowerCase();
+  if (!keyId || !keySecret || !['test', 'live'].includes(mode)) return null;
+  if (mode === 'test' && !keyId.startsWith('rzp_test_')) return null;
+  if (mode === 'live' && !keyId.startsWith('rzp_live_')) return null;
+  return { keyId, keySecret, mode };
+};
+const validHmac = (secret: string, message: Buffer | string, supplied: string) => {
+  if (!/^[a-f0-9]{64}$/i.test(supplied)) return false;
+  const expected = createHmac('sha256', secret).update(message).digest();
+  const actual = Buffer.from(supplied, 'hex');
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+};
+const razorpayFetch = (url: string, cfg: {keyId:string;keySecret:string}, init?: RequestInit) =>
+  fetch(url, { ...init, signal: init?.signal || AbortSignal.timeout(15000), headers: { Authorization: 'Basic ' + Buffer.from(cfg.keyId + ':' + cfg.keySecret).toString('base64'), 'Content-Type':'application/json', ...(init?.headers || {}) } });
+
+app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  const cfg = razorpayConfig();
+  if (!cfg || !firebaseAdminApp) return res.status(503).json({success:false,error:'Razorpay Test Mode credentials are not safely configured.'});
+  const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+  const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
+  if (!bookingId || bookingId.length > 128) return res.status(400).json({success:false,error:'Valid booking ID required.'});
+  const db = getFirestore(firebaseAdminApp), bookingRef = db.collection('bookings').doc(bookingId);
+  const attemptRef = db.collection('razorpay_payment_attempts').doc(bookingId);
+  let ownsAttemptLock = false;
+  try {
+    const snap = await bookingRef.get();
+    if (!snap.exists) return res.status(404).json({success:false,error:'Booking not found.'});
+    const b = snap.data()!;
+    if (b.customerUid !== uid) return res.status(403).json({success:false,error:'Booking ownership check failed.'});
+    if (b.paymentMethod !== 'upi' || b.status !== 'requested' || b.paymentStatus !== 'pending') return res.status(409).json({success:false,error:'Booking is not eligible for online payment.'});
+    if (b.pricingStatus !== 'estimated_from_approved_rate_card' || !b.rateCardId) return res.status(409).json({success:false,error:'Payment requires an approved local rate card.'});
+    const rupees = Number(b.totalAmount), paise = Math.round(rupees * 100);
+    if (!Number.isFinite(rupees) || paise < 100 || paise > 100000000 || Math.abs(paise / 100 - rupees) > 0.000001) return res.status(409).json({success:false,error:'Approved booking amount is invalid.'});
+    if (b.paymentOrderId && b.paymentOrderStatus === 'created' && b.paymentOrderAmount === paise && b.paymentOrderCurrency === 'INR') return res.json({success:true,orderId:b.paymentOrderId,amount:b.paymentOrderAmount,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
+    const reserved = await db.runTransaction(async tx => {
+      const [fresh, attempt] = await Promise.all([tx.get(bookingRef),tx.get(attemptRef)]);
+      if (!fresh.exists || fresh.data()?.customerUid !== uid) throw new Error('BOOKING_NOT_FOUND');
+      if (fresh.data()?.paymentOrderId && fresh.data()?.paymentOrderStatus === 'created' && fresh.data()?.paymentOrderAmount === paise && fresh.data()?.paymentOrderCurrency === 'INR') return String(fresh.data()!.paymentOrderId);
+      const lockUpdatedAt = attempt.data()?.updatedAt;
+      const lockAgeMs = lockUpdatedAt && typeof lockUpdatedAt.toMillis === 'function' ? Date.now() - lockUpdatedAt.toMillis() : Number.POSITIVE_INFINITY;
+      if (attempt.exists && attempt.data()?.status === 'creating' && lockAgeMs < 120000) throw new Error('ORDER_IN_PROGRESS');
+      tx.set(attemptRef,{status:'creating',customerUid:uid,bookingId,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+      return '';
+    });
+    if (reserved) return res.json({success:true,orderId:reserved,amount:paise,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
+    ownsAttemptLock = true;
+    const response = await razorpayFetch('https://api.razorpay.com/v1/orders',cfg,{method:'POST',body:JSON.stringify({amount:paise,currency:'INR',receipt:'qf_'+bookingId.slice(0,32),notes:{bookingId,customerUid:uid}})});
+    const order = await response.json().catch(()=>({})) as any;
+    if (!response.ok || typeof order.id !== 'string' || order.amount !== paise || order.currency !== 'INR') {
+      await attemptRef.set({status:'failed',updatedAt:FieldValue.serverTimestamp()},{merge:true});
+      console.error('Razorpay order rejected:',response.status,order?.error?.code || 'unknown');
+      return res.status(502).json({success:false,error:'Order creation failed. No payment was collected.'});
+    }
+    await db.runTransaction(async tx => {
+      const fresh = await tx.get(bookingRef);
+      if (!fresh.exists || fresh.data()?.customerUid !== uid || fresh.data()?.paymentStatus !== 'pending') throw new Error('BOOKING_CHANGED');
+      tx.update(bookingRef,{paymentOrderId:order.id,paymentOrderAmount:paise,paymentOrderCurrency:'INR',paymentOrderStatus:'created',paymentCollectionEnabled:true,paymentProvider:'razorpay',paymentMode:cfg.mode,paymentUpdatedAt:FieldValue.serverTimestamp()});
+      tx.set(attemptRef,{status:'created',orderId:order.id,amount:paise,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    });
+    return res.status(201).json({success:true,orderId:order.id,amount:paise,currency:'INR',keyId:cfg.keyId,mode:cfg.mode});
+  } catch(e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg === 'ORDER_IN_PROGRESS') return res.status(409).json({success:false,error:'Order creation is in progress. Retry shortly.'});
+    if (msg === 'BOOKING_NOT_FOUND') return res.status(404).json({success:false,error:'Booking not found.'});
+    if (ownsAttemptLock) await attemptRef.set({status:'failed',updatedAt:FieldValue.serverTimestamp()},{merge:true}).catch(() => undefined);
+    console.error('Razorpay order route failed:',e);
+    return res.status(500).json({success:false,error:'Order creation failed. No payment was collected.'});
+  }
+});
+
+app.post('/api/payments/razorpay/verify', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  const cfg = razorpayConfig();
+  if (!cfg || !firebaseAdminApp) return res.status(503).json({success:false,error:'Payment verification is unavailable.'});
+  const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+  const {bookingId,orderId,paymentId,signature} = req.body ?? {};
+  if (![bookingId,orderId,paymentId,signature].every(v=>typeof v==='string' && v.length>0 && v.length<=200)) return res.status(400).json({success:false,error:'Invalid verification details.'});
+  if (!validHmac(cfg.keySecret,orderId+'|'+paymentId,signature)) return res.status(400).json({success:false,error:'Invalid payment signature.'});
+  try {
+    const db=getFirestore(firebaseAdminApp), ref=db.collection('bookings').doc(bookingId), snap=await ref.get();
+    if (!snap.exists || snap.data()?.customerUid!==uid) return res.status(404).json({success:false,error:'Booking not found.'});
+    const b=snap.data()!;
+    if (b.paymentOrderId!==orderId || b.paymentProvider!=='razorpay' || b.paymentOrderCurrency!=='INR') return res.status(409).json({success:false,error:'Order does not match booking.'});
+    const response=await razorpayFetch('https://api.razorpay.com/v1/payments/'+encodeURIComponent(paymentId),cfg);
+    const p=await response.json().catch(()=>({})) as any;
+    if (!response.ok || p.order_id!==orderId || p.status!=='captured' || p.currency!=='INR' || p.amount!==b.paymentOrderAmount) return res.status(409).json({success:false,error:'Gateway has not confirmed the exact captured amount.'});
+    await db.runTransaction(async tx=>{
+      const fresh=await tx.get(ref);
+      if (!fresh.exists || fresh.data()?.customerUid!==uid || fresh.data()?.paymentOrderId!==orderId) throw new Error('BOOKING_CHANGED');
+      if (fresh.data()?.paymentStatus==='paid') return;
+      tx.update(ref,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
+    });
+    return res.json({success:true,paymentStatus:'paid'});
+  } catch(e) { console.error('Razorpay verification failed:',e); return res.status(500).json({success:false,error:'Payment verification could not be completed safely.'}); }
+});
+
+app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
+  const secret=process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || '';
+  const raw=(req as Request & {rawBody?:Buffer}).rawBody;
+  const signature=String(req.headers['x-razorpay-signature'] || '');
+  const eventId=String(req.headers['x-razorpay-event-id'] || '');
+  if (!secret || !raw || !eventId || eventId.length>200) return res.status(503).json({success:false,error:'Webhook is not configured.'});
+  if (!validHmac(secret,raw,signature)) return res.status(400).json({success:false,error:'Invalid webhook signature.'});
+  if (!firebaseAdminApp) return res.status(503).json({success:false,error:'Payment ledger unavailable.'});
+  try {
+    const event=req.body?.event, p=req.body?.payload?.payment?.entity, o=req.body?.payload?.order?.entity;
+    if (!['payment.captured','order.paid'].includes(event)) return res.json({success:true,ignored:true});
+    const orderId=p?.order_id || o?.id, paymentId=p?.id, amount=p?.amount ?? o?.amount_paid, currency=p?.currency || o?.currency;
+    if (typeof orderId!=='string' || typeof paymentId!=='string' || !Number.isInteger(amount) || currency!=='INR') return res.status(400).json({success:false,error:'Incomplete payment event.'});
+    const db=getFirestore(firebaseAdminApp), eventRef=db.collection('razorpay_webhook_events').doc(eventId);
+    const matches=await db.collection('bookings').where('paymentOrderId','==',orderId).limit(1).get();
+    if (matches.empty) return res.status(404).json({success:false,error:'Matching booking not found.'});
+    const bookingRef=matches.docs[0]!.ref;
+    await db.runTransaction(async tx=>{
+      const [seen,bSnap]=await Promise.all([tx.get(eventRef),tx.get(bookingRef)]);
+      if (seen.exists) return;
+      if (!bSnap.exists) throw new Error('BOOKING_NOT_FOUND');
+      const b=bSnap.data()!;
+      if (b.paymentOrderId!==orderId || b.paymentOrderAmount!==amount || b.paymentOrderCurrency!=='INR') throw new Error('AMOUNT_MISMATCH');
+      if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
+      tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp()});
+    });
+    return res.json({success:true,received:true});
+  } catch(e) { console.error('Razorpay webhook failed:',e); return res.status(409).json({success:false,error:'Webhook could not be applied safely.'}); }
 });
 
 // Channel Partner job feed. It reveals only eligible, unassigned requests and never
