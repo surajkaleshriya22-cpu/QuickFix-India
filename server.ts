@@ -301,6 +301,22 @@ app.get('/api/partners/recharge/packages', authenticateFirebaseUser, async (_req
   }
 });
 
+app.get('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge settings are unavailable.' });
+    const snap = await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').get();
+    const data = snap.data() || {};
+    const packages = Array.isArray(data.packages) ? data.packages.map((p: any) => ({
+      id: p.id, name: p.name, amountRupees: Number.isInteger(p.amountPaise) ? p.amountPaise / 100 : 0,
+      durationDays: p.durationDays, active: p.active === true
+    })) : [];
+    return res.json({ success: true, trialDays: Number.isInteger(data.trialDays) ? data.trialDays : 30, packages });
+  } catch (error) {
+    console.error('Admin recharge settings read failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge settings could not be loaded.' });
+  }
+});
+
 app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge settings are unavailable.' });
