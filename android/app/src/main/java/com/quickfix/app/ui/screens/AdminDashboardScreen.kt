@@ -613,6 +613,8 @@ fun CommissionsTab(
     var bankHolderInput by remember { mutableStateOf("") }
     var bankAccountInput by remember { mutableStateOf("") }
     var bankIfscInput by remember { mutableStateOf("") }
+    var bankMenuExpanded by remember { mutableStateOf(false) }
+    val indianBanks = listOf("State Bank of India", "HDFC Bank", "ICICI Bank", "Punjab National Bank", "Bank of Baroda", "Axis Bank", "Canara Bank", "Union Bank of India", "Kotak Mahindra Bank", "IDFC FIRST Bank", "IndusInd Bank", "Yes Bank", "Indian Bank", "Central Bank of India", "Bank of India", "Other")
 
     var activeSubTab by remember { mutableStateOf("master_account") } // "master_account", "payouts", "history", "reports", "settings"
     var statusFilter by remember { mutableStateOf("all") } // "all", "paid", "pending", "failed"
@@ -737,11 +739,24 @@ fun CommissionsTab(
                     Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
 
-                    Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.accountNumberMasked} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
+                    Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.accountNumberMasked.ifBlank { "Not configured" }} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
                     OutlinedButton(onClick = onLoadAdminBank, modifier = Modifier.fillMaxWidth()) {
                         Text("Refresh saved bank details")
                     }
-                    OutlinedTextField(value = bankNameInput, onValueChange = { bankNameInput = it }, label = { Text("Bank name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { bankMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(bankNameInput.ifBlank { "Select Bank" }, modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Select bank")
+                        }
+                        DropdownMenu(expanded = bankMenuExpanded, onDismissRequest = { bankMenuExpanded = false }) {
+                            indianBanks.forEach { bank ->
+                                DropdownMenuItem(text = { Text(bank) }, onClick = {
+                                    bankNameInput = bank
+                                    bankMenuExpanded = false
+                                })
+                            }
+                        }
+                    }
                     OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text("New bank account number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankIfscInput, onValueChange = { bankIfscInput = it.uppercase().take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
