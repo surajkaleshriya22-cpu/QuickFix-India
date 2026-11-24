@@ -193,6 +193,7 @@ fun AdminDashboardScreen(
                     onIssueRefund = { bId, amt, reason -> viewModel.adminIssueCustomerRefund(bId, amt, reason) },
                     onUpdateAdminConfig = { cfg -> viewModel.updateAdminPaymentConfig(cfg) },
                     onSaveAdminBank = { bank, holder, account, ifsc -> viewModel.saveAdminBankDetails(bank, holder, account, ifsc) },
+                    onLoadAdminBank = { viewModel.loadAdminBankDetails() },
                     bankSaveStatus = firestoreStatus
                 )
                 AdminTab.REVIEWS -> ReviewsTab(bookings = bookings)
@@ -599,6 +600,7 @@ fun CommissionsTab(
     onIssueRefund: (String, Int, String) -> Unit,
     onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit,
     onSaveAdminBank: (String, String, String, String) -> Unit,
+    onLoadAdminBank: () -> Unit,
     bankSaveStatus: String
 ) {
     var elecPct by remember { mutableStateOf(settings.electricianCommissionPct.toString()) }
@@ -733,7 +735,10 @@ fun CommissionsTab(
                     Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
 
-                    Text("Saved bank account: ${adminConfig.receivingBankName} • ${adminConfig.accountNumberMasked} • IFSC ${adminConfig.ifscCode}", fontSize = 12.sp, color = TextPrimary)
+                    Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.accountNumberMasked} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
+                    OutlinedButton(onClick = onLoadAdminBank, modifier = Modifier.fillMaxWidth()) {
+                        Text("Refresh saved bank details")
+                    }
                     OutlinedTextField(value = bankNameInput, onValueChange = { bankNameInput = it }, label = { Text("Bank name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text("New bank account number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
