@@ -482,7 +482,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
     }
     const profile = profileSnap.data()!;
-    const resolvedLines = requestedLines.map((line: any) => {
+    const resolvedLines: Array<{ service: (typeof INITIAL_SERVICES)[number]; quantity: number; billing: ReturnType<typeof getBillingProfile> }> = requestedLines.map((line: any) => {
       const service = INITIAL_SERVICES.find((item) => item.id === line.serviceId);
       if (!service) throw new Error('INVALID_BOOKING_SERVICE');
       return { service, quantity: Number(line.quantity), billing: getBillingProfile(service) };
