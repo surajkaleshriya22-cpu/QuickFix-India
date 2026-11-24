@@ -34,7 +34,6 @@ import {
   MessageSquare,
   Lock,
   Unlock,
-  Radio,
   Flame,
   KeyRound,
   Trash2,
@@ -140,7 +139,7 @@ export const AdminDashboard: React.FC = () => {
   const [reportPeriod, setReportPeriod] = useState<'daily' | 'monthly'>('daily');
   const [simulatorAmount, setSimulatorAmount] = useState<number>(500);
   const [selectedReceiptBooking, setSelectedReceiptBooking] = useState<Booking | null>(null);
-  const [statusUpdateSuccessMsg, setStatusUpdateSuccessMsg] = useState('');
+  const [statusUpdateNoticeMsg, setStatusUpdateNoticeMsg] = useState('');
 
   // Admin Master Account & Gateway Control Form
   const [adminMerchantName, setAdminMerchantName] = useState(adminPaymentConfig.merchantName);
@@ -272,14 +271,14 @@ export const AdminDashboard: React.FC = () => {
       platformConvenienceFee: Number(convFee),
       minPayoutThreshold: Number(minPayout)
     });
-    setSaveMessage('Commission settings are disabled until secure server-side admin APIs are deployed. No changes were saved.');
+    setSaveMessage('NOT SAVED: Commission settings require a trusted server-side admin workflow. No changes were saved.');
     setTimeout(() => setSaveMessage(''), 3500);
   };
 
   const handlePaymentStatusChange = (bookingId: string, newStatus: PaymentStatus) => {
     updateBookingPaymentStatus(bookingId, newStatus);
-    setStatusUpdateSuccessMsg(`Transaction ${bookingId} status updated to ${newStatus.toUpperCase()} (Synced with Firestore)`);
-    setTimeout(() => setStatusUpdateSuccessMsg(''), 3500);
+    setStatusUpdateNoticeMsg(`NOT UPDATED: Payment status changes require a verified server-side payment event. Booking ${bookingId} was not changed.`);
+    setTimeout(() => setStatusUpdateNoticeMsg(''), 3500);
   };
 
   // Group bookings for Daily Revenue Report
@@ -409,7 +408,7 @@ export const AdminDashboard: React.FC = () => {
     const text = replyTextMap[bookingId];
     if (!text || !text.trim()) return;
     addCustomerReviewReply(bookingId, text.trim());
-    setReplyTextMap(prev => ({ ...prev, [bookingId]: '' }));
+    setStatusUpdateNoticeMsg('NOT SAVED: Review replies require a trusted persisted admin workflow. Your text has been kept in the input.');
   };
 
 
@@ -691,10 +690,10 @@ export const AdminDashboard: React.FC = () => {
                 <h2 className="text-sm font-bold text-white tracking-tight">QuickFix Operations HQ</h2>
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-700/60 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                   <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
-                  <span>ONLINE</span>
+                  <span>PREVIEW MODE</span>
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">Pan-India Marketplace Management & Live Financial Ledger</p>
+              <p className="text-[10px] text-slate-400">Preview dashboard · live dispatch and financial ledger are not connected.</p>
             </div>
           </div>
 
@@ -866,7 +865,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="text-2xl font-extrabold text-white font-mono">{totalCustomers}</div>
                 <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                  <span>100% Mobile Verified</span>
+                  <span>Phone verification status is not available in this preview</span>
                 </div>
               </div>
 
@@ -2556,7 +2555,7 @@ export const AdminDashboard: React.FC = () => {
                       className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-colors shadow-xs flex items-center gap-2"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      <span>Save & Sync Commission Rules to Firestore</span>
+                      <span>Preview only — commission changes are not saved</span>
                     </button>
                   </form>
                 </div>
@@ -2659,8 +2658,8 @@ export const AdminDashboard: React.FC = () => {
             {paymentSubTab === 'payouts' && (
               <PendingPayoutsSection
                 onNotify={(msg) => {
-                  setStatusUpdateSuccessMsg(msg);
-                  setTimeout(() => setStatusUpdateSuccessMsg(''), 4500);
+                  setStatusUpdateNoticeMsg(msg);
+                  setTimeout(() => setStatusUpdateNoticeMsg(''), 4500);
                 }}
               />
             )}
@@ -2676,13 +2675,13 @@ export const AdminDashboard: React.FC = () => {
                       <span>Admin Master Account & Payment Gateway Routing</span>
                     </h4>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      All customer payments land in the Admin Master account first. Technicians receive net earnings only upon Admin verification and release.
+                      Payment routing is not configured. This app does not collect or hold customer funds.
                     </p>
                   </div>
 
                   <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Admin Escrow Active</span>
+                    <span>ESCROW NOT CONFIGURED</span>
                   </span>
                 </div>
 
@@ -2808,7 +2807,7 @@ export const AdminDashboard: React.FC = () => {
                         className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
                       />
                       <div>
-                        <strong className="text-white block">Strict Manual Admin Approval Required for Payouts</strong>
+                        <strong className="text-white block">Manual payout approval (preview only)</strong>
                         <span className="text-slate-400 text-[11px]">
                           Prevents automatic technician withdrawals. Every payment release requires an authorized Admin sign-off from HQ.
                         </span>
@@ -2823,7 +2822,7 @@ export const AdminDashboard: React.FC = () => {
                         className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
                       />
                       <div>
-                        <strong className="text-white block">Buyer Escrow Protection Active</strong>
+                        <strong className="text-white block">Buyer escrow (preview only)</strong>
                         <span className="text-slate-400 text-[11px]">
                           Customer payment is held securely in the Admin Master account until service is completed satisfactorily.
                         </span>
@@ -2856,7 +2855,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
                     >
                       <Save className="w-4 h-4" />
-                      <span>Save Master Account Settings</span>
+                      <span>Preview only — payment settings are not saved</span>
                     </button>
                   </div>
                 </div>
