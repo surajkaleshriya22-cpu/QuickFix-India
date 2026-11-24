@@ -618,6 +618,8 @@ fun CommissionsTab(
     var statusFilter by remember { mutableStateOf("all") } // "all", "paid", "pending", "failed"
     var reportMode by remember { mutableStateOf("daily") } // "daily", "monthly"
 
+    LaunchedEffect(Unit) { onLoadAdminBank() }
+
     val totalReceived = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
     val pendingAmount = bookings.filter { it.paymentStatus != "paid" }.sumOf { it.totalAmount }
     val techPayments = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.technicianPayout }
