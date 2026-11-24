@@ -600,8 +600,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ...prev,
         id: firebaseUser.uid,
         isOnline: result.isOnline === true,
-        walletBalance: typeof result.walletBalance === 'number' ? result.walletBalance : prev.walletBalance,
-        dispatchRadiusKm: typeof result.dispatchRadiusKm === 'number' ? result.dispatchRadiusKm : prev.dispatchRadiusKm
+        walletBalance: typeof result.walletBalance === 'number' ? result.walletBalance : prev.walletBalance
       }));
       return { success: true, message: online ? 'You are now online and eligible to receive nearby service requests.' : 'You are now offline.' };
     } catch {
