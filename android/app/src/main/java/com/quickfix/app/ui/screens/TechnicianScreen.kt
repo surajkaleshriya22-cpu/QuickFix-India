@@ -136,9 +136,16 @@ fun TechnicianScreen(
         }
     }
 
+    // Keep the authenticated server-filtered available-job feed fresh only while this screen is visible.
+    LaunchedEffect(viewModel) {
+        while (true) {
+            viewModel.refreshPartnerJobs()
+            kotlinx.coroutines.delay(30_000L)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadPartnerDispatchSettings()
-        viewModel.refreshPartnerJobs()
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
             tradesLoadMessage = "Partner खाते में लॉगिन करें।"
