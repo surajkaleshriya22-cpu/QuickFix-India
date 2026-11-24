@@ -39,13 +39,13 @@ data class CommissionSettings(
 )
 
 data class AdminMasterPaymentConfig(
-    val corporateEntity: String = "QuickFix Technologies India Pvt Ltd",
-    val masterUpiVpa: String = "quickfix.master@hdfcbank",
-    val receivingBankName: String = "HDFC Bank Ltd",
-    val accountNumberMasked: String = "••••••••4892",
-    val ifscCode: String = "HDFC0000128",
-    val accountHolderName: String = "QuickFix Technologies India Pvt Ltd",
-    val gatewayProvider: String = "Razorpay Smart Escrow Route",
+    val corporateEntity: String = "",
+    val masterUpiVpa: String = "",
+    val receivingBankName: String = "",
+    val accountNumberMasked: String = "Not configured",
+    val ifscCode: String = "",
+    val accountHolderName: String = "",
+    val gatewayProvider: String = "Razorpay",
     val requireAdminPayoutApproval: Boolean = true,
     val escrowHoldUntilOtpVerified: Boolean = true,
     val tdsDeductionPct: Double = 1.0
