@@ -30,6 +30,10 @@ class AuthRepository(
     val currentUserEmail: String?
         get() = auth.currentUser?.email
 
+    /** E.164 phone number verified by Firebase Phone Auth. */
+    val currentUserPhoneNumber: String?
+        get() = auth.currentUser?.phoneNumber
+
     val isUserLoggedIn: Boolean
         get() = auth.currentUser != null
 
@@ -115,15 +119,13 @@ class AuthRepository(
             "displayName" to user.displayName,
             "email" to user.email,
             "role" to user.role.name,
+            "roles" to listOf("CUSTOMER"),
             "address" to user.address,
             "city" to user.city,
             "pincode" to user.pincode,
             "trades" to user.trades,
             "experienceYears" to user.experienceYears,
-            "kycDocType" to user.kycDocType,
-            "kycDocNumber" to user.kycDocNumber,
             "isVerified" to user.isVerified,
-            "upiId" to user.upiId,
             "createdAt" to FieldValue.serverTimestamp()
         )
         firestore.collection("users")
