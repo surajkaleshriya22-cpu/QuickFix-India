@@ -14,12 +14,14 @@ interface ServiceBookingSheetProps {
 }
 
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
-  const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
+  const { customer, currentCity, services, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stateName, setStateName] = useState('');
   const [districtName, setDistrictName] = useState('');
   const [tehsilName, setTehsilName] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [basketLines, setBasketLines] = useState<{ serviceId: string; quantity: string }[]>([{ serviceId: service.id, quantity: '1' }]);
+  const [additionalServiceId, setAdditionalServiceId] = useState('');
   const [rateQuote, setRateQuote] = useState<any>(null);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
@@ -115,6 +117,22 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   // The legacy amount is only an indicative starting figure until a verified local rate card is connected.
   const billingProfile = getBillingProfile(service);
+  const basketServices = basketLines.map(line => ({ ...line, service: services.find(item => item.id === line.serviceId) })).filter(line => line.service);
+  const addBasketLine = () => {
+    if (!additionalServiceId || basketLines.length >= 20) return;
+    setBasketLines(current => [...current, { serviceId: additionalServiceId, quantity: '1' }]);
+    setAdditionalServiceId('');
+    setRateQuote(null);
+    setQuoteMessage('');
+  };
+  const updateBasketQuantity = (index: number, value: string) => {
+    setBasketLines(current => current.map((line, i) => i === index ? { ...line, quantity: value } : line));
+    setRateQuote(null);
+  };
+  const removeBasketLine = (index: number) => {
+    setBasketLines(current => current.filter((_, i) => i !== index));
+    setRateQuote(null);
+  };
   const basePrice = rateQuote?.quote?.totalMinimum ?? null;
   const quoteMaximum = rateQuote?.quote?.totalMaximum ?? null;
   const totalAmount = basePrice === null ? null : basePrice;
@@ -252,17 +270,13 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   const handleConfirm = async () => {
     if (isSubmitting) return;
-    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || Number(quantity) <= 0) {
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || basketServices.length === 0 || basketServices.some(line => !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0)) {
       window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
       return;
     }
     if (!selectedAddress.trim()) {
       window.alert('Booking se pehle map se apna poora service address select karein.');
       setIsEditingAddress(true);
-      return;
-    }
-    if (paymentMethod === 'upi' && !pendingBookingId && !rateQuote) {
-      window.alert('UPI payment ke liye pehle approved local rate check karein. Bina approved rate ke payment nahi li jayegi.');
       return;
     }
     setIsSubmitting(true);
@@ -277,7 +291,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           notes,
           paymentMethod,
           serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
-          quantity: Number(quantity)
+          quantity: Number(basketLines[0]?.quantity || 1),
+          lineItems: basketServices.map(line => ({ serviceId: line.serviceId, quantity: Number(line.quantity) }))
         });
         if (!result.success || !result.bookingId) {
           window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
@@ -436,13 +451,31 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               <input value={tehsilName} onChange={e => { setTehsilName(e.target.value); setRateQuote(null); }} placeholder="e.g. Rau" className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
             </label>
           </div>
-          <div className="rounded-xl border border-slate-200 p-3 space-y-2">
-            <label className="block text-xs font-semibold text-slate-700">{billingProfile.quantityPrompt} / {billingProfile.hindiQuantityPrompt}
-              <input type="number" min="0.01" step="0.01" value={quantity} onChange={e => { setQuantity(e.target.value); setRateQuote(null); }} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
-            </label>
-            <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-              {isLoadingQuote ? 'Checking approved rate...' : 'Check approved local rate'}
-            </button>
+          <div className="rounded-xl border border-slate-200 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">Work items / Kaam ki list</h3>
+              <span className="text-xs text-slate-500">{basketLines.length}/20</span>
+            </div>
+            {basketServices.map((line, index) => (
+              <div key={line.serviceId + '-' + index} className="grid grid-cols-[1fr_92px_32px] gap-2 items-end">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-700 truncate">{line.service?.title}</p>
+                  <p className="text-[10px] text-slate-500">{getBillingProfile(line.service!).quantityPrompt}</p>
+                </div>
+                <label className="text-[10px] text-slate-600">Quantity
+                  <input type="number" min="0.01" step="0.01" value={line.quantity} onChange={e => updateBasketQuantity(index, e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+                </label>
+                <button type="button" aria-label="Remove work item" onClick={() => removeBasketLine(index)} disabled={basketLines.length === 1} className="h-9 rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30">×</button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <select value={additionalServiceId} onChange={e => setAdditionalServiceId(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-300 p-2 text-xs">
+                <option value="">Add another service…</option>
+                {services.filter(item => !basketLines.some(line => line.serviceId === item.id)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+              </select>
+              <button type="button" onClick={addBasketLine} disabled={!additionalServiceId || basketLines.length >= 20} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">+ Add</button>
+            </div>
+            <p className="text-xs text-slate-600">Har kaam ka rate Admin ke published local rate card se server calculate karega. Jis kaam ka rate available nahi hoga, uske liye inspection/quotation lagega. Customer ke liye koi rate approval request nahi.</p>
             {quoteMessage && <p className="text-xs text-slate-600">{quoteMessage}</p>}
           </div>
 
