@@ -39,6 +39,7 @@ import { GeofenceModal } from './GeofenceModal';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { PartnerKycPanel } from './PartnerKycPanel';
 import { PartnerRechargeCard } from './PartnerRechargeCard';
+import { PartnerUpiQrCard } from './PartnerUpiQrCard';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -736,6 +737,7 @@ export const TechnicianPortal: React.FC = () => {
         )}
 
         <PartnerRechargeCard />
+        <PartnerUpiQrCard />
 
         {/* ================= COMPREHENSIVE WALLET & SECURITY RESERVE CARD ================= */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-4 shadow-md border border-slate-800 space-y-3.5">
