@@ -2,10 +2,14 @@ import { cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 const expectedProjectId = 'quickfix-india';
-const authorizedEmails = [
-  'surajkaleshriya22@gmail.com',
-  'ops.admin@quickfix.in'
-];
+const authorizedEmails = (process.env.QUICKFIX_ADMIN_ALLOWED_EMAILS || '')
+  .split(',')
+  .map(email => email.trim().toLowerCase())
+  .filter(Boolean);
+
+if (authorizedEmails.length === 0) {
+  throw new Error('QUICKFIX_ADMIN_ALLOWED_EMAILS must contain at least one explicitly authorized email.');
+}
 const uid = process.env.QUICKFIX_ADMIN_UID;
 const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
