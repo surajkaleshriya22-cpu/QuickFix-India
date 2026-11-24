@@ -113,6 +113,7 @@ export const TechnicianPortal: React.FC = () => {
     registerTechnician,
     logoutTechnician,
     serviceZones,
+    updatePartnerDutyStatus,
     toggleTechnicianOnline,
     validateAndSetTechnicianOnline,
     bookings,
@@ -143,6 +144,7 @@ export const TechnicianPortal: React.FC = () => {
   const [payoutSuccess, setPayoutSuccess] = useState('');
   const [payoutError, setPayoutError] = useState('');
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
+  const [dutyStatusLoading, setDutyStatusLoading] = useState(false);
 
   // Wallet Top-up Modal State
   const [showTopupModal, setShowTopupModal] = useState(false);
@@ -534,38 +536,38 @@ export const TechnicianPortal: React.FC = () => {
           </button>
 
           <button
-            onClick={() => {
+            type="button"
+            disabled={dutyStatusLoading}
+            onClick={async () => {
+              setDutyStatusLoading(true);
+              setQualificationAlertMsg('');
               if (currentTechnician.isOnline) {
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 4500);
-                }
-              } else {
-                if (!currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit' || currentTechnician.approvalStatus === 'rejected') {
-                  setQualificationAlertMsg('Awaiting Trade Qualification Clearance: Your certificate is under audit by QuickFix Admin HQ. Only approved technicians can go online.');
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                if ((currentTechnician.walletBalance ?? 0) < 2000) {
-                  const deficit = 2000 - (currentTechnician.walletBalance ?? 0);
-                  setQualificationAlertMsg(`Minimum ₹2,000 Security Reserve Required: Your current wallet balance is ₹${currentTechnician.walletBalance ?? 0}. Please top-up ₹${deficit}.`);
-                  setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  return;
-                }
-                const res = toggleTechnicianOnline(currentTechnician.id);
-                if (!res.success) {
-                  if (res.requiresGeofence) {
-                    setShowGeofenceModal(true);
-                  } else {
-                    setQualificationAlertMsg(res.message || 'Geo-fence verification required to go online.');
-                    setTimeout(() => setQualificationAlertMsg(''), 7000);
-                  }
-                } else if (res.message) {
-                  setPayoutSuccess(res.message);
-                  setTimeout(() => setPayoutSuccess(''), 5000);
-                }
+                const result = await updatePartnerDutyStatus(false);
+                if (!result.success) setQualificationAlertMsg(result.message);
+                else setPayoutSuccess(result.message);
+                setDutyStatusLoading(false);
+                return;
               }
+              if (!navigator.geolocation) {
+                setQualificationAlertMsg('This device does not support GPS location. Enable location services or use a supported device.');
+                setDutyStatusLoading(false);
+                return;
+              }
+              navigator.geolocation.getCurrentPosition(async position => {
+                const result = await updatePartnerDutyStatus(true, {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracyMeters: position.coords.accuracy
+                });
+                if (!result.success) setQualificationAlertMsg(result.message);
+                else setPayoutSuccess(result.message);
+                setDutyStatusLoading(false);
+              }, error => {
+                setQualificationAlertMsg(error.code === error.PERMISSION_DENIED
+                  ? 'GPS permission was denied. Allow location access to activate duty.'
+                  : 'Current GPS location could not be obtained. Check device location and try again.');
+                setDutyStatusLoading(false);
+              }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
               currentTechnician.isOnline
