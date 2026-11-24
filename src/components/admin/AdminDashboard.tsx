@@ -64,6 +64,7 @@ import { BookingStatus, ServiceCategoryType, CustomerUser, Technician, Booking, 
 import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { AdminKycReviewSection } from './AdminKycReviewSection';
+import { AdminPartnerRechargeSection } from './AdminPartnerRechargeSection';
 import { auth } from '../../lib/firebase';
 
 const INDIAN_BANK_OPTIONS = [
@@ -121,7 +122,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates' | 'kyc'
+    'overview' | 'customers' | 'technicians' | 'bookings' | 'commissions' | 'reviews' | 'firebase' | 'rates' | 'kyc' | 'partner_recharge'
   >('overview');
 
   // Search & Filter States
@@ -822,6 +823,14 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => { setActiveTab('partner_recharge'); setSearchQuery(''); }}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === 'partner_recharge' ? 'bg-emerald-700 text-white shadow-xs font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Partner Recharge</span>
+          </button>
+
+          <button
             onClick={() => { setActiveTab('firebase'); setSearchQuery(''); }}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
               activeTab === 'firebase'
@@ -839,6 +848,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === 'rates' && <AdminRateCardsSection />}
         {activeTab === 'kyc' && <AdminKycReviewSection />}
+        {activeTab === 'partner_recharge' && <AdminPartnerRechargeSection />}
 
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (
