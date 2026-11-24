@@ -16,6 +16,16 @@ test('allows a fully approved and funded active partner', () => {
   assert.equal(isPartnerEligibleForDispatch(eligible), true);
 });
 
+test('blocks partners whose paid or trial subscription has expired', () => {
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, subscriptionStatus: 'trial', subscriptionExpiresAt: new Date(Date.now() - 1000) }), false);
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, subscriptionStatus: 'expired' }), false);
+});
+
+test('allows active subscriptions and preserves existing legacy profiles without subscription fields', () => {
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, subscriptionStatus: 'active', subscriptionExpiresAt: new Date(Date.now() + 86400000) }), true);
+  assert.equal(isPartnerEligibleForDispatch(eligible), true);
+});
+
 test('blocks suspended partners even when all other checks pass', () => {
   assert.equal(isPartnerEligibleForDispatch({ ...eligible, isSuspended: true }), false);
 });
