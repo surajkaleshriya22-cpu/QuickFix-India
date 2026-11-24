@@ -290,7 +290,7 @@ app.get('/api/partners/payment-profile', authenticateFirebaseUser, async (req: R
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     const profile = snap.data()!;
     return res.json({ success: true, upiId: typeof profile.paymentUpiId === 'string' ? profile.paymentUpiId : '', payeeName: String(profile.displayName || '').slice(0, 80) });
   } catch (error) {
