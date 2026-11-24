@@ -1708,7 +1708,7 @@ export const AdminDashboard: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
                   <span className="text-slate-300">Firestore Realtime:</span>
                   <span className="text-emerald-400 font-bold">{firestoreSyncStatus.latencyMs}ms</span>
                 </div>
@@ -2679,7 +2679,7 @@ export const AdminDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold flex items-center gap-1.5">
+                  <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-xs font-bold flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span>ESCROW NOT CONFIGURED</span>
                   </span>
@@ -2698,7 +2698,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Master Platform UPI</div>
                     <div className="text-base font-bold text-indigo-400 font-mono">{adminPaymentConfig.merchantVpa}</div>
-                    <p className="text-[11px] text-slate-500">All customer UPI QR codes & payment links route here directly.</p>
+                    <p className="text-[11px] text-slate-500">No live UPI routing is configured.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
@@ -2712,7 +2712,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Gateway & Escrow Mode</div>
                     <div className="text-sm font-bold text-emerald-400">{adminPaymentConfig.gatewayProvider}</div>
                     <div className="text-[11px] text-slate-400">Merchant ID: {adminPaymentConfig.merchantId}</div>
-                    <div className="text-[10px] text-indigo-300 font-semibold">Strict Manual Admin Approval: ON</div>
+                    <div className="text-[10px] text-indigo-300 font-semibold">Server-side payout approval: not configured</div>
                   </div>
                 </div>
 
@@ -2809,7 +2809,7 @@ export const AdminDashboard: React.FC = () => {
                       <div>
                         <strong className="text-white block">Manual payout approval (preview only)</strong>
                         <span className="text-slate-400 text-[11px]">
-                          Prevents automatic technician withdrawals. Every payment release requires an authorized Admin sign-off from HQ.
+                          Payout release is disabled until a trusted server-side payment and ledger workflow is deployed.
                         </span>
                       </div>
                     </label>
@@ -2824,7 +2824,7 @@ export const AdminDashboard: React.FC = () => {
                       <div>
                         <strong className="text-white block">Buyer escrow (preview only)</strong>
                         <span className="text-slate-400 text-[11px]">
-                          Customer payment is held securely in the Admin Master account until service is completed satisfactorily.
+                          No customer funds are held. Escrow is not configured.
                         </span>
                       </div>
                     </label>
