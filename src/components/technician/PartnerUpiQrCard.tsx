@@ -14,6 +14,18 @@ export const PartnerUpiQrCard: React.FC = () => {
   const [error, setError] = useState('');
 
   const paymentUri = useMemo(() => savedUpiId ? 'upi://pay?' + new URLSearchParams({ pa: savedUpiId, pn: payeeName || 'QuickFix Partner', cu: 'INR' }).toString() : '', [savedUpiId, payeeName]);
+
+  useEffect(() => {
+    let active = true;
+    if (!paymentUri) {
+      setQrDataUrl('');
+      return () => { active = false; };
+    }
+    void QRCode.toDataURL(paymentUri, { width: 240, margin: 2, errorCorrectionLevel: 'M' })
+      .then((url: string) => { if (active) setQrDataUrl(url); })
+      .catch(() => { if (active) { setQrDataUrl(''); setError('QR code could not be generated on this device.'); } });
+    return () => { active = false; };
+  }, [paymentUri]);
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
