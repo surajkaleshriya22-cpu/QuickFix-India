@@ -232,21 +232,29 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const trialExpiry = new Date(Date.now() + trialDays * 86400000);
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
-      if (existing.exists) {
-        throw new Error('PROFILE_ALREADY_EXISTS');
+      const existingData = existing.exists ? existing.data()! : undefined;
+      if (existingData) {
+        const existingRoles = Array.isArray(existingData.roles) ? existingData.roles : [existingData.role];
+        const eligibleCustomer = existingData.role === 'CUSTOMER' &&
+          existingData.isVerified === false &&
+          existingData.phoneNumber === verifiedPhone &&
+          existingRoles.includes('CUSTOMER') &&
+          !existingRoles.includes('CHANNEL_PARTNER');
+        if (!eligibleCustomer) throw new Error('PROFILE_ALREADY_EXISTS');
       }
-      transaction.create(userRef, {
+      const partnerFields = {
         uid: identity.uid,
         phoneNumber: verifiedPhone,
         displayName: displayName.trim(),
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
+        roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
         subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
         subscriptionTrialDaysGranted: trialDays,
-        subscriptionTrialStartedAt: FieldValue.serverTimestamp(),
+        ...(existingData?.subscriptionTrialStartedAt ? {} : { subscriptionTrialStartedAt: FieldValue.serverTimestamp() }),
         subscriptionExpiresAt: trialExpiry,
         city: city.trim(),
-        address: typeof address === 'string' ? address.trim() : '',
+        address: typeof address === 'string' ? address.trim() : (existingData?.address || ''),
         ...(validServiceArea && serviceArea ? {
           serviceArea: {
             state: serviceArea.state.trim(),
@@ -263,9 +271,11 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         approvalStatus: 'pending_audit',
         kycStatus: 'not_submitted',
         securityDepositPaid: false,
-        createdAt: FieldValue.serverTimestamp(),
+        ...(existingData?.createdAt ? {} : { createdAt: FieldValue.serverTimestamp() }),
         updatedAt: FieldValue.serverTimestamp()
-      });
+      };
+      if (existing.exists) transaction.update(userRef, partnerFields);
+      else transaction.create(userRef, partnerFields);
     });
 
     return res.status(201).json({
@@ -478,10 +488,12 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
 
     const db = getFirestore(firebaseAdminApp);
     const profileSnap = await db.collection('users').doc(identity.uid).get();
-    if (!profileSnap.exists || profileSnap.data()?.role !== 'CUSTOMER') {
+    const profile = profileSnap.exists ? profileSnap.data()! : undefined;
+    const hasCustomerAccess = profile?.role === 'CUSTOMER' ||
+      (Array.isArray(profile?.roles) && profile.roles.includes('CUSTOMER'));
+    if (!profile || !hasCustomerAccess) {
       return res.status(403).json({ success: false, error: 'A registered customer profile is required to book a service.' });
     }
-    const profile = profileSnap.data()!;
     const resolvedLines: Array<{ service: (typeof INITIAL_SERVICES)[number]; quantity: number; billing: ReturnType<typeof getBillingProfile> }> = requestedLines.map((line: any) => {
       const service = INITIAL_SERVICES.find((item) => item.id === line.serviceId);
       if (!service) throw new Error('INVALID_BOOKING_SERVICE');
