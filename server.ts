@@ -318,7 +318,24 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     });
     const approvedRateSnapshot = await db.collection('rate_cards').where('approvalStatus', '==', 'approved').limit(500).get();
     const approvedCards = approvedRateSnapshot.docs.map(item => ({ id: item.id, ...item.data() } as LocationRateCard));
-    const lineItems = resolvedLines.map(({ service, quantity, billing }) => {
+    const lineItems: Array<{
+      serviceId: string;
+      serviceTitle: string;
+      category: typeof INITIAL_SERVICES[number]['category'];
+      quantity: number;
+      billingUnit: BillingUnit;
+      pricingStatus: string;
+      rateCardId?: string;
+      unitRateMinimum?: number;
+      unitRateMaximum?: number;
+      lineTotalMinimum: number;
+      lineTotalMaximum: number;
+      materialsIncluded?: boolean;
+      rateSourceName?: string;
+      rateSourceUrl?: string | null;
+      rateEffectiveFrom?: string;
+      rateEffectiveTo?: string | null;
+    }> = resolvedLines.map(({ service, quantity, billing }) => {
       const matchingCards = approvedCards.filter(card =>
         card.state.trim().toLocaleLowerCase('en-IN') === serviceArea.state.trim().toLocaleLowerCase('en-IN') &&
         card.district.trim().toLocaleLowerCase('en-IN') === serviceArea.district.trim().toLocaleLowerCase('en-IN') &&
