@@ -667,11 +667,36 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
   try {
     const event=req.body?.event, p=req.body?.payload?.payment?.entity, o=req.body?.payload?.order?.entity;
     if (!['payment.captured','order.paid'].includes(event)) return res.json({success:true,ignored:true});
-    const orderId=p?.order_id || o?.id, paymentId=p?.id, amount=p?.amount ?? o?.amount_paid, currency=p?.currency || o?.currency;
+    const orderId=p?.order_id || o?.id, paymentId=p?.id || o?.payments?.[0]?.id, amount=p?.amount ?? o?.amount_paid, currency=p?.currency || o?.currency || 'INR';
     if (typeof orderId!=='string' || typeof paymentId!=='string' || !Number.isInteger(amount) || currency!=='INR') return res.status(400).json({success:false,error:'Incomplete payment event.'});
     const db=getFirestore(firebaseAdminApp), eventRef=db.collection('razorpay_webhook_events').doc(eventId);
+    const rechargeMatches=await db.collection('partner_recharge_payments').where('orderId','==',orderId).limit(1).get();
+    if (!rechargeMatches.empty) {
+      const rechargeRef=rechargeMatches.docs[0]!.ref;
+      await db.runTransaction(async tx=>{
+        const [seen,rSnap]=await Promise.all([tx.get(eventRef),tx.get(rechargeRef)]);
+        if (seen.exists) return;
+        if (!rSnap.exists) throw new Error('RECHARGE_NOT_FOUND');
+        const r=rSnap.data()!;
+        if (r.orderId!==orderId || r.amountPaise!==amount || r.currency!=='INR') throw new Error('RECHARGE_AMOUNT_MISMATCH');
+        if (r.status!=='paid') {
+          const partnerRef=db.collection('users').doc(String(r.partnerUid || ''));
+          const partner=await tx.get(partnerRef);
+          if (!partner.exists) throw new Error('PARTNER_NOT_FOUND');
+          const now=Date.now(), currentExpiry=partner.data()?.subscriptionExpiresAt?.toMillis?.() || 0;
+          const expiry=new Date(Math.max(now,currentExpiry)+Number(r.durationDays)*86400000);
+          tx.update(rechargeRef,{status:'paid',paymentId,verifiedAt:FieldValue.serverTimestamp(),verifiedBy:'razorpay_webhook'});
+          tx.update(partnerRef,{subscriptionStatus:'active',subscriptionExpiresAt:expiry,subscriptionUpdatedAt:FieldValue.serverTimestamp()});
+          tx.create(db.collection('partner_recharge_ledger').doc(rechargeRef.id),{partnerUid:r.partnerUid,rechargeId:rechargeRef.id,orderId,paymentId,amountPaise:r.amountPaise,currency:'INR',durationDays:r.durationDays,status:'paid',source:'webhook',createdAt:FieldValue.serverTimestamp()});
+        } else if (r.paymentId && r.paymentId!==paymentId) {
+          throw new Error('RECHARGE_PAYMENT_CONFLICT');
+        }
+        tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp(),kind:'partner_recharge'});
+      });
+      return res.json({success:true,received:true,kind:'partner_recharge'});
+    }
     const matches=await db.collection('bookings').where('paymentOrderId','==',orderId).limit(1).get();
-    if (matches.empty) return res.status(404).json({success:false,error:'Matching booking not found.'});
+    if (matches.empty) return res.status(404).json({success:false,error:'Matching booking or recharge not found.'});
     const bookingRef=matches.docs[0]!.ref;
     await db.runTransaction(async tx=>{
       const [seen,bSnap]=await Promise.all([tx.get(eventRef),tx.get(bookingRef)]);
@@ -680,9 +705,9 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
       const b=bSnap.data()!;
       if (b.paymentOrderId!==orderId || b.paymentOrderAmount!==amount || b.paymentOrderCurrency!=='INR') throw new Error('AMOUNT_MISMATCH');
       if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
-      tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp()});
+      tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp(),kind:'booking'});
     });
-    return res.json({success:true,received:true});
+    return res.json({success:true,received:true,kind:'booking'});
   } catch(e) { console.error('Razorpay webhook failed:',e); return res.status(409).json({success:false,error:'Webhook could not be applied safely.'}); }
 });
 
