@@ -401,10 +401,13 @@ class QuickFixViewModel : ViewModel() {
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.setRequestProperty("Authorization", "Bearer $idToken")
                 val payload = org.json.JSONObject()
-                    .put("serviceId", serverServiceId)
+                    .put("lineItems", org.json.JSONArray().put(
+                        org.json.JSONObject()
+                            .put("serviceId", serverServiceId)
+                            .put("quantity", quantity)
+                    ))
                     .put("scheduledDate", scheduledDate)
                     .put("scheduledTimeSlot", scheduledTimeSlot)
-                    .put("quantity", quantity)
                     .put("paymentMethod", "cash")
                     .put("address", customerAddress.trim())
                     .put("serviceArea", org.json.JSONObject()
@@ -422,7 +425,15 @@ class QuickFixViewModel : ViewModel() {
                 val stream = if (status in 200..299) connection.inputStream else connection.errorStream
                 val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 if (status !in 200..299) {
-                    val message = runCatching { org.json.JSONObject(body).optString("error") }.getOrNull()
+                    val message = runCatching {
+                        val errorJson = org.json.JSONObject(body)
+                        val base = errorJson.optString("error")
+                        val fields = errorJson.optJSONArray("invalidFields")
+                        val details = if (fields != null && fields.length() > 0) {
+                            (0 until fields.length()).joinToString(", ") { fields.optString(it) }
+                        } else ""
+                        if (details.isNotBlank()) "$base ($details)" else base
+                    }.getOrNull()
                     throw IllegalStateException(message?.takeIf { it.isNotBlank() }
                         ?: "Secure booking service returned HTTP $status.")
                 }
