@@ -227,6 +227,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 
     const db = getFirestore(firebaseAdminApp);
     const userRef = db.collection('users').doc(identity.uid);
+    const rechargeSettings = await db.collection('settings').doc('partner_recharge').get();
+    const trialDays = Number.isInteger(rechargeSettings.data()?.trialDays) ? Number(rechargeSettings.data()?.trialDays) : 30;
+    const trialExpiry = new Date(Date.now() + trialDays * 86400000);
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       if (existing.exists) {
@@ -238,9 +241,10 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         displayName: displayName.trim(),
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
-        subscriptionStatus: 'trial',
+        subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
+        subscriptionTrialDaysGranted: trialDays,
         subscriptionTrialStartedAt: FieldValue.serverTimestamp(),
-        subscriptionExpiresAt: new Date(Date.now() + (Number.isInteger((await db.collection('settings').doc('partner_recharge').get()).data()?.trialDays) ? Number((await db.collection('settings').doc('partner_recharge').get()).data()?.trialDays) : 30) * 86400000),
+        subscriptionExpiresAt: trialExpiry,
         city: city.trim(),
         address: typeof address === 'string' ? address.trim() : '',
         ...(validServiceArea && serviceArea ? {
