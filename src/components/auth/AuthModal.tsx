@@ -264,7 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
               : selectedRoleTab === 'customer'
               ? isSignupMode ? 'Create Customer Account' : 'Customer Sign In'
               : selectedRoleTab === 'technician'
-              ? isSignupMode ? 'Register as Service Partner' : 'Technician Partner Sign In'
+              ? isSignupMode ? 'Register as Channel Partner' : 'Channel Partner Sign In'
               : 'Admin Operations Login'}
           </h3>
           <p className="text-xs text-blue-100 mt-0.5">
@@ -306,7 +306,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
               }`}
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>Partner</span>
+              <span>Channel Partner</span>
             </button>
 
             <button
