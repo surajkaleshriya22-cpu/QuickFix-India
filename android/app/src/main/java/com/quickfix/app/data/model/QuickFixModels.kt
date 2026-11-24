@@ -42,13 +42,13 @@ data class AdminMasterPaymentConfig(
     val corporateEntity: String = "",
     val masterUpiVpa: String = "",
     val receivingBankName: String = "",
-    val accountNumberMasked: String = "Not configured",
+    val accountNumberMasked: String = "",
     val ifscCode: String = "",
     val accountHolderName: String = "",
-    val gatewayProvider: String = "Razorpay",
+    val gatewayProvider: String = "Not connected",
     val requireAdminPayoutApproval: Boolean = true,
     val escrowHoldUntilOtpVerified: Boolean = true,
-    val tdsDeductionPct: Double = 1.0
+    val tdsDeductionPct: Double = 0.0
 )
 
 data class PayoutRecord(
