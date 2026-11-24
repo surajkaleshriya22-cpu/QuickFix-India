@@ -230,6 +230,46 @@ class QuickFixViewModel : ViewModel() {
         _firestoreSyncStatus.value = "Use the secure Admin bank account form to save verified bank details."
     }
 
+    fun loadAdminBankDetails() {
+        val user = auth.currentUser ?: run { _firestoreSyncStatus.value = "Authorized Admin sign-in required."; return }
+        viewModelScope.launch {
+            runCatching {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/admin/payment-bank").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val result = org.json.JSONObject(body)
+                        if (status !in 200..299 || !result.optBoolean("success")) error(result.optString("error").ifBlank { "Bank details could not be loaded (HTTP $status)." })
+                        if (!result.optBoolean("configured")) {
+                            _adminPaymentConfig.value = AdminMasterPaymentConfig()
+                            "No admin bank account configured yet."
+                        } else {
+                            val bank = result.optString("bankName")
+                            val holder = result.optString("accountHolderName")
+                            val last4 = result.optString("accountLast4")
+                            val ifsc = result.optString("ifsc")
+                            _adminPaymentConfig.value = _adminPaymentConfig.value.copy(
+                                receivingBankName = bank,
+                                accountNumberMasked = if (last4.isNotBlank()) "••••••••$last4" else "Configured",
+                                ifscCode = ifsc,
+                                accountHolderName = holder
+                            )
+                            "Saved admin bank loaded •••• $last4"
+                        }
+                    } finally { connection.disconnect() }
+                }
+            }.onSuccess { _firestoreSyncStatus.value = it }
+                .onFailure { _firestoreSyncStatus.value = it.message ?: "Bank details could not be loaded." }
+        }
+    }
+
     fun saveAdminBankDetails(bankName: String, accountHolderName: String, accountNumber: String, ifsc: String) {
         val user = auth.currentUser ?: run { _firestoreSyncStatus.value = "Authorized Admin sign-in required."; return }
         val cleanAccount = accountNumber.filterNot { it.isWhitespace() }
