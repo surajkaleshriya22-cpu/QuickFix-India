@@ -499,6 +499,33 @@ fun ServiceBookingScreen(
                 }
             }
 
+            // Payment choice is explicit; customer checkout is not enabled until its
+            // verified payment-order and webhook lifecycle is implemented.
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("4. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = true, onClick = {})
+                        Column {
+                            Text("सेवा पूरी होने के बाद नकद (Cash)", fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Text("अभी कोई ऑनलाइन भुगतान नहीं लिया जाएगा।", fontSize = 11.sp, color = TextSecondary)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = false, onClick = {}, enabled = false)
+                        Column {
+                            Text("UPI / ऑनलाइन भुगतान", color = TextSecondary)
+                            Text("ग्राहक भुगतान की सुरक्षित सुविधा अभी चालू नहीं है।", fontSize = 11.sp, color = TextSecondary)
+                        }
+                    }
+                }
+            }
+
             // QuickFix Admin Escrow Buyer Protection Badge
             Surface(
                 color = Color(0xFFEFF6FF),
