@@ -191,7 +191,9 @@ fun AdminDashboardScreen(
                     onApprovePayout = { pId -> viewModel.adminApprovePayout(pId) },
                     onHoldPayout = { pId, reason -> viewModel.adminHoldPayout(pId, reason) },
                     onIssueRefund = { bId, amt, reason -> viewModel.adminIssueCustomerRefund(bId, amt, reason) },
-                    onUpdateAdminConfig = { cfg -> viewModel.updateAdminPaymentConfig(cfg) }
+                    onUpdateAdminConfig = { cfg -> viewModel.updateAdminPaymentConfig(cfg) },
+                    onSaveAdminBank = { bank, holder, account, ifsc -> viewModel.saveAdminBankDetails(bank, holder, account, ifsc) },
+                    bankSaveStatus = firestoreStatus
                 )
                 AdminTab.REVIEWS -> ReviewsTab(bookings = bookings)
                 AdminTab.FIRESTORE -> FirestoreTab(
@@ -595,7 +597,9 @@ fun CommissionsTab(
     onApprovePayout: (String) -> Unit,
     onHoldPayout: (String, String) -> Unit,
     onIssueRefund: (String, Int, String) -> Unit,
-    onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit
+    onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit,
+    onSaveAdminBank: (String, String, String, String) -> Unit,
+    bankSaveStatus: String
 ) {
     var elecPct by remember { mutableStateOf(settings.electricianCommissionPct.toString()) }
     var plumbPct by remember { mutableStateOf(settings.plumberCommissionPct.toString()) }
@@ -603,7 +607,10 @@ fun CommissionsTab(
 
     var masterUpi by remember { mutableStateOf(adminConfig.masterUpiVpa) }
     var masterBank by remember { mutableStateOf(adminConfig.receivingBankName) }
-    var configSavedMsg by remember { mutableStateOf(false) }
+    var bankNameInput by remember { mutableStateOf("") }
+    var bankHolderInput by remember { mutableStateOf("") }
+    var bankAccountInput by remember { mutableStateOf("") }
+    var bankIfscInput by remember { mutableStateOf("") }
 
     var activeSubTab by remember { mutableStateOf("master_account") } // "master_account", "payouts", "history", "reports", "settings"
     var statusFilter by remember { mutableStateOf("all") } // "all", "paid", "pending", "failed"
@@ -726,49 +733,16 @@ fun CommissionsTab(
                     Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
 
-                    OutlinedTextField(
-                        value = masterUpi,
-                        onValueChange = { masterUpi = it },
-                        label = { Text("Master UPI VPA (Customer Collections)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = masterBank,
-                        onValueChange = { masterBank = it },
-                        label = { Text("Receiving Bank & Account Details") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Surface(
-                        color = Color(0xFFF8FAFC),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Corporate Entity: ${adminConfig.corporateEntity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
-                            Text("Account: ${adminConfig.accountNumberMasked} • IFSC: ${adminConfig.ifscCode}", fontSize = 11.sp, color = TextSecondary)
-                            Text("Payment provider: Not connected", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
-                            Text("Payouts, escrow, and bank transfers are not active. Saving details below does not move money.", fontSize = 11.sp, color = Color(0xFFB45309), fontWeight = FontWeight.SemiBold)
-                        }
+                    Text("Saved bank account: ${adminConfig.receivingBankName} • ${adminConfig.accountNumberMasked} • IFSC ${adminConfig.ifscCode}", fontSize = 12.sp, color = TextPrimary)
+                    OutlinedTextField(value = bankNameInput, onValueChange = { bankNameInput = it }, label = { Text("Bank name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text("New bank account number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = bankIfscInput, onValueChange = { bankIfscInput = it.uppercase().take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Text("Server encrypts bank details. Saving bank information does not transfer money or activate payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
+                    Button(onClick = { onSaveAdminBank(bankNameInput, bankHolderInput, bankAccountInput, bankIfscInput); bankAccountInput = "" }, colors = ButtonDefaults.buttonColors(containerColor = DeepBlue), modifier = Modifier.fillMaxWidth()) {
+                        Text("Save / Update Admin Bank Account", fontWeight = FontWeight.Bold)
                     }
-
-                    Button(
-                        onClick = {
-                            val updated = adminConfig.copy(masterUpiVpa = masterUpi, receivingBankName = masterBank)
-                            onUpdateAdminConfig(updated)
-                            configSavedMsg = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepBlue),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save Gateway Configuration", fontWeight = FontWeight.Bold)
-                    }
-
-                    if (configSavedMsg) {
-                        Text("Admin reference details saved. This does not activate a payment gateway or transfer funds.", color = Color(0xFFB45309), fontSize = 12.sp)
-                    }
+                    if (bankSaveStatus.isNotBlank()) Text(bankSaveStatus, fontSize = 12.sp, color = TextSecondary)
                 }
             }
         }
