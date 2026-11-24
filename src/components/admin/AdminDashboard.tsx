@@ -1722,11 +1722,11 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Status Update Success Banner */}
-            {statusUpdateSuccessMsg && (
-              <div className="p-3 bg-emerald-950/80 border border-emerald-700 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{statusUpdateSuccessMsg}</span>
+            {/* Backend action notice: no success is implied for disabled client-side mutations. */}
+            {statusUpdateNoticeMsg && (
+              <div role="status" className="p-3 bg-amber-950/80 border border-amber-700 rounded-xl text-amber-200 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
+                <span>{statusUpdateNoticeMsg}</span>
               </div>
             )}
 
@@ -2544,8 +2544,8 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     {saveMessage && (
-                      <div className="p-3 bg-emerald-950 border border-emerald-700 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div role="status" className="p-3 bg-amber-950 border border-amber-700 rounded-xl text-amber-200 text-xs font-semibold flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
                         <span>{saveMessage}</span>
                       </div>
                     )}
