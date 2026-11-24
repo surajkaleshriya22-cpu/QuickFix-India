@@ -133,8 +133,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     setBasketLines(current => current.filter((_, i) => i !== index));
     setRateQuote(null);
   };
-  const basePrice = rateQuote?.quote?.totalMinimum ?? null;
-  const quoteMaximum = rateQuote?.quote?.totalMaximum ?? null;
+  const basePrice = rateQuote?.allPriced ? rateQuote.totalMinimum : null;
+  const quoteMaximum = rateQuote?.allPriced ? rateQuote.totalMaximum : null;
   const totalAmount = basePrice === null ? null : basePrice;
 
   const slotOptions = [
@@ -591,14 +591,29 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
             <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Local Price Estimate</div>
             <div className="text-[11px] text-slate-600">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel}) · {billingProfile.note}</div>
+            <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
+              {isLoadingQuote ? 'Calculating total…' : 'Calculate item-wise total'}
+            </button>
+            {quoteMessage && <p className="text-[11px] text-slate-600" role="status">{quoteMessage}</p>}
             {rateQuote ? (
               <>
-                <div className="flex justify-between text-sm"><span>Approved rate range</span><strong>₹{rateQuote.quote.totalMinimum} – ₹{rateQuote.quote.totalMaximum}</strong></div>
-                <div className="text-[10px] text-slate-500">Source: {rateQuote.source.name}. Materials {rateQuote.quote.materialsIncluded ? 'included' : 'extra'}. Estimate only; customer approval is required before work starts.</div>
+                {rateQuote.lines.map((line: any) => (
+                  <div key={line.serviceId} className="flex items-start justify-between gap-3 border-t border-slate-200 pt-2 text-xs">
+                    <div><strong>{line.title}</strong><div className="text-[10px] text-slate-500">Qty {line.quantity} · {line.unit}</div>
+                      {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
+                    </div>
+                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'After inspection'}</strong>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold">
+                  <span>{rateQuote.allPriced ? 'Estimated total' : 'Priced items subtotal'}</span>
+                  <strong>₹{rateQuote.totalMinimum} – ₹{rateQuote.totalMaximum}</strong>
+                </div>
+                <div className="text-[10px] text-slate-500">Rates are from approved local rate cards. Unpriced work is excluded until inspection; no payment is collected for an unpriced basket.</div>
               </>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                Is location/service ke liye approved rate card nahi mila to booking inspection/quotation request ke roop mein jayegi. Abhi koi final price ya payment collect nahi hogi.
+                Published rate cards se total calculate karein. Jis item ka rate available nahi hoga, uska quotation inspection ke baad hoga.
               </div>
             )}
           </div>
