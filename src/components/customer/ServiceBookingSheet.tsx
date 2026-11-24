@@ -147,9 +147,12 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
 
   const fetchRateQuote = async () => {
-    const qty = Number(quantity);
-    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || !Number.isFinite(qty) || qty <= 0) {
-      setQuoteMessage('Rate dekhne ke liye State, District, Tehsil aur sahi quantity bharein.');
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || basketServices.length !== basketLines.length) {
+      setQuoteMessage('Total calculate karne ke liye State, District, Tehsil aur har work item select karein.');
+      return;
+    }
+    if (basketLines.some(line => !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0 || Number(line.quantity) > 100000)) {
+      setQuoteMessage('Har item ki quantity 0 se zyada aur valid honi chahiye.');
       return;
     }
     const user = auth.currentUser;
@@ -162,22 +165,34 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     setQuoteMessage('');
     try {
       const token = await user.getIdToken();
-      const params = new URLSearchParams({
-        state: stateName.trim(), district: districtName.trim(), city: currentCity,
-        tehsil: tehsilName.trim(), serviceCategory: service.category,
-        serviceId: service.id, unit: billingProfile.unit, date: selectedDate,
-        quantity: String(qty)
-      });
-      const response = await fetch(`/api/rates/quote?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setQuoteMessage(data.error || 'Is location ke liye approved rate abhi uplabdh nahi hai.');
-        return;
-      }
-      setRateQuote(data);
-      setQuoteMessage('Yeh approved local rate card ke hisaab se estimate hai. Final amount kaam shuru hone se pehle confirm hoga.');
+      const results = await Promise.all(basketServices.map(async line => {
+        const billing = getBillingProfile(line.service!);
+        const params = new URLSearchParams({
+          state: stateName.trim(), district: districtName.trim(), city: currentCity,
+          tehsil: tehsilName.trim(), serviceCategory: line.service!.category,
+          serviceId: line.serviceId, unit: billing.unit, date: selectedDate,
+          quantity: String(Number(line.quantity))
+        });
+        const response = await fetch(`/api/rates/quote?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          return { serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit, priced: false, error: data.error || 'Rate not published' };
+        }
+        return {
+          serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit,
+          priced: true, minimum: data.quote.totalMinimum, maximum: data.quote.totalMaximum,
+          materialsIncluded: data.quote.materialsIncluded, source: data.source?.name || 'Published local rate'
+        };
+      }));
+      const allPriced = results.every(line => line.priced);
+      const totalMinimum = results.reduce((sum, line) => sum + (line.priced ? line.minimum : 0), 0);
+      const totalMaximum = results.reduce((sum, line) => sum + (line.priced ? line.maximum : 0), 0);
+      setRateQuote({ lines: results, allPriced, totalMinimum, totalMaximum });
+      setQuoteMessage(allPriced
+        ? 'Har item ka rate published local rate card se calculate hua hai.'
+        : 'Kuch items ka published rate nahi mila. Unka estimate inspection ke baad milega; abhi payment nahi hogi.');
     } catch {
       setQuoteMessage('Rate service abhi available nahi hai. Aap inspection/quotation booking bhej sakte hain.');
     } finally {
