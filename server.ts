@@ -434,6 +434,37 @@ const validHmac = (secret: string, message: Buffer | string, supplied: string) =
 const razorpayFetch = (url: string, cfg: {keyId:string;keySecret:string}, init?: RequestInit) =>
   fetch(url, { ...init, signal: init?.signal || AbortSignal.timeout(15000), headers: { Authorization: 'Basic ' + Buffer.from(cfg.keyId + ':' + cfg.keySecret).toString('base64'), 'Content-Type':'application/json', ...(init?.headers || {}) } });
 
+// Safe payment readiness diagnostic. Never returns key IDs, secrets, or webhook values.
+app.get('/api/payments/razorpay/status', authenticateFirebaseUser, (_req: Request, res: Response) => {
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim() || '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim() || '';
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || '';
+  const mode = (process.env.RAZORPAY_MODE || 'test').trim().toLowerCase();
+  const validMode = mode === 'test' || mode === 'live';
+  const validKeyPrefix = mode === 'test'
+    ? keyId.startsWith('rzp_test_')
+    : mode === 'live' && keyId.startsWith('rzp_live_');
+  const checks = {
+    keyIdPresent: Boolean(keyId),
+    keySecretPresent: Boolean(keySecret),
+    keyModeMatches: Boolean(keyId && validMode && validKeyPrefix),
+    webhookSecretPresent: Boolean(webhookSecret),
+    modeValid: validMode
+  };
+  const ready = Object.values(checks).every(Boolean);
+  return res.json({
+    success: true,
+    provider: 'razorpay',
+    mode: validMode ? mode : 'invalid',
+    configured: ready,
+    checks,
+    missing: Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name),
+    note: ready
+      ? 'Credentials are present. A real test payment is still required before enabling live payments.'
+      : 'Payment is safely disabled until the missing server-side configuration is completed.'
+  });
+});
+
 app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: Request, res: Response) => {
   const cfg = razorpayConfig();
   if (!cfg || !firebaseAdminApp) return res.status(503).json({success:false,error:'Razorpay Test Mode credentials are not safely configured.'});
