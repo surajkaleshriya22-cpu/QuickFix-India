@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
 
 export const PartnerUpiQrCard: React.FC = () => {
@@ -15,29 +16,40 @@ export const PartnerUpiQrCard: React.FC = () => {
   const paymentUri = useMemo(() => savedUpiId ? 'upi://pay?' + new URLSearchParams({ pa: savedUpiId, pn: payeeName || 'QuickFix Partner', cu: 'INR' }).toString() : '', [savedUpiId, payeeName]);
   useEffect(() => {
     let active = true;
-    if (!paymentUri) { setQrDataUrl(''); return () => { active = false; }; }
-    void QRCode.toDataURL(paymentUri, { width: 240, margin: 2, errorCorrectionLevel: 'M' })
-      .then((url: string) => { if (active) setQrDataUrl(url); })
-      .catch(() => { if (active) { setQrDataUrl(''); setError('QR code could not be generated on this device.'); } });
-    return () => { active = false; };
-  }, [paymentUri]);
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
+    let unsubscribe: (() => void) | undefined;
+    if (!isFirebaseConfigured) {
+      setError('Firebase is not configured for this app.');
+      setLoading(false);
+      return;
+    }
+    unsubscribe = onAuthStateChanged(auth, async user => {
+      if (!active) return;
+      if (!user) {
+        setError('Please sign in with your Channel Partner account.');
+        setLoading(false);
+        return;
+      }
       try {
-        const user = auth.currentUser;
-        if (!isFirebaseConfigured || !user) throw new Error('Please sign in with your Channel Partner account.');
         const token = await user.getIdToken();
         const response = await fetch('/api/partners/payment-profile', { headers: { Authorization: 'Bearer ' + token } });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.error || 'UPI profile could not be loaded.');
-        if (active) { setUpiId(result.upiId || ''); setSavedUpiId(result.upiId || ''); setPayeeName(result.payeeName || ''); }
-      } catch (e) { if (active) setError(e instanceof Error ? e.message : 'UPI profile could not be loaded.'); }
-      finally { if (active) setLoading(false); }
+        if (active) {
+          setUpiId(result.upiId || '');
+          setSavedUpiId(result.upiId || '');
+          setPayeeName(result.payeeName || '');
+          setError('');
+        }
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : 'UPI profile could not be loaded.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe?.();
     };
-    void load();
-    return () => { active = false; };
   }, []);
 
   const save = async () => {
