@@ -354,10 +354,10 @@ export const TechnicianPortal: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => setShowRegisterForm(true)}
                 className="w-full text-xs text-blue-600 hover:underline font-semibold text-center block pt-1"
               >
-                New Service Technician? Register Trade & KYC
+                New Channel Partner? Register your services
               </button>
             </div>
           ) : (
@@ -373,19 +373,26 @@ export const TechnicianPortal: React.FC = () => {
                 />
               </div>
 
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                <div className="font-bold text-slate-700">Verified Mobile Number</div>
+                <p className="text-slate-600">{auth.currentUser?.phoneNumber || 'Mobile OTP verification is required before submitting your partner profile.'}</p>
+                {!auth.currentUser?.phoneNumber && (
+                  <button type="button" onClick={() => setShowAuthModal(true)} className="w-full rounded-lg bg-blue-600 text-white font-bold py-2">
+                    Verify Mobile Number with OTP
+                  </button>
+                )}
+              </div>
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Mobile Number</label>
-                <input
-                  type="tel"
-                  value={regPhone}
-                  onChange={e => setRegPhone(e.target.value)}
-                  placeholder="+91 98450..."
-                  className="w-full p-2 rounded-lg border border-slate-300"
-                />
+                <label className="font-bold text-slate-700 block mb-1">Email Address</label>
+                <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="name@example.com" className="w-full p-2 rounded-lg border border-slate-300" autoComplete="email"/>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Work Experience (years)</label>
+                <input type="number" min="0" max="60" value={regExp} onChange={e => setRegExp(Math.min(60, Math.max(0, Number(e.target.value) || 0)))} className="w-full p-2 rounded-lg border border-slate-300"/>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Select Trade</label>
+                <label className="font-bold text-slate-700 block mb-1">Select your service categories</label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     ['electrician','Electrician'],['plumber','Plumber'],['technician','Technician (AC / Fridge / Appliances)'],
@@ -399,7 +406,14 @@ export const TechnicianPortal: React.FC = () => {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setRegTrades(id === 'technician' ? ['ac_repair', 'fridge_repair', 'appliance_repair'] : [id])}
+                      onClick={() => {
+                        const selected = (id === 'technician'
+                          ? ['ac_repair', 'fridge_repair', 'appliance_repair']
+                          : [id]) as ServiceCategoryType[];
+                        setRegTrades(current => selected.every(trade => current.includes(trade))
+                          ? current.filter(trade => !selected.includes(trade))
+                          : [...new Set([...current, ...selected])]);
+                      }}
                       className={`py-2 px-2 rounded-lg border text-left text-xs font-semibold ${(id === 'technician' ? ['ac_repair', 'fridge_repair', 'appliance_repair'].every(trade => regTrades.includes(trade as ServiceCategoryType)) : regTrades.includes(id as ServiceCategoryType)) ? 'bg-blue-100 text-blue-900 border-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
                     >
                       {label}
@@ -409,7 +423,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Operating City (शहर)</label>
+                <label className="font-bold text-slate-700 block mb-1">Operating City / Service Area (शहर)</label>
                 <select
                   value={regCity}
                   onChange={e => setRegCity(e.target.value)}
@@ -443,7 +457,7 @@ export const TechnicianPortal: React.FC = () => {
                   try {
                     const res = await registerTechnician({
                       name: regName.trim(),
-                      phone: regPhone,
+                      phone: auth.currentUser.phoneNumber || regPhone,
                       email: regEmail.trim(),
                       trades: regTrades,
                       experienceYears: Math.max(0, regExp),
@@ -458,7 +472,7 @@ export const TechnicianPortal: React.FC = () => {
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl mt-2 transition-colors"
               >
-                Submit Basic Partner Registration
+                Submit Channel Partner Registration
               </button>
 
               <button
