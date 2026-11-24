@@ -574,7 +574,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       scheduledTimeSlot,
       city: String(profile.city || '').slice(0, 100),
       pincode: String(profile.pincode || '').slice(0, 12),
-      serviceArea: { state: serviceArea.state.trim(), district: serviceArea.district.trim(), tehsil: serviceArea.tehsil.trim() },
+      serviceArea: { state: serviceArea.state.trim(), district: serviceArea.district.trim(), tehsil: serviceArea.tehsil.trim(), stateKey: serviceAreaKey(serviceArea.state), districtKey: serviceAreaKey(serviceArea.district) },
       ...(customerLocation ? { customerLocation: { latitude: customerLocation.latitude, longitude: customerLocation.longitude, capturedAt: FieldValue.serverTimestamp() } } : {}),
       quantity: primary.quantity,
       billingUnit: primary.billing.unit,
