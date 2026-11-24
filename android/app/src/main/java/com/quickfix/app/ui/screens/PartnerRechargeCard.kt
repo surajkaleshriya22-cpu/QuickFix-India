@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.razorpay.Checkout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,7 +67,7 @@ private suspend fun rechargeApi(path: String, payload: JSONObject? = null): JSON
 }
 
 private suspend fun com.google.android.gms.tasks.Task<com.google.firebase.auth.GetTokenResult>.awaitToken(): String? =
-    kotlinx.coroutines.tasks.await(this).token
+    this.await().token
 
 @Composable
 fun PartnerRechargeCard() {
