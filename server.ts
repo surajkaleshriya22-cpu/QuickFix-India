@@ -282,6 +282,40 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   }
 });
 
+// Partner-owned UPI payment profile. This only publishes a verified-format VPA for QR display;
+// it does not confirm payments or change booking payment status.
+app.get('/api/partners/payment-profile', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner payment profile is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const profile = snap.data()!;
+    return res.json({ success: true, upiId: typeof profile.paymentUpiId === 'string' ? profile.paymentUpiId : '', payeeName: String(profile.displayName || '').slice(0, 80) });
+  } catch (error) {
+    console.error('Partner payment profile read failed:', error);
+    return res.status(500).json({ success: false, error: 'Payment profile could not be loaded.' });
+  }
+});
+
+app.put('/api/partners/payment-profile', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner payment profile is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const upiId = typeof req.body?.upiId === 'string' ? req.body.upiId.trim().toLowerCase() : '';
+    if (upiId.length > 100 || !/^[a-z0-9][a-z0-9._-]{1,80}@[a-z0-9][a-z0-9.-]{1,30}$/.test(upiId)) return res.status(400).json({ success: false, error: 'Enter a valid UPI ID, for example name@bank.' });
+    const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    await ref.update({ paymentUpiId: upiId, paymentUpiUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    return res.json({ success: true, upiId, payeeName: String(snap.data()?.displayName || '').slice(0, 80) });
+  } catch (error) {
+    console.error('Partner payment profile update failed:', error);
+    return res.status(500).json({ success: false, error: 'UPI ID could not be saved securely.' });
+  }
+});
+
 // Partner recharge: package prices are server-owned; payments are verified against Razorpay before subscription activation.
 app.get('/api/partners/recharge/packages', authenticateFirebaseUser, async (_req: Request, res: Response) => {
   try {
