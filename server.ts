@@ -1408,6 +1408,170 @@ const getAI = () => {
 };
 
 // 1. Maps Grounding API with gemini-3.8-flash & googleMaps tool
+// Consent-based live location API. Coordinates are server-owned and never exposed
+// through direct client Firestore access. Both booking participants must opt in.
+const liveLocationStatuses = new Set(['assigned', 'technician_en_route', 'in_progress']);
+const validCoordinates = (lat: unknown, lng: unknown) =>
+  typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+  typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+
+async function getLiveLocationParticipant(bookingId: string, uid: string) {
+  const db = getFirestore(firebaseAdminApp!);
+  const ref = db.collection('bookings').doc(bookingId);
+  const snap = await ref.get();
+  if (!snap.exists) return { error: 'BOOKING_NOT_FOUND' as const };
+  const booking = snap.data()!;
+  const role = booking.customerUid === uid ? 'customer'
+    : (booking.technicianUid === uid || booking.assignedPartnerUid === uid) ? 'partner' : null;
+  if (!role) return { error: 'NOT_A_BOOKING_PARTICIPANT' as const };
+  if (!liveLocationStatuses.has(String(booking.status))) {
+    // A completed/cancelled booking must not retain readable GPS points.
+    // Cleanup is idempotent and runs whenever either participant next accesses tracking.
+    const partnerUid = booking.technicianUid || booking.assignedPartnerUid;
+    const participantUids = [booking.customerUid, partnerUid].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0
+    );
+    await Promise.all(participantUids.map((participantUid) =>
+      ref.collection('liveLocations').doc(participantUid).delete().catch((error) => {
+        console.warn('Could not clear ended-booking live-location point:', error);
+      })
+    ));
+    return { error: 'TRACKING_NOT_AVAILABLE_FOR_BOOKING_STATUS' as const };
+  }
+  return { ref, booking, role };
+}
+
+app.get('/api/bookings/:bookingId/location/consent', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
+    if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
+    const sharing = participant.booking.locationSharing || {};
+    return res.json({
+      success: true,
+      ownEnabled: sharing[participant.role + 'Enabled'] === true,
+      otherEnabled: sharing[participant.role === 'customer' ? 'partnerEnabled' : 'customerEnabled'] === true,
+    });
+  } catch (error) {
+    console.error('Live location consent lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not load location sharing permission.' });
+  }
+});
+
+app.post('/api/bookings/:bookingId/location/consent', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const enabled = req.body?.enabled;
+    if (typeof enabled !== 'boolean') return res.status(400).json({ success: false, error: 'enabled must be true or false.' });
+    const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
+    if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
+    await participant.ref.update({
+      [`locationSharing.${participant.role}Enabled`]: enabled,
+      [`locationSharing.${participant.role}UpdatedAt`]: FieldValue.serverTimestamp(),
+    });
+    if (!enabled) {
+      // Revocation by either participant ends the shared session for both people.
+      // Remove both latest GPS points so a later re-consent cannot expose stale coordinates.
+      const locationsRef = participant.ref.collection('liveLocations');
+      const partnerUid = participant.booking.technicianUid || participant.booking.assignedPartnerUid;
+      const participantUids = [participant.booking.customerUid, partnerUid].filter(
+        (value): value is string => typeof value === 'string' && value.length > 0
+      );
+      await Promise.all(participantUids.map((participantUid) =>
+        locationsRef.doc(participantUid).delete().catch((error) => {
+          console.warn('Could not clear a revoked live-location point:', error);
+        })
+      ));
+    }
+    return res.json({ success: true, enabled });
+  } catch (error) {
+    console.error('Live location consent update failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not update location sharing consent.' });
+  }
+});
+
+app.post('/api/bookings/:bookingId/location', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const { lat, lng, accuracy } = req.body ?? {};
+    if (!validCoordinates(lat, lng) ||
+        (accuracy !== undefined && (typeof accuracy !== 'number' || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 10000))) {
+      return res.status(400).json({ success: false, error: 'GPS coordinates or accuracy are invalid.' });
+    }
+    const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
+    if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
+    const sharing = participant.booking.locationSharing || {};
+    if (sharing.customerEnabled !== true || sharing.partnerEnabled !== true) {
+      return res.status(403).json({ success: false, error: 'Both customer and Channel Partner must enable location sharing first.' });
+    }
+    const db = getFirestore(firebaseAdminApp!);
+    await participant.ref.collection('liveLocations').doc(uid).set({
+      uid, role: participant.role, lat, lng,
+      ...(accuracy === undefined ? {} : { accuracy }),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return res.json({ success: true, saved: true });
+  } catch (error) {
+    console.error('Live location update failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not update live location.' });
+  }
+});
+
+app.get('/api/bookings/:bookingId/location', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const participant = await getLiveLocationParticipant(req.params.bookingId, uid);
+    if ('error' in participant) return res.status(participant.error === 'BOOKING_NOT_FOUND' ? 404 : 403).json({ success: false, error: participant.error });
+    const sharing = participant.booking.locationSharing || {};
+    if (sharing.customerEnabled !== true || sharing.partnerEnabled !== true) {
+      return res.status(403).json({ success: false, error: 'Location is visible only after both participants opt in.' });
+    }
+    const db = getFirestore(firebaseAdminApp!);
+    const partnerUid = participant.booking.technicianUid || participant.booking.assignedPartnerUid;
+    if (typeof partnerUid !== 'string' || !partnerUid) {
+      return res.status(409).json({ success: false, error: 'This booking has no authenticated Channel Partner assignment yet.' });
+    }
+    const [customerSnap, partnerSnap] = await Promise.all([
+      participant.ref.collection('liveLocations').doc(participant.booking.customerUid).get(),
+      participant.ref.collection('liveLocations').doc(partnerUid).get(),
+    ]);
+    const now = Date.now();
+    const serialize = (snap: any) => {
+      if (!snap.exists) return null;
+      const data = snap.data()!;
+      const updatedAt = data.updatedAt?.toDate?.();
+      return {
+        role: data.role,
+        lat: data.lat,
+        lng: data.lng,
+        updatedAt: updatedAt ? updatedAt.toISOString() : null,
+        stale: !updatedAt || now - updatedAt.getTime() > 120000,
+      };
+    };
+    return res.json({ success: true, customer: serialize(customerSnap), partner: serialize(partnerSnap) });
+  } catch (error) {
+    console.error('Live location read failed:', error);
+    return res.status(500).json({ success: false, error: 'Could not read live locations.' });
+  }
+});
+
+// API routes must verify Firebase identity; admin routes must additionally use requireServerAdmin.
+app.use('/api/places', authenticateFirebaseUser);
+app.use('/api/audio', authenticateFirebaseUser);
+app.use('/api/music', authenticateFirebaseUser);
+
+// Create Gemini client lazily so the web app can boot before an API key is configured.
+const getAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured on the server.');
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'quickfix-india' } },
+  });
+};
+
+// 1. Maps Grounding API with gemini-3.8-flash & googleMaps tool
+
 app.post('/api/places/grounding', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     const { query, city, lat, lng } = req.body;
