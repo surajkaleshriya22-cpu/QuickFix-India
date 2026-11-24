@@ -28,6 +28,8 @@ service cloud.firestore {
 
       allow create: if isOwner(userId)
         && request.resource.data.uid == userId
+        // The stored phone must be the number Firebase Phone Auth verified.
+        && request.resource.data.phoneNumber == request.auth.token.phone_number
         // Partner profiles must be created only by the authenticated server API.
         // Client-side self-assignment of CHANNEL_PARTNER is not permitted.
         && request.resource.data.role == 'CUSTOMER'
