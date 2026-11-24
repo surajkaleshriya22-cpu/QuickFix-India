@@ -2680,15 +2680,15 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-xs font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
                     <span>ESCROW NOT CONFIGURED</span>
                   </span>
                 </div>
 
                 {/* Success Notification */}
                 {adminConfigSavedMsg && (
-                  <div className="p-3 bg-emerald-950/80 border border-emerald-700 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div role="status" className="p-3 bg-amber-950/80 border border-amber-700 rounded-xl text-amber-200 text-xs font-semibold flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" />
                     <span>{adminConfigSavedMsg}</span>
                   </div>
                 )}
@@ -2697,7 +2697,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Master Platform UPI</div>
-                    <div className="text-base font-bold text-indigo-400 font-mono">{adminPaymentConfig.merchantVpa}</div>
+                    <div className="text-base font-bold text-indigo-400 font-mono">Not configured</div>
                     <p className="text-[11px] text-slate-500">No live UPI routing is configured.</p>
                   </div>
 
@@ -2710,8 +2710,8 @@ export const AdminDashboard: React.FC = () => {
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Gateway & Escrow Mode</div>
-                    <div className="text-sm font-bold text-emerald-400">{adminPaymentConfig.gatewayProvider}</div>
-                    <div className="text-[11px] text-slate-400">Merchant ID: {adminPaymentConfig.merchantId}</div>
+                    <div className="text-sm font-bold text-amber-300">Not configured</div>
+                    <div className="text-[11px] text-slate-400">Merchant ID: not connected</div>
                     <div className="text-[10px] text-indigo-300 font-semibold">Server-side payout approval: not configured</div>
                   </div>
                 </div>
