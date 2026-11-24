@@ -424,11 +424,21 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     const validLines = Array.isArray(requestedLines) && requestedLines.length >= 1 && requestedLines.length <= 20 &&
       requestedLines.every((line: any) => line && typeof line.serviceId === 'string' && line.serviceId.length <= 120 &&
         Number.isFinite(line.quantity) && line.quantity > 0 && line.quantity <= 100000);
-    if (!validCustomerLocation || !validServiceArea || !validLines || typeof scheduledDate !== 'string' ||
-        typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' || !address.trim() || address.length > 500 ||
-        !isValidBookingDate(scheduledDate) || !/^[\p{L}\p{N}\s:().,+-]{1,80}$/u.test(scheduledTimeSlot) ||
-        !['upi', 'cash'].includes(paymentMethod) || (notes !== undefined && typeof notes !== 'string')) {
-      return res.status(400).json({ success: false, error: 'Booking details are invalid. Please check each work item, date, time, address and payment method.' });
+    const invalidFields: string[] = [];
+    if (!validCustomerLocation) invalidFields.push('customerLocation');
+    if (!validServiceArea) invalidFields.push('serviceArea (state, district, tehsil)');
+    if (!validLines) invalidFields.push('lineItems (service and quantity)');
+    if (typeof scheduledDate !== 'string' || !isValidBookingDate(scheduledDate)) invalidFields.push('scheduledDate');
+    if (typeof scheduledTimeSlot !== 'string' || !/^[\p{L}\p{N}\s:().,+-]{1,80}$/u.test(scheduledTimeSlot)) invalidFields.push('scheduledTimeSlot');
+    if (typeof address !== 'string' || !address.trim() || address.length > 500) invalidFields.push('address');
+    if (!['upi', 'cash'].includes(paymentMethod)) invalidFields.push('paymentMethod');
+    if (notes !== undefined && typeof notes !== 'string') invalidFields.push('notes');
+    if (invalidFields.length) {
+      return res.status(400).json({
+        success: false,
+        error: 'Booking details are invalid.',
+        invalidFields
+      });
     }
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking is temporarily unavailable.' });
 
