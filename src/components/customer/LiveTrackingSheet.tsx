@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Booking, BookingStatus } from '../../types';
 import { NearbyStoresModal } from './NearbyStoresModal';
+import { LiveLocationPanel } from '../maps/LiveLocationPanel';
 
 interface LiveTrackingSheetProps {
   booking: Booking;
@@ -62,20 +63,11 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Do not display fabricated partner/customer coordinates as live tracking. */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-2">
-          <div className="flex items-center gap-2 text-sm font-bold text-amber-900">
-            <MapPin className="h-4 w-4" />
-            <span>Live location sharing is not active</span>
-          </div>
-          <p className="text-xs leading-relaxed text-amber-900">
-            This booking view does not yet receive verified GPS updates from the assigned Channel Partner.
-            No moving marker, route, or arrival time is shown until both sides enable secure location sharing.
-          </p>
-          <div className="rounded-xl bg-white/80 px-3 py-2 text-xs text-slate-700">
-            **Service address:** {booking.customerAddress || 'Not provided'}
-          </div>
-        </div>
+        <LiveLocationPanel
+          bookingId={booking.id}
+          role="customer"
+          active={booking.status === 'assigned' || booking.status === 'technician_en_route' || booking.status === 'in_progress'}
+        />
 
           {/* Quick link to Nearby Hardware & Spare Parts Stores */}
           <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs shadow-2xs">
