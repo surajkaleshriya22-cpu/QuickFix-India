@@ -1379,10 +1379,17 @@ app.post('/api/partners/bookings/:bookingId/complete', authenticateFirebaseUser,
       const booking = bookingSnap.data()!;
       if (booking.technicianUid !== identity.uid) throw new Error('NOT_ASSIGNED_PARTNER');
       if (booking.status !== 'in_progress') throw new Error('INVALID_BOOKING_STATE');
-      transaction.update(bookingRef, { status: 'completed', completedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      transaction.update(bookingRef, {
+        status: 'completed',
+        locationSharing: { customerEnabled: false, partnerEnabled: false },
+        completedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
       transaction.create(auditRef, { action: 'service_completed', bookingId, partnerUid: identity.uid, createdAt: FieldValue.serverTimestamp() });
     });
-    return res.json({ success: true, bookingId, status: 'completed', message: 'Service completion recorded. Payment settlement is not implied.' });
+    const liveLocationSnapshot = await bookingRef.collection('liveLocations').get();
+    await Promise.all(liveLocationSnapshot.docs.map(locationDoc => locationDoc.ref.delete()));
+    return res.json({ success: true, bookingId, status: 'completed', locationsCleared: liveLocationSnapshot.size, message: 'Service completion recorded. Shared GPS points were cleared; payment settlement is not implied.' });
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
     if (code === 'BOOKING_NOT_FOUND') return res.status(404).json({ success: false, error: 'Booking was not found.' });
