@@ -23,6 +23,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const [rateQuote, setRateQuote] = useState<any>(null);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [paymentMessage, setPaymentMessage] = useState('');
 
   const dateOptions = [
     { label: 'Today', value: getIndiaBookingDate(0) },
@@ -165,6 +167,89 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     }
   };
 
+  const openRazorpayCheckout = async (bookingId: string): Promise<{ paid: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user) return { paid: false, message: 'Please sign in again before payment.' };
+    const token = await user.getIdToken();
+    const orderResponse = await fetch('/api/payments/razorpay/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ bookingId })
+    });
+    const order = await orderResponse.json().catch(() => ({}));
+    if (!orderResponse.ok || !order.success || !order.orderId || !order.keyId) {
+      return { paid: false, message: order.error || 'UPI payment is not available right now. Your booking remains unpaid.' };
+    }
+
+    const RazorpayCheckout = (window as any).Razorpay;
+    if (!RazorpayCheckout) {
+      await new Promise<void>((resolve, reject) => {
+        const existing = document.querySelector('script[data-quickfix-razorpay="true"]') as HTMLScriptElement | null;
+        if (existing) {
+          existing.addEventListener('load', () => resolve(), { once: true });
+          existing.addEventListener('error', () => reject(new Error('Razorpay checkout could not load.')), { once: true });
+          if ((window as any).Razorpay) resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        script.dataset.quickfixRazorpay = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Razorpay checkout could not load.'));
+        document.body.appendChild(script);
+      });
+    }
+    const Checkout = (window as any).Razorpay;
+    if (!Checkout) return { paid: false, message: 'Secure payment window could not be opened.' };
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result: { paid: boolean; message: string }) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+      const checkout = new Checkout({
+        key: order.keyId,
+        amount: order.amount,
+        currency: 'INR',
+        name: 'QuickFix India',
+        description: `Service booking ${bookingId}`,
+        order_id: order.orderId,
+        method: { upi: true, card: false, netbanking: false, wallet: false },
+        handler: async (response: any) => {
+          try {
+            const verifyResponse = await fetch('/api/payments/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                bookingId,
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              })
+            });
+            const verification = await verifyResponse.json().catch(() => ({}));
+            if (!verifyResponse.ok || !verification.success || verification.paymentStatus !== 'paid') {
+              finish({ paid: false, message: verification.error || 'Payment could not be verified. Do not retry until your bank/payment app confirms the result.' });
+              return;
+            }
+            finish({ paid: true, message: 'UPI payment verified successfully.' });
+          } catch {
+            finish({ paid: false, message: 'Payment verification is temporarily unavailable. Your payment status will remain unconfirmed until the server verifies it.' });
+          }
+        },
+        modal: { ondismiss: () => finish({ paid: false, message: 'Payment window closed. Your booking is saved and remains unpaid until verification.' }) },
+        theme: { color: '#2563eb' }
+      });
+      checkout.on('payment.failed', (event: any) => {
+        finish({ paid: false, message: event?.error?.description || 'UPI payment failed. Your booking remains unpaid.' });
+      });
+      checkout.open();
+    });
+  };
+
   const handleConfirm = async () => {
     if (isSubmitting) return;
     if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || Number(quantity) <= 0) {
@@ -176,24 +261,49 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
       setIsEditingAddress(true);
       return;
     }
+    if (paymentMethod === 'upi' && !pendingBookingId && !rateQuote) {
+      window.alert('UPI payment ke liye pehle approved local rate check karein. Bina approved rate ke payment nahi li jayegi.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const result = await submitCustomerBooking({
-        serviceId: service.id,
-        scheduledDate: selectedDate,
-        scheduledTimeSlot: selectedSlot,
-        address: selectedAddress,
-        notes,
-        paymentMethod,
-        serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
-        quantity: Number(quantity)
-      });
-      if (!result.success || !result.bookingId) {
-        window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
-        return;
+      let bookingId = pendingBookingId;
+      if (!bookingId) {
+        const result = await submitCustomerBooking({
+          serviceId: service.id,
+          scheduledDate: selectedDate,
+          scheduledTimeSlot: selectedSlot,
+          address: selectedAddress,
+          notes,
+          paymentMethod,
+          serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
+          quantity: Number(quantity)
+        });
+        if (!result.success || !result.bookingId) {
+          window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
+          return;
+        }
+        bookingId = result.bookingId;
+        setPendingBookingId(bookingId);
       }
-      window.alert(`Booking request successfully save ho gayi. Request ID: ${result.bookingId}. Abhi koi payment collect nahi hui hai; payment status pending rahega.`);
-      onSuccess(result.bookingId);
+
+      if (paymentMethod === 'upi') {
+        setPaymentMessage('Secure UPI checkout khol rahe hain…');
+        const payment = await openRazorpayCheckout(bookingId);
+        setPaymentMessage(payment.message);
+        if (!payment.paid) {
+          window.alert(`${payment.message} Booking ID: ${bookingId}`);
+          return;
+        }
+        window.alert(`Payment verified. QuickFix booking confirmed. Booking ID: ${bookingId}`);
+      } else {
+        window.alert(`Booking request successfully save ho gayi. Request ID: ${bookingId}. Payment service ke baad cash mein hogi.`);
+      }
+      onSuccess(bookingId);
+    } catch (error: any) {
+      const message = error?.message || 'Secure checkout could not be opened.';
+      setPaymentMessage(message);
+      window.alert(`${message} Booking unpaid rahegi. Koi successful payment tabhi mani jayegi jab server verify kare. ${pendingBookingId ? `Booking ID: ${pendingBookingId}` : ''}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -420,12 +530,13 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               </button>
             </div>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-amber-900 leading-relaxed">
-                UPI collection and escrow are not active yet. QuickFix will not collect or mark any payment as paid until a verified payment gateway is connected.
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
+              <Shield className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-blue-900 leading-relaxed">
+                UPI payment opens through Razorpay Test Mode when the server is configured. QuickFix marks payment paid only after server-side signature and gateway verification. Gateway payment is not escrow or partner payout.
               </p>
             </div>
+            {paymentMessage && <p className="text-xs text-slate-700" role="status">{paymentMessage}</p>}
           </div>
 
           {/* Server-approved local quote; no mock starting price is presented as payable. */}
@@ -458,7 +569,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             disabled={isSubmitting}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving Request...</> : <span>Confirm Service Request</span>}
+            {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <span>{pendingBookingId && paymentMethod === 'upi' ? 'Retry UPI Payment' : paymentMethod === 'upi' ? 'Book & Pay by UPI' : 'Confirm Service Request'}</span>}
           </button>
         </div>
       </div>
