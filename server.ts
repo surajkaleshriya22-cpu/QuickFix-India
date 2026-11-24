@@ -275,6 +275,107 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   }
 });
 
+// Partner recharge: package prices are server-owned; payments are verified against Razorpay before subscription activation.
+app.get('/api/partners/recharge/packages', authenticateFirebaseUser, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge is temporarily unavailable.' });
+    const snap = await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').get();
+    const configured = snap.data()?.packages;
+    const packages = Array.isArray(configured) ? configured.filter((p: any) =>
+      p && p.active === true && typeof p.id === 'string' && typeof p.name === 'string' &&
+      Number.isInteger(p.amountPaise) && p.amountPaise >= 100 && p.amountPaise <= 100000000 &&
+      Number.isInteger(p.durationDays) && p.durationDays >= 1 && p.durationDays <= 3650
+    ).map((p: any) => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, currency: 'INR' })) : [];
+    return res.json({ success: true, packages });
+  } catch (error) {
+    console.error('Recharge packages read failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge packages could not be loaded.' });
+  }
+});
+
+app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge settings are unavailable.' });
+    const packages = req.body?.packages;
+    if (!Array.isArray(packages) || packages.length < 1 || packages.length > 20) return res.status(400).json({ success: false, error: 'Provide between 1 and 20 packages.' });
+    const ids = new Set<string>();
+    const clean = [];
+    for (const p of packages) {
+      if (!p || typeof p.id !== 'string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(p.id) || ids.has(p.id) ||
+          typeof p.name !== 'string' || !p.name.trim() || p.name.trim().length > 80 ||
+          !Number.isInteger(p.amountRupees) || p.amountRupees < 1 || p.amountRupees > 1000000 ||
+          !Number.isInteger(p.durationDays) || p.durationDays < 1 || p.durationDays > 3650 ||
+          typeof p.active !== 'boolean') return res.status(400).json({ success: false, error: 'A package has invalid ID, name, amount, duration or active status.' });
+      ids.add(p.id);
+      clean.push({ id: p.id, name: p.name.trim(), amountPaise: p.amountRupees * 100, durationDays: p.durationDays, active: p.active });
+    }
+    await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').set({ packages: clean, updatedAt: FieldValue.serverTimestamp(), updatedBy: (req as AuthenticatedRequest).firebaseUser!.uid }, { merge: true });
+    return res.json({ success: true, packages: clean.map(p => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, active: p.active })) });
+  } catch (error) {
+    console.error('Recharge packages update failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge packages could not be saved.' });
+  }
+});
+
+app.post('/api/partners/recharge/orders', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge is temporarily unavailable.' });
+    const cfg = razorpayConfig();
+    if (!cfg) return res.status(503).json({ success: false, error: 'Razorpay is not configured; no payment was collected.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const db = getFirestore(firebaseAdminApp);
+    const profileRef = db.collection('users').doc(uid);
+    const [profile, setting] = await Promise.all([profileRef.get(), db.collection('settings').doc('partner_recharge').get()]);
+    if (!profile.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Channel Partner account required.' });
+    const packageId = typeof req.body?.packageId === 'string' ? req.body.packageId : '';
+    const pkg = (Array.isArray(setting.data()?.packages) ? setting.data()!.packages : []).find((p: any) => p?.id === packageId && p.active === true);
+    if (!pkg || !Number.isInteger(pkg.amountPaise) || !Number.isInteger(pkg.durationDays)) return res.status(400).json({ success: false, error: 'Select an active recharge package.' });
+    const ref = db.collection('partner_recharge_payments').doc();
+    const response = await razorpayFetch('https://api.razorpay.com/v1/orders', cfg, { method: 'POST', body: JSON.stringify({ amount: pkg.amountPaise, currency: 'INR', receipt: 'qfr_' + ref.id.slice(0, 32), notes: { rechargeId: ref.id, partnerUid: uid, packageId: pkg.id } }) });
+    const order = await response.json().catch(() => ({})) as any;
+    if (!response.ok || typeof order.id !== 'string' || order.amount !== pkg.amountPaise || order.currency !== 'INR') return res.status(502).json({ success: false, error: 'Razorpay order creation failed; no payment was collected.' });
+    await ref.create({ partnerUid: uid, packageId: pkg.id, packageName: pkg.name, amountPaise: pkg.amountPaise, durationDays: pkg.durationDays, currency: 'INR', orderId: order.id, status: 'created', createdAt: FieldValue.serverTimestamp() });
+    return res.status(201).json({ success: true, rechargeId: ref.id, orderId: order.id, amount: pkg.amountPaise, currency: 'INR', keyId: cfg.keyId, mode: cfg.mode });
+  } catch (error) {
+    console.error('Partner recharge order failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge order could not be created.' });
+  }
+});
+
+app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge verification is unavailable.' });
+    const cfg = razorpayConfig();
+    if (!cfg) return res.status(503).json({ success: false, error: 'Razorpay is not configured.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const { rechargeId, orderId, paymentId, signature } = req.body ?? {};
+    if (![rechargeId, orderId, paymentId, signature].every(v => typeof v === 'string' && v.length > 0 && v.length <= 200)) return res.status(400).json({ success: false, error: 'Invalid payment verification details.' });
+    if (!validHmac(cfg.keySecret, orderId + '|' + paymentId, signature)) return res.status(400).json({ success: false, error: 'Invalid payment signature.' });
+    const db = getFirestore(firebaseAdminApp), rechargeRef = db.collection('partner_recharge_payments').doc(rechargeId);
+    const snap = await rechargeRef.get(), record = snap.data();
+    if (!snap.exists || record?.partnerUid !== uid || record?.orderId !== orderId) return res.status(404).json({ success: false, error: 'Recharge order not found.' });
+    const paymentResponse = await razorpayFetch('https://api.razorpay.com/v1/payments/' + encodeURIComponent(paymentId), cfg);
+    const payment = await paymentResponse.json().catch(() => ({})) as any;
+    if (!paymentResponse.ok || payment.order_id !== orderId || payment.status !== 'captured' || payment.currency !== 'INR' || payment.amount !== record.amountPaise) return res.status(409).json({ success: false, error: 'Razorpay has not confirmed the exact captured amount.' });
+    await db.runTransaction(async tx => {
+      const [fresh, profile] = await Promise.all([tx.get(rechargeRef), tx.get(db.collection('users').doc(uid))]);
+      if (!fresh.exists || fresh.data()?.partnerUid !== uid || fresh.data()?.orderId !== orderId) throw new Error('RECHARGE_CHANGED');
+      if (fresh.data()?.status === 'paid') return;
+      if (!profile.exists) throw new Error('PARTNER_MISSING');
+      const now = Date.now(), currentExpiry = profile.data()?.subscriptionExpiresAt?.toMillis?.() || 0;
+      const start = Math.max(now, currentExpiry);
+      const expiry = new Date(start + Number(fresh.data()?.durationDays) * 86400000);
+      tx.update(rechargeRef, { status: 'paid', paymentId, verifiedAt: FieldValue.serverTimestamp() });
+      tx.update(db.collection('users').doc(uid), { subscriptionStatus: 'active', subscriptionExpiresAt: expiry, subscriptionUpdatedAt: FieldValue.serverTimestamp() });
+      tx.create(db.collection('partner_recharge_ledger').doc(rechargeId), { partnerUid: uid, rechargeId, orderId, paymentId, amountPaise: fresh.data()?.amountPaise, currency: 'INR', durationDays: fresh.data()?.durationDays, status: 'paid', createdAt: FieldValue.serverTimestamp() });
+    });
+    return res.json({ success: true, paymentStatus: 'paid' });
+  } catch (error) {
+    console.error('Partner recharge verification failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge could not be activated safely.' });
+  }
+});
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
