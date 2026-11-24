@@ -486,7 +486,7 @@ app.post('/api/payments/razorpay/verify', authenticateFirebaseUser, async (req: 
       const fresh=await tx.get(ref);
       if (!fresh.exists || fresh.data()?.customerUid!==uid || fresh.data()?.paymentOrderId!==orderId) throw new Error('BOOKING_CHANGED');
       if (fresh.data()?.paymentStatus==='paid') return;
-      tx.update(ref,{paymentStatus:'paid',escrowStatus:'funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
+      tx.update(ref,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
     });
     return res.json({success:true,paymentStatus:'paid'});
   } catch(e) { console.error('Razorpay verification failed:',e); return res.status(500).json({success:false,error:'Payment verification could not be completed safely.'}); }
@@ -515,7 +515,7 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
       if (!bSnap.exists) throw new Error('BOOKING_NOT_FOUND');
       const b=bSnap.data()!;
       if (b.paymentOrderId!==orderId || b.paymentOrderAmount!==amount || b.paymentOrderCurrency!=='INR') throw new Error('AMOUNT_MISMATCH');
-      if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
+      if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
       tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp()});
     });
     return res.json({success:true,received:true});
