@@ -307,7 +307,7 @@ app.put('/api/partners/payment-profile', authenticateFirebaseUser, async (req: R
     if (upiId.length > 100 || !/^[a-z0-9][a-z0-9._-]{1,80}@[a-z0-9][a-z0-9.-]{1,30}$/.test(upiId)) return res.status(400).json({ success: false, error: 'Enter a valid UPI ID, for example name@bank.' });
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     await ref.update({ paymentUpiId: upiId, paymentUpiUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     return res.json({ success: true, upiId, payeeName: String(snap.data()?.displayName || '').slice(0, 80) });
   } catch (error) {
