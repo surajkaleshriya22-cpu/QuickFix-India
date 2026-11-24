@@ -670,13 +670,15 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   // Payment Provider Webhook Confirmation: Only this marks payout as 'settled'
+  // Client-side code must never settle payouts. Only a verified server webhook
+  // may perform this transition after signature verification and idempotency checks.
   const confirmPayoutSettlementWebhook = (
     _payoutId: string,
     _providerEventId: string,
     _gatewayProvider = 'Verified Payment Webhook'
   ): { success: boolean; message: string } => ({
     success: false,
-    message: 'A browser or Android client cannot verify a payment webhook. Only the server can validate the provider signature and settle a payout.'
+    message: 'Payout settlement is disabled in the client. A verified payment-provider webhook on the trusted server is required.'
   });
 
   const adminIssueCustomerRefund = (
