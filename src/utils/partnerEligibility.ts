@@ -6,11 +6,23 @@ export type PartnerDispatchProfile = {
   isSuspended?: unknown;
   securityDepositPaid?: unknown;
   walletBalance?: unknown;
+  subscriptionStatus?: unknown;
+  subscriptionExpiresAt?: unknown;
 };
 
 /** Fail-closed dispatch eligibility shared by partner job-feed and acceptance APIs. */
 export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): boolean {
-  return (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
+  // Existing partner records without subscription fields remain compatible until migrated.
+  // New registrations always receive an expiry; an explicit expired state blocks dispatch.
+  const expiryValue = profile.subscriptionExpiresAt as { toMillis?: () => number } | Date | number | string | null | undefined;
+  const expiryMs = expiryValue && typeof expiryValue === 'object' && 'toMillis' in expiryValue && typeof expiryValue.toMillis === 'function'
+    ? expiryValue.toMillis()
+    : expiryValue instanceof Date ? expiryValue.getTime()
+      : typeof expiryValue === 'number' ? expiryValue
+        : typeof expiryValue === 'string' ? Date.parse(expiryValue) : null;
+  const subscriptionValid = profile.subscriptionStatus !== 'expired' &&
+    (expiryMs === null || (Number.isFinite(expiryMs) && expiryMs > Date.now()));
+  return subscriptionValid && (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
