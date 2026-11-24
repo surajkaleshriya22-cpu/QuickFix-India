@@ -14,12 +14,14 @@ interface ServiceBookingSheetProps {
 }
 
 export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ service, onClose, onSuccess }) => {
-  const { customer, currentCity, commissionSettings, submitCustomerBooking } = useQuickFix();
+  const { customer, currentCity, services, commissionSettings, submitCustomerBooking } = useQuickFix();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stateName, setStateName] = useState('');
   const [districtName, setDistrictName] = useState('');
   const [tehsilName, setTehsilName] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [basketLines, setBasketLines] = useState<{ serviceId: string; quantity: string }[]>([{ serviceId: service.id, quantity: '1' }]);
+  const [additionalServiceId, setAdditionalServiceId] = useState('');
   const [rateQuote, setRateQuote] = useState<any>(null);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
@@ -115,8 +117,24 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   // The legacy amount is only an indicative starting figure until a verified local rate card is connected.
   const billingProfile = getBillingProfile(service);
-  const basePrice = rateQuote?.quote?.totalMinimum ?? null;
-  const quoteMaximum = rateQuote?.quote?.totalMaximum ?? null;
+  const basketServices = basketLines.map(line => ({ ...line, service: services.find(item => item.id === line.serviceId) })).filter(line => line.service);
+  const addBasketLine = () => {
+    if (!additionalServiceId || basketLines.length >= 20) return;
+    setBasketLines(current => [...current, { serviceId: additionalServiceId, quantity: '1' }]);
+    setAdditionalServiceId('');
+    setRateQuote(null);
+    setQuoteMessage('');
+  };
+  const updateBasketQuantity = (index: number, value: string) => {
+    setBasketLines(current => current.map((line, i) => i === index ? { ...line, quantity: value } : line));
+    setRateQuote(null);
+  };
+  const removeBasketLine = (index: number) => {
+    setBasketLines(current => current.filter((_, i) => i !== index));
+    setRateQuote(null);
+  };
+  const basePrice = rateQuote?.allPriced ? rateQuote.totalMinimum : null;
+  const quoteMaximum = rateQuote?.allPriced ? rateQuote.totalMaximum : null;
   const totalAmount = basePrice === null ? null : basePrice;
 
   const slotOptions = [
@@ -129,9 +147,12 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
 
   const fetchRateQuote = async () => {
-    const qty = Number(quantity);
-    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || !Number.isFinite(qty) || qty <= 0) {
-      setQuoteMessage('Rate dekhne ke liye State, District, Tehsil aur sahi quantity bharein.');
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || basketServices.length !== basketLines.length) {
+      setQuoteMessage('Total calculate karne ke liye State, District, Tehsil aur har work item select karein.');
+      return;
+    }
+    if (basketLines.some(line => !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0 || Number(line.quantity) > 100000)) {
+      setQuoteMessage('Har item ki quantity 0 se zyada aur valid honi chahiye.');
       return;
     }
     const user = auth.currentUser;
@@ -144,22 +165,34 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     setQuoteMessage('');
     try {
       const token = await user.getIdToken();
-      const params = new URLSearchParams({
-        state: stateName.trim(), district: districtName.trim(), city: currentCity,
-        tehsil: tehsilName.trim(), serviceCategory: service.category,
-        serviceId: service.id, unit: billingProfile.unit, date: selectedDate,
-        quantity: String(qty)
-      });
-      const response = await fetch(`/api/rates/quote?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setQuoteMessage(data.error || 'Is location ke liye approved rate abhi uplabdh nahi hai.');
-        return;
-      }
-      setRateQuote(data);
-      setQuoteMessage('Yeh approved local rate card ke hisaab se estimate hai. Final amount kaam shuru hone se pehle confirm hoga.');
+      const results = await Promise.all(basketServices.map(async line => {
+        const billing = getBillingProfile(line.service!);
+        const params = new URLSearchParams({
+          state: stateName.trim(), district: districtName.trim(), city: currentCity,
+          tehsil: tehsilName.trim(), serviceCategory: line.service!.category,
+          serviceId: line.serviceId, unit: billing.unit, date: selectedDate,
+          quantity: String(Number(line.quantity))
+        });
+        const response = await fetch(`/api/rates/quote?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          return { serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit, priced: false, error: data.error || 'Rate not published' };
+        }
+        return {
+          serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit,
+          priced: true, minimum: data.quote.totalMinimum, maximum: data.quote.totalMaximum,
+          materialsIncluded: data.quote.materialsIncluded, source: data.source?.name || 'Published local rate'
+        };
+      }));
+      const allPriced = results.every(line => line.priced);
+      const totalMinimum = results.reduce((sum, line) => sum + (line.priced ? line.minimum : 0), 0);
+      const totalMaximum = results.reduce((sum, line) => sum + (line.priced ? line.maximum : 0), 0);
+      setRateQuote({ lines: results, allPriced, totalMinimum, totalMaximum });
+      setQuoteMessage(allPriced
+        ? 'Har item ka rate published local rate card se calculate hua hai.'
+        : 'Kuch items ka published rate nahi mila. Unka estimate inspection ke baad milega; abhi payment nahi hogi.');
     } catch {
       setQuoteMessage('Rate service abhi available nahi hai. Aap inspection/quotation booking bhej sakte hain.');
     } finally {
@@ -252,17 +285,13 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   const handleConfirm = async () => {
     if (isSubmitting) return;
-    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || Number(quantity) <= 0) {
+    if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || basketServices.length === 0 || basketServices.some(line => !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0)) {
       window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
       return;
     }
     if (!selectedAddress.trim()) {
       window.alert('Booking se pehle map se apna poora service address select karein.');
       setIsEditingAddress(true);
-      return;
-    }
-    if (paymentMethod === 'upi' && !pendingBookingId && !rateQuote) {
-      window.alert('UPI payment ke liye pehle approved local rate check karein. Bina approved rate ke payment nahi li jayegi.');
       return;
     }
     setIsSubmitting(true);
@@ -277,7 +306,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           notes,
           paymentMethod,
           serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
-          quantity: Number(quantity)
+          quantity: Number(basketLines[0]?.quantity || 1),
+          lineItems: basketServices.map(line => ({ serviceId: line.serviceId, quantity: Number(line.quantity) }))
         });
         if (!result.success || !result.bookingId) {
           window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
@@ -436,13 +466,31 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               <input value={tehsilName} onChange={e => { setTehsilName(e.target.value); setRateQuote(null); }} placeholder="e.g. Rau" className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
             </label>
           </div>
-          <div className="rounded-xl border border-slate-200 p-3 space-y-2">
-            <label className="block text-xs font-semibold text-slate-700">{billingProfile.quantityPrompt} / {billingProfile.hindiQuantityPrompt}
-              <input type="number" min="0.01" step="0.01" value={quantity} onChange={e => { setQuantity(e.target.value); setRateQuote(null); }} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
-            </label>
-            <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-              {isLoadingQuote ? 'Checking approved rate...' : 'Check approved local rate'}
-            </button>
+          <div className="rounded-xl border border-slate-200 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">Work items / Kaam ki list</h3>
+              <span className="text-xs text-slate-500">{basketLines.length}/20</span>
+            </div>
+            {basketServices.map((line, index) => (
+              <div key={line.serviceId + '-' + index} className="grid grid-cols-[1fr_92px_32px] gap-2 items-end">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-700 truncate">{line.service?.title}</p>
+                  <p className="text-[10px] text-slate-500">{getBillingProfile(line.service!).quantityPrompt}</p>
+                </div>
+                <label className="text-[10px] text-slate-600">Quantity
+                  <input type="number" min="0.01" step="0.01" value={line.quantity} onChange={e => updateBasketQuantity(index, e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" />
+                </label>
+                <button type="button" aria-label="Remove work item" onClick={() => removeBasketLine(index)} disabled={basketLines.length === 1} className="h-9 rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30">×</button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <select value={additionalServiceId} onChange={e => setAdditionalServiceId(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-300 p-2 text-xs">
+                <option value="">Add another service…</option>
+                {services.filter(item => !basketLines.some(line => line.serviceId === item.id)).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+              </select>
+              <button type="button" onClick={addBasketLine} disabled={!additionalServiceId || basketLines.length >= 20} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">+ Add</button>
+            </div>
+            <p className="text-xs text-slate-600">Har kaam ka rate Admin ke published local rate card se server calculate karega. Jis kaam ka rate available nahi hoga, uske liye inspection/quotation lagega. Customer ke liye koi rate approval request nahi.</p>
             {quoteMessage && <p className="text-xs text-slate-600">{quoteMessage}</p>}
           </div>
 
@@ -543,14 +591,29 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
             <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Local Price Estimate</div>
             <div className="text-[11px] text-slate-600">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel}) · {billingProfile.note}</div>
+            <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
+              {isLoadingQuote ? 'Calculating total…' : 'Calculate item-wise total'}
+            </button>
+            {quoteMessage && <p className="text-[11px] text-slate-600" role="status">{quoteMessage}</p>}
             {rateQuote ? (
               <>
-                <div className="flex justify-between text-sm"><span>Approved rate range</span><strong>₹{rateQuote.quote.totalMinimum} – ₹{rateQuote.quote.totalMaximum}</strong></div>
-                <div className="text-[10px] text-slate-500">Source: {rateQuote.source.name}. Materials {rateQuote.quote.materialsIncluded ? 'included' : 'extra'}. Estimate only; customer approval is required before work starts.</div>
+                {rateQuote.lines.map((line: any) => (
+                  <div key={line.serviceId} className="flex items-start justify-between gap-3 border-t border-slate-200 pt-2 text-xs">
+                    <div><strong>{line.title}</strong><div className="text-[10px] text-slate-500">Qty {line.quantity} · {line.unit}</div>
+                      {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
+                    </div>
+                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'After inspection'}</strong>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold">
+                  <span>{rateQuote.allPriced ? 'Estimated total' : 'Priced items subtotal'}</span>
+                  <strong>₹{rateQuote.totalMinimum} – ₹{rateQuote.totalMaximum}</strong>
+                </div>
+                <div className="text-[10px] text-slate-500">Rates are from approved local rate cards. Unpriced work is excluded until inspection; no payment is collected for an unpriced basket.</div>
               </>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                Is location/service ke liye approved rate card nahi mila to booking inspection/quotation request ke roop mein jayegi. Abhi koi final price ya payment collect nahi hogi.
+                Published rate cards se total calculate karein. Jis item ka rate available nahi hoga, uska quotation inspection ke baad hoga.
               </div>
             )}
           </div>
