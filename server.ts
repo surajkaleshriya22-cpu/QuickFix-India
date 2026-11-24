@@ -299,7 +299,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
         Number.isFinite(line.quantity) && line.quantity > 0 && line.quantity <= 100000);
     if (!validCustomerLocation || !validServiceArea || !validLines || typeof scheduledDate !== 'string' ||
         typeof scheduledTimeSlot !== 'string' || typeof address !== 'string' || !address.trim() || address.length > 500 ||
-        !isValidBookingDate(scheduledDate) || !/^[\w\s:().,+-]{1,80}$/.test(scheduledTimeSlot) ||
+        !isValidBookingDate(scheduledDate) || !/^[\p{L}\p{N}\s:().,+-]{1,80}$/u.test(scheduledTimeSlot) ||
         !['upi', 'cash'].includes(paymentMethod) || (notes !== undefined && typeof notes !== 'string')) {
       return res.status(400).json({ success: false, error: 'Booking details are invalid. Please check each work item, date, time, address and payment method.' });
     }
