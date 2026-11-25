@@ -270,11 +270,11 @@ class QuickFixViewModel : ViewModel() {
         }
     }
 
-    fun saveAdminBankDetails(bankName: String, accountHolderName: String, accountNumber: String, ifsc: String) {
+    fun saveAdminBankDetails(bankName: String, accountType: String, accountHolderName: String, accountNumber: String, ifsc: String) {
         val user = auth.currentUser ?: run { _firestoreSyncStatus.value = "Authorized Admin sign-in required."; return }
         val cleanAccount = accountNumber.filterNot { it.isWhitespace() }
         val cleanIfsc = ifsc.trim().uppercase()
-        if (bankName.isBlank() || accountHolderName.trim().length < 2 ||
+        if (bankName.isBlank() || accountType !in setOf("savings", "current") || accountHolderName.trim().length < 2 ||
             !cleanAccount.matches(Regex("\\d{9,18}")) || !cleanIfsc.matches(Regex("[A-Z]{4}0[A-Z0-9]{6}"))) {
             _firestoreSyncStatus.value = "Enter bank, account holder, valid 9–18 digit account number and IFSC."
             return
@@ -292,7 +292,7 @@ class QuickFixViewModel : ViewModel() {
                         connection.setRequestProperty("Content-Type", "application/json")
                         connection.connectTimeout = 15000
                         connection.readTimeout = 20000
-                        val payload = org.json.JSONObject().put("bankName", bankName.trim())
+                        val payload = org.json.JSONObject().put("bankName", bankName.trim()).put("accountType", accountType)
                             .put("accountHolderName", accountHolderName.trim()).put("accountNumber", cleanAccount).put("ifsc", cleanIfsc)
                         connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                         val status = connection.responseCode
