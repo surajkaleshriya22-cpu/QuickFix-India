@@ -12,3 +12,13 @@ test('fan and MCB installation are priced per installed unit', () => {
 test('light installation is priced per light point', () => {
   assert.equal(getBillingProfile(service('elec-light-install', 'Light Fitting Installation')).unit, 'per_point');
 });
+
+test('car washing tasks use per-vehicle or inspection quote billing', () => {
+  assert.equal(getBillingProfile({ id: 'car-wash-full-service', title: 'Complete car wash', category: 'car_wash' }).unit, 'per_job');
+  assert.equal(getBillingProfile({ id: 'car-wash-detailing', title: 'Car polishing and detailing', category: 'car_wash' }).unit, 'quote');
+});
+
+test('transport services distinguish simple trips from load-based vehicle quotes', () => {
+  assert.equal(getBillingProfile({ id: 'transport-shop-delivery', title: 'Shop purchase pickup and home delivery', category: 'transport' }).unit, 'per_trip');
+  assert.equal(getBillingProfile({ id: 'transport-mini-truck', title: 'Mini truck and house shifting transport', category: 'transport' }).unit, 'quote');
+});
