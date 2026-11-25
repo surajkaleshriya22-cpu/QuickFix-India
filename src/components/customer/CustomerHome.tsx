@@ -338,7 +338,7 @@ export const CustomerHome: React.FC = () => {
 
                 <div className="text-right shrink-0">
                   <div className="text-[10px] text-slate-400 uppercase font-semibold">{language === 'hi' ? 'स्थानीय सेवा दर' : 'Local item rate'}</div>
-                  <div className="text-sm font-extrabold text-blue-700 font-mono">{service.startingPrice > 0 ? `Indicative ₹${service.startingPrice}+` : '{language === 'hi' ? 'क्षेत्र के अनुसार दर देखें' : 'Area rate check'}'}</div>
+                  <div className="text-sm font-extrabold text-blue-700 font-mono">{service.startingPrice > 0 ? `Indicative ₹${service.startingPrice}+` : (language === 'hi' ? 'क्षेत्र के अनुसार दर देखें' : 'Area rate check')}</div>
                   <div className="text-[9px] text-slate-500">{language === 'hi' ? 'बुकिंग से पहले स्वीकृत सही दर दिखाई जाएगी' : 'Exact approved rate before booking'}</div>
                 </div>
               </div>
