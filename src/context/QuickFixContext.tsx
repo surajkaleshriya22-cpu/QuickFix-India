@@ -36,6 +36,9 @@ import { doc, getDoc, setDoc, updateDoc, Timestamp, collection } from 'firebase/
 import { getIdTokenResult, signOut, User as FirebaseUser } from 'firebase/auth';
 
 interface QuickFixContextType {
+  // App-wide language preference
+  language: "hi" | "en";
+  setLanguage: (language: "hi" | "en") => void;
   // Role & View Mode
   activeRole: ActiveRole;
   setActiveRole: (role: ActiveRole) => void;
@@ -208,6 +211,13 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
 
   // Localization & Services
+  const [language, setLanguage] = useState<"hi" | "en">(() => {
+    try { return localStorage.getItem('quickfix_app_language') === 'en' ? 'en' : 'hi'; }
+    catch { return 'hi'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('quickfix_app_language', language); } catch { /* private browsing may disable storage */ }
+  }, [language]);
   const [currentCity, setCurrentCity] = useState('Bengaluru');
   const [services] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [selectedCategory, setSelectedCategory] = useState<'all' | ServiceCategoryType>('all');
@@ -1039,6 +1049,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <QuickFixContext.Provider
       value={{
+        language,
+        setLanguage,
         activeRole,
         setActiveRole,
         viewMode,
