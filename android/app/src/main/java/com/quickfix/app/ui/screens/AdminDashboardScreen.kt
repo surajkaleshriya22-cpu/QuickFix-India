@@ -65,6 +65,7 @@ fun AdminDashboardScreen(
     val adminPaymentConfig by viewModel.adminPaymentConfig.collectAsState()
     val payouts by viewModel.payouts.collectAsState()
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
+    val isEnglish = LocalQuickFixLanguage.current.value == "en"
 
     var activeTab by remember { mutableStateOf(AdminTab.OVERVIEW) }
     var selectedTradeFilter by remember { mutableStateOf("all") }
@@ -85,7 +86,7 @@ fun AdminDashboardScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "QuickFix Admin HQ",
+                                if (isEnglish) "QuickFix Admin HQ" else "QuickFix एडमिन मुख्यालय",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 18.sp
@@ -106,7 +107,7 @@ fun AdminDashboardScreen(
                             }
                         }
                         Text(
-                            "Operations & Marketplace Governance",
+                            if (isEnglish) "Operations & Marketplace Governance" else "ऑपरेशन और मार्केटप्लेस प्रबंधन",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
                         )
@@ -146,7 +147,7 @@ fun AdminDashboardScreen(
                         onClick = { activeTab = tab },
                         text = {
                             Text(
-                                tab.title,
+                                if (isEnglish) tab.title else when (tab) { AdminTab.OVERVIEW -> "सारांश"; AdminTab.CUSTOMERS -> "ग्राहक"; AdminTab.TECHNICIANS -> "पार्टनर"; AdminTab.BOOKINGS -> "बुकिंग"; AdminTab.COMMISSIONS -> "भुगतान"; AdminTab.REVIEWS -> "रिव्यू"; AdminTab.FIRESTORE -> "डेटाबेस" },
                                 fontWeight = if (activeTab == tab) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 13.sp,
                                 color = if (activeTab == tab) Color(0xFF60A5FA) else Color(0xFF94A3B8)
@@ -244,7 +245,7 @@ fun OverviewTab(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text("Cloud Firestore Real-Time Sync", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(if (isEnglish) "Cloud Firestore Real-Time Sync" else "Cloud Firestore लाइव सिंक", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Text(firestoreStatus, color = Color(0xFF93C5FD), fontSize = 11.sp)
                     }
                 }
@@ -253,11 +254,11 @@ fun OverviewTab(
         }
 
         // Metrics Grid (5 KPI Cards requested by User)
-        Text("Primary Marketplace Metrics", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+        Text(if (isEnglish) "Primary Marketplace Metrics" else "मुख्य मार्केटप्लेस आँकड़े", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = "Total Customers",
+                title = if (isEnglish) "Total Customers" else "कुल ग्राहक",
                 value = totalCustomers.toString(),
                 subtitle = "Accounts in loaded data",
                 color = BrandBlue,
@@ -265,7 +266,7 @@ fun OverviewTab(
                 onClick = { onNavigateToTab(AdminTab.CUSTOMERS) }
             )
             KpiCard(
-                title = "Total Bookings",
+                title = if (isEnglish) "Total Bookings" else "कुल बुकिंग",
                 value = totalBookings.toString(),
                 subtitle = "Requests in loaded data",
                 color = Color(0xFF8B5CF6),
@@ -276,7 +277,7 @@ fun OverviewTab(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = "Electricians",
+                title = if (isEnglish) "Electricians" else "इलेक्ट्रीशियन",
                 value = totalElectricians.toString(),
                 subtitle = "Wiremen & Technicians",
                 color = Color(0xFFF59E0B),
@@ -284,7 +285,7 @@ fun OverviewTab(
                 onClick = { onNavigateToTab(AdminTab.TECHNICIANS) }
             )
             KpiCard(
-                title = "Plumbers",
+                title = if (isEnglish) "Plumbers" else "प्लंबर",
                 value = totalPlumbers.toString(),
                 subtitle = "Pipe & Sanity Pros",
                 color = Color(0xFF06B6D4),
@@ -356,7 +357,7 @@ fun CustomersTab(customers: List<User>) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Registered Indian Customers (${customers.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text(if (isEnglish) "Registered Indian Customers (${customers.size})" else "रजिस्टर्ड भारतीय ग्राहक (${customers.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
         }
         items(customers) { customer ->
             Card(
@@ -405,9 +406,9 @@ fun TechniciansTab(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             listOf(
                 "all" to "All Partners",
-                "electrician" to "Electricians",
+                "electrician" to if (isEnglish) "Electricians" else "इलेक्ट्रीशियन",
                 "ac_fridge" to "AC / Fridge",
-                "plumber" to "Plumbers",
+                "plumber" to if (isEnglish) "Plumbers" else "प्लंबर",
                 "welder" to "Welders",
                 "mechanic" to "Mechanics",
                 "driver" to "Drivers",
@@ -529,7 +530,7 @@ fun BookingsTab(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text("All Bookings & Dispatches (${bookings.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text(if (isEnglish) "All Bookings & Dispatches (${bookings.size})" else "सभी बुकिंग और काम (${bookings.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
         }
         items(bookings) { booking ->
             Card(
