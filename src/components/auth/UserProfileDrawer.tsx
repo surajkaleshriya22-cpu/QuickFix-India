@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Phone, Mail, MapPin, Shield, LogOut, Check, Plus, Edit2, ShieldCheck, Wrench, Zap } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
+import { auth } from '../../lib/firebase';
 
 interface UserProfileDrawerProps {
   onClose: () => void;
@@ -22,6 +23,11 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
   const [newAddressText, setNewAddressText] = useState('');
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
+  const [supportCategory, setSupportCategory] = useState('other');
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportDescription, setSupportDescription] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportBusy, setSupportBusy] = useState(false);
 
   const handleLogout = () => {
     logoutUser();
@@ -202,6 +208,35 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
               ))}
             </div>
           </div>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser || supportBusy) { setSupportMessage('Please sign in first.'); return; }
+            setSupportBusy(true); setSupportMessage('');
+            try {
+              const token = await firebaseUser.getIdToken(true);
+              const response = await fetch('/api/support/tickets', {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: supportCategory, subject: supportSubject, description: supportDescription })
+              });
+              const result = await response.json().catch(() => ({}));
+              if (!response.ok || !result.success) throw new Error(result.error || 'Request could not be saved.');
+              setSupportMessage('Ticket created: ' + result.ticketId);
+              setSupportSubject(''); setSupportDescription('');
+            } catch (error) { setSupportMessage(error instanceof Error ? error.message : 'Support request failed.'); }
+            finally { setSupportBusy(false); }
+          }} className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <div className="font-bold text-slate-800">{language === 'hi' ? 'Customer Care / सहायता' : 'Customer Care / Get Help'}</div>
+            <select value={supportCategory} onChange={e => setSupportCategory(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
+              <option value="booking">Booking</option><option value="payment">Payment</option><option value="wallet">Wallet</option><option value="account">Account</option><option value="partner">Partner</option><option value="other">Other</option>
+            </select>
+            <input required minLength={4} maxLength={120} value={supportSubject} onChange={e => setSupportSubject(e.target.value)} placeholder={language === 'hi' ? 'समस्या का विषय' : 'Issue subject'} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" />
+            <textarea required minLength={10} maxLength={2000} rows={3} value={supportDescription} onChange={e => setSupportDescription(e.target.value)} placeholder={language === 'hi' ? 'अपनी समस्या बताएं...' : 'Describe your issue...'} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" />
+            <button disabled={supportBusy} className="w-full rounded-lg bg-amber-600 py-2 text-xs font-bold text-white disabled:opacity-50">{supportBusy ? 'Submitting...' : (language === 'hi' ? 'शिकायत दर्ज करें' : 'Submit Support Ticket')}</button>
+            {supportMessage && <p className="break-words text-[11px] font-semibold text-slate-700">{supportMessage}</p>}
+          </form>
 
           {/* Quick Role Switcher shortcut */}
           <div className="pt-2 border-t border-slate-100">
