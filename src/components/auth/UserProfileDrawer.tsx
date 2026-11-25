@@ -122,6 +122,13 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
               <span className="font-mono font-medium text-slate-900">{currentUser?.phoneNumber || customer.phone}</span>
             </div>
 
+            {currentUser?.quickFixId && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 border border-blue-100 px-2.5 py-2">
+                <span className="font-bold text-blue-800">{language === 'hi' ? 'आपकी QuickFix ID' : 'Your QuickFix ID'}</span>
+                <span className="font-mono font-extrabold tracking-wide text-blue-900">{currentUser.quickFixId}</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-slate-700">
               <span className="flex items-center gap-2 text-slate-500">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Status
