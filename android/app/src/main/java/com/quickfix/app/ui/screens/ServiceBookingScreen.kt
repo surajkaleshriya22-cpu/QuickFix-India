@@ -520,10 +520,10 @@ fun ServiceBookingScreen(
                         quoteError != null -> Text(quoteError!!, color = Color(0xFFB45309), fontSize = 12.sp)
                         customerQuote?.quoteAvailable == true -> {
                             val q = customerQuote!!
-                            Text("\${q.serviceTitle} · \${q.quantity} \${q.billingUnit}", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                            Text("अनुमानित कुल: ₹\${String.format(Locale.US, "%.2f", q.minimum)} – ₹\${String.format(Locale.US, "%.2f", q.maximum)}", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("${q.serviceTitle} · ${q.quantity} ${q.billingUnit}", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("अनुमानित कुल: ₹${String.format(Locale.US, "%.2f", q.minimum)} – ₹${String.format(Locale.US, "%.2f", q.maximum)}", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             Text(if (q.materialsIncluded) "रेट में सामग्री शामिल है (मंजूर रेट कार्ड के अनुसार)।" else "सामग्री शामिल नहीं है; अतिरिक्त सामग्री का अलग रेट पहले मंजूर कराएँ।", color = TextSecondary, fontSize = 11.sp)
-                            if (q.rateSourceName.isNotBlank()) Text("रेट स्रोत: \${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
+                            if (q.rateSourceName.isNotBlank()) Text("रेट स्रोत: ${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
                         }
                         customerQuote != null -> Text("इस सेवा और क्षेत्र के लिए अभी Admin-मंजूर रेट उपलब्ध नहीं है। बुकिंग के बाद काम शुरू होने से पहले पार्टनर से मदवार कोटेशन लें और उसे मंजूर करें।", color = Color(0xFFB45309), fontSize = 12.sp)
                         else -> Text("राज्य, जिला, तहसील और मात्रा भरें; इसके बाद स्थानीय मंजूर रेट दिखेगा।", color = TextSecondary, fontSize = 12.sp)
