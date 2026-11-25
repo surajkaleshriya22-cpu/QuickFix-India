@@ -28,19 +28,60 @@ class AuthViewModel(
             ?: throw SecurityException("Firebase verified phone number is missing. Please sign in again with SMS OTP.")
 
     private fun requireMatchingLoginRole(existing: User, requestedRole: UserRole): User {
-        val requestedPartner = requestedRole == UserRole.CHANNEL_PARTNER
-        val existingPartner = existing.role == UserRole.CHANNEL_PARTNER ||
+        val memberships = existing.roles.map { it.uppercase() }.toSet()
+        val hasCustomer = memberships.contains("CUSTOMER") || existing.role == UserRole.CUSTOMER
+        val hasPartner = memberships.contains("CHANNEL_PARTNER") ||
+            memberships.contains("TECHNICIAN") ||
+            existing.role == UserRole.CHANNEL_PARTNER ||
             existing.role == UserRole.TECHNICIAN
-        if (requestedPartner != existingPartner) {
+        val allowed = when (requestedRole) {
+            UserRole.CUSTOMER -> hasCustomer
+            UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> hasPartner
+            else -> false
+        }
+        if (!allowed) {
             throw SecurityException(
-                if (existingPartner) {
-                    "यह मोबाइल नंबर Channel Partner खाते से जुड़ा है। Partner विकल्प से लॉगिन करें।"
+                if (requestedRole == UserRole.CHANNEL_PARTNER || requestedRole == UserRole.TECHNICIAN) {
+                    "इस नंबर पर Channel Partner प्रोफाइल नहीं है। Partner Registration चुनकर आवेदन पूरा करें।"
                 } else {
-                    "यह मोबाइल नंबर Customer खाते से जुड़ा है, Channel Partner खाते से नहीं। सही खाते से लॉगिन करें।"
+                    "इस नंबर पर Customer प्रोफाइल नहीं है। सही लॉगिन विकल्प चुनें।"
                 }
             )
         }
-        return existing
+        return existing.copy(
+            role = if (requestedRole == UserRole.TECHNICIAN) UserRole.CHANNEL_PARTNER else requestedRole
+        )
+    }
+
+    private suspend fun resolveVerifiedProfile(uid: String, pendingUser: User): User {
+        val verifiedPhone = requireVerifiedPhoneNumber()
+        val existing = repository.getUserProfile(uid)
+        if (existing != null &&
+            pendingUser.role == UserRole.CHANNEL_PARTNER &&
+            pendingUser.isPartnerRegistration &&
+            (existing.role == UserRole.CUSTOMER || existing.roles.any { it.equals("CUSTOMER", true) }) &&
+            existing.roles.none { it.equals("CHANNEL_PARTNER", true) || it.equals("TECHNICIAN", true) }) {
+            repository.registerChannelPartner(pendingUser.copy(uid = uid, phoneNumber = verifiedPhone))
+            return repository.getUserProfile(uid)
+                ?: throw IllegalStateException("Partner application was submitted, but the profile could not be loaded. Please sign in again.")
+        }
+        if (existing != null) return requireMatchingLoginRole(existing, pendingUser.role)
+        return when (pendingUser.role) {
+            UserRole.CHANNEL_PARTNER -> {
+                if (!pendingUser.isPartnerRegistration) {
+                    throw SecurityException("इस नंबर पर Partner अकाउंट नहीं मिला। पहले Partner Registration पूरा करें।")
+                }
+                repository.registerChannelPartner(pendingUser.copy(uid = uid, phoneNumber = verifiedPhone))
+                repository.getUserProfile(uid)
+                    ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
+            }
+            UserRole.CUSTOMER -> {
+                val newProfile = pendingUser.copy(uid = uid, phoneNumber = verifiedPhone, roles = listOf("CUSTOMER"))
+                repository.saveUserProfile(newProfile)
+                newProfile
+            }
+            else -> throw SecurityException("This account type cannot be registered from this screen.")
+        }
     }
 
     init {
@@ -107,19 +148,7 @@ class AuthViewModel(
                 viewModelScope.launch {
                     try {
                         val uid = repository.signInWithCredential(credential)
-                        val existing = repository.getUserProfile(uid)
-                        val verifiedUser = when {
-                            existing != null -> requireMatchingLoginRole(existing, pendingUser.role)
-                            pendingUser.role == UserRole.CHANNEL_PARTNER -> {
-                                repository.registerChannelPartner(pendingUser.copy(uid = uid, phoneNumber = requireVerifiedPhoneNumber()))
-                                repository.getUserProfile(uid)
-                                    ?: throw IllegalStateException("Partner registration succeeded, but the profile could not be loaded.")
-                            }
-                            pendingUser.role == UserRole.CUSTOMER -> {
-                                pendingUser.copy(uid = uid, phoneNumber = requireVerifiedPhoneNumber()).also { repository.saveUserProfile(it) }
-                            }
-                            else -> throw SecurityException("This account type cannot be registered from this screen.")
-                        }
+                        val verifiedUser = resolveVerifiedProfile(uid, pendingUser)
                         _authState.value = AuthState.Authenticated(verifiedUser)
                     } catch (e: Exception) {
                         _authState.value = AuthState.Error(e.localizedMessage ?: "Verification error")
@@ -149,22 +178,9 @@ class AuthViewModel(
                 val credential = PhoneAuthProvider.getCredential(currentVerificationId, cleanOtp)
                 val uid = repository.signInWithCredential(credential)
 
-                // Check if profile exists, otherwise save new profile
-                val existingProfile = repository.getUserProfile(uid)
-                val userToPersist = when {
-                    existingProfile != null -> requireMatchingLoginRole(existingProfile, pendingUser.role)
-                    pendingUser.role == UserRole.CHANNEL_PARTNER -> {
-                        repository.registerChannelPartner(pendingUser.copy(uid = uid, phoneNumber = requireVerifiedPhoneNumber()))
-                        repository.getUserProfile(uid)
-                            ?: throw IllegalStateException("Registration was accepted, but the partner profile could not be loaded. Please sign in again.")
-                    }
-                    pendingUser.role == UserRole.CUSTOMER -> {
-                        val newProfile = pendingUser.copy(uid = uid, phoneNumber = requireVerifiedPhoneNumber())
-                        repository.saveUserProfile(newProfile)
-                        newProfile
-                    }
-                    else -> throw SecurityException("This account type cannot be registered from this screen.")
-                }
+                // Resolve the requested role from the verified Firestore profile.
+                // Partner onboarding runs only after an explicit Registration choice.
+                val userToPersist = resolveVerifiedProfile(uid, pendingUser)
 
                 _authState.value = AuthState.Authenticated(userToPersist)
                 onSuccess(userToPersist)
