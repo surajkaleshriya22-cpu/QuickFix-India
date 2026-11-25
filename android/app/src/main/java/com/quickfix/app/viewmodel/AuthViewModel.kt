@@ -78,7 +78,7 @@ class AuthViewModel(
             UserRole.CUSTOMER -> {
                 val newProfile = pendingUser.copy(uid = uid, phoneNumber = verifiedPhone, roles = listOf("CUSTOMER"))
                 repository.saveUserProfile(newProfile)
-                newProfile
+                repository.getUserProfile(uid) ?: newProfile
             }
             else -> throw SecurityException("This account type cannot be registered from this screen.")
         }
