@@ -127,9 +127,43 @@ export const AdminDashboard: React.FC = () => {
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickFixLookupId, setQuickFixLookupId] = useState('');
+  const [quickFixLookup, setQuickFixLookup] = useState<any>(null);
+  const [quickFixLookupError, setQuickFixLookupError] = useState('');
+  const [quickFixLookupLoading, setQuickFixLookupLoading] = useState(false);
   const [techFilterTrade, setTechFilterTrade] = useState<'all' | ServiceCategoryType>('all');
   const [bookingStatusFilter, setBookingStatusFilter] = useState<string>('all');
   const [reviewRatingFilter, setReviewRatingFilter] = useState<number | 'all'>('all');
+
+  const lookupQuickFixAccount = async () => {
+    const id = quickFixLookupId.trim().toUpperCase();
+    if (!/^QF[CP]-\\d{8}$/.test(id)) {
+      setQuickFixLookupError('Enter a valid ID, e.g. QFC-12345678 or QFP-12345678.');
+      setQuickFixLookup(null);
+      return;
+    }
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setQuickFixLookupError('Admin Firebase sign-in is required.');
+      return;
+    }
+    setQuickFixLookupLoading(true);
+    setQuickFixLookupError('');
+    setQuickFixLookup(null);
+    try {
+      const token = await firebaseUser.getIdToken(true);
+      const response = await fetch('/api/admin/customer-care/' + encodeURIComponent(id), {
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || 'Account record could not be found.');
+      setQuickFixLookup(result);
+    } catch (error) {
+      setQuickFixLookupError(error instanceof Error ? error.message : 'Customer Care lookup failed.');
+    } finally {
+      setQuickFixLookupLoading(false);
+    }
+  };
 
   // Payment & Commission Management States
   const [paymentSubTab, setPaymentSubTab] = useState<'history' | 'payouts' | 'admin_account' | 'reports' | 'settings' | 'geofence'>('history');
@@ -1009,6 +1043,51 @@ export const AdminDashboard: React.FC = () => {
         {/* ================= TAB 2: MANAGE CUSTOMERS ================= */}
         {activeTab === 'customers' && (
           <div className="space-y-3">
+            <section className="bg-slate-950 border border-blue-700/60 rounded-2xl p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">Customer Care — QuickFix ID Search</h3>
+                <p className="text-[10px] text-slate-400 mt-1">Enter a customer's or Channel Partner's permanent ID to open their verified account record and service history.</p>
+              </div>
+              <div className="flex gap-2">
+                <input value={quickFixLookupId} onChange={e => setQuickFixLookupId(e.target.value.toUpperCase())}
+                  onKeyDown={e => { if (e.key === 'Enter') void lookupQuickFixAccount(); }}
+                  placeholder="QFC-12345678 / QFP-12345678"
+                  className="min-w-0 flex-1 text-xs px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono uppercase" />
+                <button type="button" onClick={() => void lookupQuickFixAccount()} disabled={quickFixLookupLoading}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:opacity-50">
+                  {quickFixLookupLoading ? 'Searching…' : 'Search ID'}
+                </button>
+              </div>
+              {quickFixLookupError && <p className="text-xs text-rose-400">{quickFixLookupError}</p>}
+              {quickFixLookup?.profile && (
+                <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono font-extrabold text-blue-300">{quickFixLookup.profile.quickFixId}</span>
+                    <span className="text-[10px] text-emerald-300">{quickFixLookup.profile.accountType === 'CHANNEL_PARTNER' ? 'Channel Partner' : 'Customer'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div><span className="text-slate-500 block">Name</span><span className="text-white">{quickFixLookup.profile.displayName}</span></div>
+                    <div><span className="text-slate-500 block">Phone</span><span className="text-white">{quickFixLookup.profile.phoneNumber}</span></div>
+                    <div><span className="text-slate-500 block">Email</span><span className="text-white break-all">{quickFixLookup.profile.email || '—'}</span></div>
+                    <div><span className="text-slate-500 block">City / Status</span><span className="text-white">{quickFixLookup.profile.city || '—'} / {quickFixLookup.profile.accountStatus}</span></div>
+                    <div><span className="text-slate-500 block">Approval / KYC</span><span className="text-white">{quickFixLookup.profile.approvalStatus} / {quickFixLookup.profile.kycStatus}</span></div>
+                    {quickFixLookup.profile.walletBalance !== null && <div><span className="text-slate-500 block">Wallet balance</span><span className="text-white">₹{quickFixLookup.profile.walletBalance}</span></div>}
+                  </div>
+                  <div className="text-[11px] text-slate-300"><span className="text-slate-500">Address:</span> {quickFixLookup.profile.address || 'Not provided'}</div>
+                  {quickFixLookup.profile.trades?.length > 0 && <div className="text-[11px] text-slate-300"><span className="text-slate-500">Services:</span> {quickFixLookup.profile.trades.join(', ')}</div>}
+                  <div className="border-t border-slate-700 pt-2">
+                    <div className="text-[11px] font-bold text-white mb-2">Service / Booking History ({quickFixLookup.bookingCount})</div>
+                    {quickFixLookup.bookings?.length ? quickFixLookup.bookings.map((booking: any) => (
+                      <div key={booking.bookingId} className="py-2 border-b border-slate-800 last:border-0 text-[10px] flex items-start justify-between gap-2">
+                        <div><div className="text-slate-200">{booking.serviceTitle || 'Service booking'}</div><div className="text-slate-500">{booking.bookingId} · {booking.role} · {booking.scheduledDate || 'Date not set'}</div></div>
+                        <div className="text-right"><div className="text-slate-200">{booking.status}</div><div className="text-slate-400">{booking.paymentStatus}{booking.totalAmount !== null ? ' · ₹' + booking.totalAmount : ''}</div></div>
+                      </div>
+                    )) : <p className="text-[10px] text-slate-500">No linked booking records were found.</p>}
+                  </div>
+                  <p className="text-[9px] text-amber-300">Sensitive KYC documents and full bank details are intentionally hidden from this summary.</p>
+                </div>
+              )}
+            </section>
             <div className="flex items-center justify-between gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
