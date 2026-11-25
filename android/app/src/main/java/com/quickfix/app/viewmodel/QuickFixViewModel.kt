@@ -29,6 +29,14 @@ data class PartnerLiveLocation(
     val ageSeconds: Int = 0
 )
 
+data class PartnerJobLineItem(
+    val serviceTitle: String,
+    val quantity: Double,
+    val billingUnit: String,
+    val lineTotalMinimum: Double,
+    val lineTotalMaximum: Double
+)
+
 data class PartnerJob(
     val id: String,
     val serviceTitle: String,
@@ -36,7 +44,8 @@ data class PartnerJob(
     val customerName: String,
     val price: Int,
     val totalAmount: Int,
-    val status: String = "requested"
+    val status: String = "requested",
+    val lineItems: List<PartnerJobLineItem> = emptyList()
 )
 
 data class AdminMetrics(
@@ -693,7 +702,20 @@ class QuickFixViewModel : ViewModel() {
                             customerName = item.optString("customerName", "Customer"),
                             price = item.optInt("price", 0),
                             totalAmount = item.optInt("totalAmount", 0),
-                            status = "requested"
+                            status = "requested",
+                            lineItems = item.optJSONArray("lineItems")?.let { rows ->
+                                (0 until rows.length()).mapNotNull { rowIndex ->
+                                    rows.optJSONObject(rowIndex)?.let { row ->
+                                        PartnerJobLineItem(
+                                            serviceTitle = row.optString("serviceTitle", "Service item"),
+                                            quantity = row.optDouble("quantity", 0.0),
+                                            billingUnit = row.optString("billingUnit", ""),
+                                            lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                        )
+                                    }
+                                }
+                            } ?: emptyList()
                         ))
                     }
                     if (assignedItems != null) for (index in 0 until assignedItems.length()) {
@@ -707,7 +729,20 @@ class QuickFixViewModel : ViewModel() {
                             customerName = item.optString("customerName", "Customer"),
                             price = item.optInt("price", 0),
                             totalAmount = item.optInt("totalAmount", 0),
-                            status = item.optString("status", "assigned")
+                            status = item.optString("status", "assigned"),
+                            lineItems = item.optJSONArray("lineItems")?.let { rows ->
+                                (0 until rows.length()).mapNotNull { rowIndex ->
+                                    rows.optJSONObject(rowIndex)?.let { row ->
+                                        PartnerJobLineItem(
+                                            serviceTitle = row.optString("serviceTitle", "Service item"),
+                                            quantity = row.optDouble("quantity", 0.0),
+                                            billingUnit = row.optString("billingUnit", ""),
+                                            lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                        )
+                                    }
+                                }
+                            } ?: emptyList()
                         ))
                     }
                 }
