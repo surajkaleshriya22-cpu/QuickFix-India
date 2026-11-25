@@ -137,7 +137,7 @@ export const AdminDashboard: React.FC = () => {
 
   const lookupQuickFixAccount = async () => {
     const id = quickFixLookupId.trim().toUpperCase();
-    if (!/^QF[CP]-\\d{8}$/.test(id)) {
+    if (!/^QF[CP]-\d{8}$/.test(id)) {
       setQuickFixLookupError('Enter a valid ID, e.g. QFC-12345678 or QFP-12345678.');
       setQuickFixLookup(null);
       return;
