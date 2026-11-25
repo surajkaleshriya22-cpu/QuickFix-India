@@ -2260,11 +2260,14 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
     const userSnap = await db.collection('users').doc(uid).get();
     if (!userSnap.exists) return res.status(404).json({ success: false, error: 'The account profile is unavailable.' });
     const user = userSnap.data()!;
-    const [customerBookings, partnerBookings, rechargeLedger, accountAudit] = await Promise.all([
+    const isPartnerAccount = hasChannelPartnerRole(user) || index.data()?.accountType === 'CHANNEL_PARTNER';
+    const [customerBookings, partnerBookings, rechargeLedger, accountAudit, kycSubmissions, kycAudit] = await Promise.all([
       db.collection('bookings').where('customerUid', '==', uid).limit(100).get(),
       db.collection('bookings').where('technicianUid', '==', uid).limit(100).get(),
-      db.collection('partner_recharge_ledger').where('partnerUid', '==', uid).limit(100).get(),
-      db.collection('admin_audit_logs').where('targetUid', '==', uid).limit(100).get()
+      isPartnerAccount ? db.collection('partner_recharge_ledger').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null),
+      db.collection('admin_audit_logs').where('targetUid', '==', uid).limit(100).get(),
+      isPartnerAccount ? db.collection('partner_kyc_submissions').where('partnerUid', '==', uid).limit(50).get() : Promise.resolve(null),
+      isPartnerAccount ? db.collection('partner_kyc_audit').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null)
     ]);
     const bookingsById = new Map<string, QueryDocumentSnapshot>();
     [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
@@ -2303,7 +2306,7 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
         createdAt: user.createdAt?.toDate?.()?.toISOString?.() || null
       },
       bookings, bookingCount: bookings.length,
-      partnerRechargeHistory: rechargeLedger.docs.map((item) => {
+      partnerRechargeHistory: (rechargeLedger?.docs || []).map((item) => {
         const row = item.data();
         return { id: item.id, amountPaise: typeof row.amountPaise === 'number' ? row.amountPaise : null,
           status: String(row.status || 'unknown'), createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null,
@@ -2313,7 +2316,24 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
         const row = item.data();
         return { id: item.id, action: String(row.action || row.event || 'account_event'),
           reason: String(row.reason || ''), createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
-      })
+      }),
+      kycSubmissions: (kycSubmissions?.docs || []).map((item) => {
+        const row = item.data();
+        // Customer Care receives workflow metadata only, never document URLs or storage paths.
+        return { submissionId: item.id, documentType: String(row.documentType || ''),
+          status: String(row.status || 'unknown'),
+          submittedAt: row.submittedAt?.toDate?.()?.toISOString?.() || null,
+          reviewedAt: row.reviewedAt?.toDate?.()?.toISOString?.() || null,
+          documentExpiryStatus: String(row.documentExpiryStatus || 'unknown'),
+          documentDeletedAt: row.documentDeletedAt?.toDate?.()?.toISOString?.() || null };
+      }),
+      kycAudit: (kycAudit?.docs || []).map((item) => {
+        const row = item.data();
+        return { id: item.id, event: String(row.event || 'kyc_event'),
+          decision: String(row.decision || ''), reason: String(row.reason || ''),
+          createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
+      }),
+      historyLimits: { bookings: 100, partnerRecharge: 100, accountAudit: 100, kycSubmissions: 50, kycAudit: 100 }
     });
   } catch (error) {
     console.error('Customer Care QuickFix ID lookup failed:', error);
