@@ -1115,6 +1115,23 @@ export const AdminDashboard: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {quickFixLookup.supportTickets?.length > 0 && (
+                    <div className="border-t border-slate-700 pt-2">
+                      <div className="text-[11px] font-bold text-white mb-1">Customer Complaints / Support Tickets</div>
+                      {quickFixLookup.supportTickets.map((ticket: any) => (
+                        <div key={ticket.ticketId} className="rounded-lg border border-slate-700 p-2 my-1 text-[10px]">
+                          <div className="flex justify-between gap-2 text-slate-200"><span>{ticket.subject}</span><span className="uppercase">{ticket.status}</span></div>
+                          <div className="text-slate-500">{ticket.ticketId} · {ticket.category} · {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : 'Date unavailable'}</div>
+                          <p className="text-slate-300 mt-1 whitespace-pre-wrap">{ticket.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {quickFixLookup.walletLedgerStatus === 'not_integrated' && (
+                    <div className="border-t border-slate-700 pt-2 text-[10px] text-amber-300">
+                      Wallet balance is shown above. A transaction ledger is not yet connected to wallet credit/debit operations, so no transaction history is claimed here.
+                    </div>
+                  )}
                   {quickFixLookup.accountAudit?.length > 0 && (
                     <div className="border-t border-slate-700 pt-2">
                       <div className="text-[11px] font-bold text-white mb-1">Account Activity / Admin History</div>
