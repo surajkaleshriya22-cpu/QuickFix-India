@@ -167,7 +167,6 @@ fun AdminDashboardScreen(
                     totalRevenueGmv = totalRevenueGmv,
                     totalCommissionCut = totalCommissionCut,
                     firestoreStatus = firestoreStatus,
-                    isEnglish = isEnglish,
                     onNavigateToTab = { activeTab = it }
                 )
                 AdminTab.CUSTOMERS -> CustomersTab(customers = customers, isEnglish = isEnglish)
@@ -219,7 +218,6 @@ fun OverviewTab(
     totalRevenueGmv: Int,
     totalCommissionCut: Int,
     firestoreStatus: String,
-    englishMode: Boolean,
     onNavigateToTab: (AdminTab) -> Unit
 ) {
     val englishMode = LocalQuickFixLanguage.current.value == "en"
