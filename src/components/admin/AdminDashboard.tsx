@@ -148,12 +148,13 @@ export const AdminDashboard: React.FC = () => {
   const [adminBankName, setAdminBankName] = useState(adminPaymentConfig.bankName);
   const [adminAccountNo, setAdminAccountNo] = useState(adminPaymentConfig.bankAccountNumber);
   const [adminAccountHolder, setAdminAccountHolder] = useState('');
+  const [adminAccountType, setAdminAccountType] = useState<'savings' | 'current'>('savings');
   const [adminIfsc, setAdminIfsc] = useState(adminPaymentConfig.bankIfsc);
   const [adminGateway, setAdminGateway] = useState(adminPaymentConfig.gatewayProvider);
   const [adminEscrowEnabled, setAdminEscrowEnabled] = useState(adminPaymentConfig.escrowEnabled);
   const [adminManualApproval, setAdminManualApproval] = useState(adminPaymentConfig.manualApprovalRequired);
   const [adminConfigSavedMsg, setAdminConfigSavedMsg] = useState('');
-  const [savedBankSummary, setSavedBankSummary] = useState<{ bankName: string; accountLast4: string; ifsc: string; accountHolderName: string } | null>(null);
+  const [savedBankSummary, setSavedBankSummary] = useState<{ bankName: string; accountType: string; accountLast4: string; ifsc: string; accountHolderName: string } | null>(null);
 
   // Refund & Hold state
   const [refundBookingTarget, setRefundBookingTarget] = useState<Booking | null>(null);
@@ -547,7 +548,7 @@ export const AdminDashboard: React.FC = () => {
         const result = await response.json();
         if (!response.ok || !result.success || cancelled) return;
         if (result.configured) {
-          setSavedBankSummary({ bankName: result.bankName, accountLast4: result.accountLast4, ifsc: result.ifsc, accountHolderName: result.accountHolderName });
+          setSavedBankSummary({ bankName: result.bankName, accountType: result.accountType || 'savings', accountLast4: result.accountLast4, ifsc: result.ifsc, accountHolderName: result.accountHolderName });
           setAdminBankName(result.bankName || '');
           setAdminAccountHolder(result.accountHolderName || '');
           setAdminIfsc(result.ifsc || '');
@@ -2705,7 +2706,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Settlement Bank Account</div>
                     <div className="text-sm font-bold text-white">{savedBankSummary?.bankName || 'No bank account saved'}</div>
-                    <div className="text-xs font-mono text-slate-300">A/C: {savedBankSummary ? '•••• ' + savedBankSummary.accountLast4 : 'Not configured'}</div>
+                    <div className="text-xs font-mono text-slate-300">A/C: {savedBankSummary ? '•••• ' + savedBankSummary.accountLast4 : 'Not configured'} · {savedBankSummary?.accountType === 'current' ? 'Current' : 'Savings'}</div>
                     <div className="text-[11px] font-mono text-slate-500">IFSC: {savedBankSummary?.ifsc || 'Not configured'}</div>
                   </div>
 
@@ -2754,6 +2755,14 @@ export const AdminDashboard: React.FC = () => {
                       >
                         <option value="">Choose your bank</option>
                         {INDIAN_BANK_OPTIONS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-400 block mb-1">Account Type</label>
+                      <select value={adminAccountType} onChange={e => setAdminAccountType(e.target.value as 'savings' | 'current')} className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium">
+                        <option value="savings">Savings Account</option>
+                        <option value="current">Current Account</option>
                       </select>
                     </div>
 
@@ -2843,7 +2852,7 @@ export const AdminDashboard: React.FC = () => {
                           const response = await fetch('/api/admin/payment-bank', {
                             method: 'PUT',
                             headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ bankName: adminBankName, accountHolderName: adminAccountHolder, accountNumber: adminAccountNo, ifsc: adminIfsc })
+                            body: JSON.stringify({ bankName: adminBankName, accountType: adminAccountType, accountHolderName: adminAccountHolder, accountNumber: adminAccountNo, ifsc: adminIfsc })
                           });
                           const result = await response.json();
                           if (!response.ok || !result.success) throw new Error(result.error || 'Bank details could not be saved.');
