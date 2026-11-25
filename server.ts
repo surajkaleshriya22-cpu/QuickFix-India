@@ -2215,6 +2215,63 @@ app.post('/api/admin/kyc-submissions/:submissionId/decision', authenticateFireba
   }
 });
 
+// Customer Care: search by the permanent QuickFix ID. Only server-authorized admins can access it.
+app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure Customer Care lookup is unavailable.' });
+    const quickFixId = String(req.params.quickFixId || '').trim().toUpperCase();
+    if (!/^QF[CP]-\d{8}$/.test(quickFixId)) return res.status(400).json({ success: false, error: 'Enter a valid QuickFix ID.' });
+    const db = getFirestore(firebaseAdminApp);
+    const index = await db.collection('quickfix_id_index').doc(quickFixId).get();
+    if (!index.exists) return res.status(404).json({ success: false, error: 'No account was found for this QuickFix ID.' });
+    const uid = String(index.data()?.uid || '');
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return res.status(404).json({ success: false, error: 'The QuickFix ID record is unavailable.' });
+    const userSnap = await db.collection('users').doc(uid).get();
+    if (!userSnap.exists) return res.status(404).json({ success: false, error: 'The account profile is unavailable.' });
+    const user = userSnap.data()!;
+    const [customerBookings, partnerBookings] = await Promise.all([
+      db.collection('bookings').where('customerUid', '==', uid).limit(100).get(),
+      db.collection('bookings').where('technicianUid', '==', uid).limit(100).get()
+    ]);
+    const bookingsById = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
+    const bookings = [...bookingsById.values()].map((item) => {
+      const booking = item.data();
+      return {
+        bookingId: item.id,
+        role: booking.customerUid === uid ? 'customer' : 'channel_partner',
+        serviceTitle: String(booking.serviceTitle || booking.serviceCategory || ''),
+        status: String(booking.status || 'unknown'),
+        paymentStatus: String(booking.paymentStatus || 'unknown'),
+        totalAmount: typeof booking.totalAmount === 'number' ? booking.totalAmount : null,
+        createdAt: booking.createdAt?.toDate?.()?.toISOString?.() || null,
+        scheduledDate: String(booking.scheduledDate || '')
+      };
+    }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return res.json({
+      success: true,
+      profile: {
+        quickFixId, accountType: hasChannelPartnerRole(user) ? 'CHANNEL_PARTNER' : 'CUSTOMER',
+        displayName: String(user.displayName || ''), phoneNumber: String(user.phoneNumber || ''),
+        email: String(user.email || ''), address: String(user.address || ''), city: String(user.city || ''),
+        serviceArea: user.serviceArea || null,
+        trades: Array.isArray(user.trades) ? user.trades.filter((v: unknown) => typeof v === 'string') : [],
+        accountStatus: String(user.status || (user.isSuspended ? 'suspended' : 'active')),
+        approvalStatus: String(user.approvalStatus || 'not_applicable'),
+        kycStatus: String(user.kycStatus || 'not_applicable'),
+        isVerified: user.isVerified === true, isOnline: user.isOnline === true,
+        walletBalance: typeof user.walletBalance === 'number' ? user.walletBalance : null,
+        securityDepositPaid: user.securityDepositPaid === true,
+        createdAt: user.createdAt?.toDate?.()?.toISOString?.() || null
+      },
+      bookings, bookingCount: bookings.length
+    });
+  } catch (error) {
+    console.error('Customer Care QuickFix ID lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Customer Care could not load this account record.' });
+  }
+});
+
 // Admin-only directory for all registered Channel Partners and legacy Technicians.
 app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
   try {
