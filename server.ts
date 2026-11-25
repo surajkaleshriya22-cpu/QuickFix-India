@@ -303,10 +303,12 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     const rechargeSettings = await db.collection('settings').doc('partner_recharge').get();
     const trialDays = Number.isInteger(rechargeSettings.data()?.trialDays) ? Number(rechargeSettings.data()?.trialDays) : 30;
     const trialExpiry = new Date(Date.now() + trialDays * 86400000);
+    let issuedPartnerQuickFixId = '';
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
       let issuedQuickFixId = typeof existingData?.quickFixId === 'string' ? existingData.quickFixId : '';
+      issuedPartnerQuickFixId = issuedQuickFixId;
       let quickFixIdRef: any = null;
       if (!issuedQuickFixId) {
         for (let attempt = 0; attempt < 8; attempt++) {
@@ -317,6 +319,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         }
         if (!issuedQuickFixId || !quickFixIdRef) throw new Error('QUICKFIX_ID_ALLOCATION_FAILED');
       }
+      issuedPartnerQuickFixId = issuedQuickFixId;
       if (existingData) {
         const existingRoles = Array.isArray(existingData.roles) ? existingData.roles : [existingData.role];
         const eligibleCustomer = existingData.role === 'CUSTOMER' &&
@@ -368,6 +371,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 
     return res.status(201).json({
       success: true,
+      quickFixId: issuedPartnerQuickFixId,
       approvalStatus: 'pending_audit',
       message: 'Basic partner profile created. KYC and approval are still pending; no deposit was collected.'
     });
