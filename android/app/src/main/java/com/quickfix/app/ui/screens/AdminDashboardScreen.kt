@@ -566,6 +566,20 @@ fun BookingsTab(
                     Text("Customer: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
                     Text("Assigned: ${booking.technicianName ?: "Pending Allocation"}", fontSize = 12.sp, color = TextSecondary)
                     Text("Booking total: ₹${booking.totalAmount}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                    if (booking.lineItems.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                            Text("Item-wise approved rates / अलग-अलग काम का रेट", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                            booking.lineItems.forEach { line ->
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("${line.serviceTitle} × ${line.quantity} ${line.billingUnit.replace('_', ' ')}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.weight(1f))
+                                    Text("₹${line.lineTotalMinimum.toInt()}${if (line.lineTotalMaximum != line.lineTotalMinimum) "–₹${line.lineTotalMaximum.toInt()}" else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
+                            }
+                            Text("कुल item-wise अनुमान: ₹${booking.lineItems.sumOf { it.lineTotalMinimum }.toInt()} – ₹${booking.lineItems.sumOf { it.lineTotalMaximum }.toInt()}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                        }
+                    } else {
+                        Text("इस booking में item-wise rate snapshot उपलब्ध नहीं है।", fontSize = 10.sp, color = Color(0xFFB45309))
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
