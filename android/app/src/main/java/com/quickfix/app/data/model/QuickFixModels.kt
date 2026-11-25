@@ -10,6 +10,16 @@ data class ServiceItem(
     val warrantyDays: Int
 )
 
+data class BookingLineItem(
+    val serviceId: String = "",
+    val serviceTitle: String = "Service item",
+    val quantity: Double = 0.0,
+    val billingUnit: String = "",
+    val lineTotalMinimum: Double = 0.0,
+    val lineTotalMaximum: Double = 0.0,
+    val materialsIncluded: Boolean = false
+)
+
 data class Booking(
     val id: String,
     val serviceTitle: String,
@@ -28,7 +38,8 @@ data class Booking(
     val refundAmount: Int = 0,
     val refundReason: String? = null,
     val customerLatitude: Double? = null,
-    val customerLongitude: Double? = null
+    val customerLongitude: Double? = null,
+    val lineItems: List<BookingLineItem> = emptyList()
 )
 
 data class CommissionSettings(
