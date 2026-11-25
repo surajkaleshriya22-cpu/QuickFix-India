@@ -1,0 +1,45 @@
+name: Sync Bun lockfile
+
+on:
+  push:
+    branches:
+      - main
+      - fix/render-bun-lockfile
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bun-lockfile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Regenerate lockfile from package.json
+        run: bun install --lockfile-only
+
+      - name: Commit lockfile when it changed
+        run: |
+          if git diff --quiet -- bun.lock; then
+            echo "bun.lock already matches package.json"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lock
+          git commit -m "chore: sync Bun lockfile"
+          git push origin "HEAD:${{ github.ref_name }}"
