@@ -557,7 +557,7 @@ fun TechnicianScreen(
                                     job.lineItems.forEach { line ->
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text("${line.serviceTitle} × ${line.quantity} ${line.billingUnit.replace('_', ' ')}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.weight(1f))
-                                            Text("₹${line.lineTotalMinimum.toInt()}${if (line.lineTotalMaximum != line.lineTotalMinimum) "–₹${line.lineTotalMaximum.toInt()}" else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                            Text("₹${line.lineTotalMinimum.toInt()}${if (line.lineTotalMaximum != line.lineTotalMinimum) "–₹${line.lineTotalMaximum.toInt()}" else ""} (₹${line.unitRateMinimum.toInt()}/unit)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                                         }
                                     }
                                     Text("हर अतिरिक्त काम/सामग्री के लिए ग्राहक की अलग मंजूरी जरूरी है।", fontSize = 10.sp, color = TextSecondary)
