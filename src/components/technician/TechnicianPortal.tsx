@@ -135,7 +135,7 @@ export const TechnicianPortal: React.FC = () => {
   const [availableJobs, setAvailableJobs] = useState<Array<{
     id: string; serviceTitle: string; category: string; customerName: string;
     status: 'requested'; price: number; totalAmount: number;
-    lineItems?: Array<{ serviceTitle: string; quantity: number; billingUnit: string; unitRateMinimum?: number; unitRateMaximum?: number; lineTotalMinimum: number; lineTotalMaximum: number; materialsIncluded?: boolean }>;
+    lineItems?: Array<{ serviceTitle: string; quantity: number; billingUnit: string; unitRateMinimum?: number; unitRateMaximum?: number; baseFee?: number; minimumCharge?: number; lineTotalMinimum: number; lineTotalMaximum: number; materialsIncluded?: boolean }>;
   }>>([]);
   const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
@@ -1103,7 +1103,7 @@ export const TechnicianPortal: React.FC = () => {
                 {job.lineItems?.length ? <div className="rounded-lg bg-slate-50 border border-slate-100 p-2 space-y-1.5">
                   <p className="text-[10px] font-bold text-slate-500 uppercase">Customer-approved item-wise rate</p>
                   {job.lineItems.map((line, index) => <div key={line.serviceTitle + index} className="flex justify-between gap-2 text-[11px]">
-                    <span className="text-slate-700">{line.serviceTitle} × {line.quantity} {line.billingUnit.replaceAll('_', ' ')}</span>
+                    <span className="text-slate-700">{line.serviceTitle} × {line.quantity} {line.billingUnit.replaceAll('_', ' ')}{line.unitRateMinimum !== undefined ? ` · ₹${line.unitRateMinimum}${line.unitRateMaximum !== undefined && line.unitRateMaximum !== line.unitRateMinimum ? '–₹' + line.unitRateMaximum : ''}/unit` : ''}</span>
                     <strong className="text-slate-900">₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</strong>
                   </div>)}
                   <div className="border-t border-slate-200 pt-1 flex justify-between text-xs font-bold"><span>Estimated total</span><span>₹{job.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)}{job.lineItems.some(line => line.lineTotalMaximum !== line.lineTotalMinimum) ? ' – ₹' + job.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0) : ''}</span></div>
