@@ -113,25 +113,40 @@ class AuthRepository(
     }
 
     suspend fun saveUserProfile(user: User) {
-        val userMap = hashMapOf<String, Any>(
-            "uid" to user.uid,
-            "phoneNumber" to user.phoneNumber,
-            "displayName" to user.displayName,
-            "email" to user.email,
-            "role" to user.role.name,
-            "roles" to (user.roles.ifEmpty { listOf(user.role.name) }),
-            "address" to user.address,
-            "city" to user.city,
-            "pincode" to user.pincode,
-            "trades" to user.trades,
-            "experienceYears" to user.experienceYears,
-            "isVerified" to user.isVerified,
-            "createdAt" to FieldValue.serverTimestamp()
-        )
-        firestore.collection("users")
-            .document(user.uid)
-            .set(userMap)
-            .await()
+        val firebaseUser = auth.currentUser
+            ?: throw SecurityException("Please verify your mobile number again.")
+        val idToken = firebaseUser.getIdToken(true).await().token
+            ?: throw SecurityException("Could not obtain a secure Firebase sign-in token.")
+        val payload = JSONObject().apply {
+            put("displayName", user.displayName.trim().ifBlank { "QuickFix Customer" })
+            put("email", user.email.trim())
+            put("address", user.address.trim())
+            put("city", user.city.trim())
+        }
+        withContext(Dispatchers.IO) {
+            val connection = (URL("https://quickfix-india.onrender.com/api/customers/register")
+                .openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 15000
+                readTimeout = 20000
+                doOutput = true
+                setRequestProperty("Authorization", "Bearer $idToken")
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setRequestProperty("Accept", "application/json")
+            }
+            try {
+                connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                val status = connection.responseCode
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val body = if (response.isNotBlank()) JSONObject(response) else JSONObject()
+                if (status !in 200..299 || !body.optBoolean("success", false)) {
+                    throw IllegalStateException(body.optString("error").ifBlank { "Secure Customer registration failed (HTTP $status)." })
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
     }
 
 
@@ -207,6 +222,9 @@ class AuthRepository(
         @Suppress("UNCHECKED_CAST")
         return User(
             uid = snapshot.id,
+            quickFixId = if (role == UserRole.CHANNEL_PARTNER || role == UserRole.TECHNICIAN)
+                data["partnerQuickFixId"] as? String ?: ""
+            else data["customerQuickFixId"] as? String ?: data["quickFixId"] as? String ?: "",
             phoneNumber = data["phoneNumber"] as? String ?: "",
             displayName = data["displayName"] as? String ?: "",
             email = data["email"] as? String ?: "",
