@@ -70,6 +70,7 @@ interface QuickFixContextType {
     email: string;
     city: string;
   }) => Promise<{ success: boolean; message?: string }>;
+  signInExistingPartner: () => Promise<{ success: boolean; message?: string }>;
   registerNewPartner: (params: {
     displayName: string;
     phoneNumber: string;
@@ -482,6 +483,67 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (error) {
       console.warn('Secure partner registration request failed:', error);
       return { success: false, message: 'Network or server error. Your partner profile was not confirmed; please try again.' };
+    }
+  };
+
+  const signInExistingPartner: QuickFixContextType['signInExistingPartner'] = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return { success: false, message: 'Please verify your registered partner mobile number with Firebase OTP first.' };
+    try {
+      const idToken = await firebaseUser.getIdToken(true);
+      const response = await fetch('/api/partners/profile', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${idToken}`, Accept: 'application/json' }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || !result.profile) {
+        // Do not leave a customer or unknown account signed in under the Partner tab.
+        if (response.status === 403 || response.status === 404) await signOut(auth);
+        return { success: false, message: result.error || 'Registered Channel Partner account could not be verified.' };
+      }
+      const profile = result.profile;
+      const trades = Array.isArray(profile.trades) ? profile.trades : [];
+      const partnerUser: AppUser = {
+        uid: profile.uid,
+        phoneNumber: profile.phoneNumber,
+        displayName: profile.displayName,
+        email: profile.email,
+        role: 'technician',
+        city: profile.city,
+        address: profile.address,
+        trades,
+        experienceYears: profile.experienceYears,
+        approvalStatus: profile.approvalStatus,
+        isVerified: profile.isVerified,
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUser(partnerUser);
+      setIsAuthenticated(true);
+      setIsTechnicianLoggedIn(true);
+      setCurrentTechnician(prev => ({
+        ...prev,
+        id: profile.uid,
+        name: profile.displayName,
+        phone: profile.phoneNumber,
+        email: profile.email,
+        city: profile.city,
+        trades,
+        experienceYears: profile.experienceYears,
+        isOnline: profile.isOnline,
+        isVerified: profile.isVerified,
+        approvalStatus: profile.approvalStatus,
+        walletBalance: profile.walletBalance,
+        securityDepositPaid: profile.securityDepositPaid
+      }));
+      setActiveRole('technician');
+      return { success: true, message: profile.isSuspended
+        ? 'Login successful. Your account is suspended; contact support before accepting jobs.'
+        : profile.approvalStatus === 'approved'
+          ? 'Login successful.'
+          : 'Login successful. Your partner profile is awaiting approval.' };
+    } catch (error) {
+      console.warn('Secure partner sign-in failed:', error);
+      return { success: false, message: 'Network or server error. Please try partner login again.' };
     }
   };
 
@@ -1309,6 +1371,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         authenticateFirebaseCustomer,
         authenticateVerifiedAdmin,
         registerNewPartner,
+        signInExistingPartner,
         logoutUser,
         updateCustomerAddress,
         currentCity,
