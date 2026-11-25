@@ -56,7 +56,8 @@ fun CustomerHomeScreen(
     var voiceMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     val languagePrefs = remember { context.getSharedPreferences("quickfix_preferences", android.content.Context.MODE_PRIVATE) }
-    var appLanguage by remember { mutableStateOf(languagePrefs.getString("app_language", "hi") ?: "hi") }
+    val languageState = LocalQuickFixLanguage.current
+    val appLanguage = languageState.value
     val isEnglish = appLanguage == "en"
     var hindiSpeaker by remember { mutableStateOf<TextToSpeech?>(null) }
     DisposableEffect(context) {
@@ -74,7 +75,7 @@ fun CustomerHomeScreen(
     }
     LaunchedEffect(voiceMessage) {
         if (voiceMessage.isNotBlank()) {
-            hindiSpeaker?.language = Locale("hi", "IN")
+            hindiSpeaker?.language = if (isEnglish) Locale.US else Locale("hi", "IN")
             hindiSpeaker?.speak(voiceMessage, TextToSpeech.QUEUE_FLUSH, null, "quickfix_voice_feedback")
         }
     }
@@ -179,12 +180,12 @@ fun CustomerHomeScreen(
                         }
                         DropdownMenu(expanded = showLanguageMenu, onDismissRequest = { showLanguageMenu = false }) {
                             DropdownMenuItem(text = { Text("हिंदी") }, onClick = {
-                                appLanguage = "hi"
+                                languageState.value = "hi"
                                 languagePrefs.edit().putString("app_language", "hi").apply()
                                 showLanguageMenu = false
                             })
                             DropdownMenuItem(text = { Text("English") }, onClick = {
-                                appLanguage = "en"
+                                languageState.value = "en"
                                 languagePrefs.edit().putString("app_language", "en").apply()
                                 showLanguageMenu = false
                             })
