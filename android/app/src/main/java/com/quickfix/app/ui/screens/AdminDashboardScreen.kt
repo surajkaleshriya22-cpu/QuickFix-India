@@ -413,7 +413,9 @@ fun TechniciansTab(
                 "driver" to "Drivers",
                 "tourist_guide" to "Tourist Guides",
                 "contractor" to "Contractors",
-                "bike_rider" to "Bike Rider Captains"
+                "bike_rider" to "Bike Rider Captains",
+                "car_wash" to "Car Washing",
+                "transport" to "Transport & Delivery"
             ).forEach { (key, label) ->
                 FilterChip(
                     selected = selectedFilter == key,
