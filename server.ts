@@ -402,7 +402,7 @@ app.get('/api/admin/partner-recharge/ledger', authenticateFirebaseUser, requireS
       .orderBy('createdAt', 'desc')
       .limit(limit)
       .get();
-    const rawItems = snapshot.docs.map(document => ({ id: document.id, ...(document.data() || {}) }));
+    const rawItems: Array<Record<string, any>> = snapshot.docs.map(document => ({ id: document.id, ...(document.data() || {}) }));
     const partnerUids = Array.from(new Set(rawItems
       .map(item => typeof item.partnerUid === 'string' ? item.partnerUid : '')
       .filter(Boolean)));
