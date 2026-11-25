@@ -53,6 +53,7 @@ fun ServiceBookingScreen(
 ) {
     val services by viewModel.services.collectAsState()
     val currentCity by viewModel.currentCity.collectAsState()
+    val isEnglish = LocalQuickFixLanguage.current.value == "en"
 
     val service = services.find { it.id == serviceId } ?: services.first()
 
@@ -149,7 +150,7 @@ fun ServiceBookingScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "काम बुक करें",
+                        if (isEnglish) "Book a service" else "काम बुक करें",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 17.sp
@@ -178,9 +179,9 @@ fun ServiceBookingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
+                        Text(if (isEnglish) "Final price" else "अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
                         Text(
-                            "काम की पुष्टि के बाद",
+                            if (isEnglish) "After job confirmation" else "काम की पुष्टि के बाद",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BrandBlue
@@ -189,13 +190,13 @@ fun ServiceBookingScreen(
                     Button(
                         onClick = {
                             if (!isValidBookingDate) {
-                                bookingError = "कृपया आज या आगे की सही तारीख चुनें।"
+                                bookingError = if (isEnglish) "Please choose today or a future date." else "कृपया आज या आगे की सही तारीख चुनें।"
                             } else if (!isValidQuantity) {
-                                bookingError = "कृपया मात्रा 0 से अधिक लिखें।"
+                                bookingError = if (isEnglish) "Please enter a quantity greater than 0." else "कृपया मात्रा 0 से अधिक लिखें।"
                             } else if (address.isBlank()) {
-                                bookingError = "कृपया पूरा पता लिखें।"
+                                bookingError = if (isEnglish) "Please enter the complete address." else "कृपया पूरा पता लिखें।"
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
-                                bookingError = "कृपया राज्य, जिला और तहसील भरें।"
+                                bookingError = if (isEnglish) "Please enter state, district and tehsil." else "कृपया राज्य, जिला और तहसील भरें।"
                             } else {
                                 isBooking = true
                                 bookingError = null
@@ -268,9 +269,9 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(service.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Text(if (isEnglish) service.title else service.hindiTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
                     if (service.hindiTitle != null) {
-                        Text(service.hindiTitle, fontSize = 12.sp, color = TextSecondary)
+                        Text(if (isEnglish) service.hindiTitle else service.title, fontSize = 12.sp, color = TextSecondary)
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -295,7 +296,7 @@ fun ServiceBookingScreen(
                         value = address,
                         onValueChange = { address = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("मकान नंबर, गली, मोहल्ला और पूरा पता") }
+                        label = { Text(if (isEnglish) "House number, street, locality and full address" else "मकान नंबर, गली, मोहल्ला और पूरा पता") }
                     )
                     OutlinedButton(
                         onClick = {
@@ -320,7 +321,7 @@ fun ServiceBookingScreen(
                     ) {
                         Icon(Icons.Default.MyLocation, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("मेरी वर्तमान लोकेशन इस्तेमाल करें")
+                        Text(if (isEnglish) "Use my current location" else "मेरी वर्तमान लोकेशन इस्तेमाल करें")
                     }
                     locationMessage?.let { message ->
                         Text(message, fontSize = 11.sp, color = TextSecondary)
@@ -371,21 +372,21 @@ fun ServiceBookingScreen(
                         value = state,
                         onValueChange = { state = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("राज्य") },
+                        label = { Text(if (isEnglish) "State" else "राज्य") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = district,
                         onValueChange = { district = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("जिला") },
+                        label = { Text(if (isEnglish) "District" else "जिला") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = tehsil,
                         onValueChange = { tehsil = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("तहसील / तालुका") },
+                        label = { Text(if (isEnglish) "Tehsil / Taluka" else "तहसील / तालुका") },
                         singleLine = true
                     )
                     OutlinedButton(
@@ -394,7 +395,7 @@ fun ServiceBookingScreen(
                     ) {
                         Icon(Icons.Default.CalendarMonth, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("काम की तारीख: $scheduledDate")
+                        Text(if (isEnglish) "Service date: $scheduledDate" else "काम की तारीख: $scheduledDate")
                     }
                     Text(
                         if (isValidBookingDate) "आज या आगे की तारीख चुनें" else "कृपया सही तारीख चुनें",
@@ -408,7 +409,7 @@ fun ServiceBookingScreen(
                         ) {
                             Icon(Icons.Default.Schedule, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("समय चुनें: $scheduledTimeSlot")
+                            Text(if (isEnglish) "Choose time: $scheduledTimeSlot" else "समय चुनें: $scheduledTimeSlot")
                         }
                         DropdownMenu(
                             expanded = showTimeOptions,
@@ -448,10 +449,10 @@ fun ServiceBookingScreen(
                                             .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
                                     }
                                     showDatePicker = false
-                                }) { Text("तारीख तय करें") }
+                                }) { Text(if (isEnglish) "Set date" else "तारीख तय करें") }
                             },
                             dismissButton = {
-                                TextButton(onClick = { showDatePicker = false }) { Text("रद्द करें") }
+                                TextButton(onClick = { showDatePicker = false }) { Text(if (isEnglish) "Cancel" else "रद्द करें") }
                             }
                         ) {
                             DatePicker(state = datePickerState)
@@ -468,13 +469,13 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("2. कितना काम है?", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "2. How much work is needed?" else "2. कितना काम है?", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = quantity,
                         onValueChange = { quantity = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("मात्रा (घंटे / किलो / किलोमीटर आदि)") },
-                        supportingText = { Text("सिर्फ विजिट या जाँच के लिए 1 लिखें") },
+                        label = { Text(if (isEnglish) "Quantity (hours / kg / km etc.)" else "मात्रा (घंटे / किलो / किलोमीटर आदि)") },
+                        supportingText = { Text(if (isEnglish) "Enter 1 for a visit or inspection only" else "सिर्फ विजिट या जाँच के लिए 1 लिखें") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         isError = quantity.isNotBlank() && !isValidQuantity
@@ -489,12 +490,12 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("3. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "3. What is the issue? (optional)" else "3. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("जैसे: पंखा आवाज़ कर रहा है या नल से पानी टपक रहा है") }
+                        placeholder = { Text(if (isEnglish) "Example: fan is noisy or tap is leaking" else "जैसे: पंखा आवाज़ कर रहा है या नल से पानी टपक रहा है") }
                     )
                 }
             }
@@ -508,19 +509,19 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("4. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "4. Payment method" else "4. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = true, onClick = {})
                         Column {
-                            Text("सेवा पूरी होने के बाद नकद (Cash)", fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Text("अभी कोई ऑनलाइन भुगतान नहीं लिया जाएगा।", fontSize = 11.sp, color = TextSecondary)
+                            Text(if (isEnglish) "Cash after service completion" else "सेवा पूरी होने के बाद नकद (Cash)", fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Text(if (isEnglish) "Online payment is not available yet." else "अभी कोई ऑनलाइन भुगतान नहीं लिया जाएगा।", fontSize = 11.sp, color = TextSecondary)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = false, onClick = {}, enabled = false)
                         Column {
-                            Text("UPI / ऑनलाइन भुगतान", color = TextSecondary)
-                            Text("ग्राहक भुगतान की सुरक्षित सुविधा अभी चालू नहीं है।", fontSize = 11.sp, color = TextSecondary)
+                            Text(if (isEnglish) "UPI / Online payment" else "UPI / ऑनलाइन भुगतान", color = TextSecondary)
+                            Text(if (isEnglish) "Secure customer payments are not enabled yet." else "ग्राहक भुगतान की सुरक्षित सुविधा अभी चालू नहीं है।", fontSize = 11.sp, color = TextSecondary)
                         }
                     }
                 }
@@ -581,7 +582,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("कीमत की जानकारी", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "Price details" else "कीमत की जानकारी", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     Text(
                         "इस स्क्रीन पर कोई अनुमानित रकम नहीं ली जाती। जहाँ तय रेट उपलब्ध होंगे, उनका उपयोग होगा। अन्यथा काम शुरू होने से पहले पार्टनर कीमत बताएगा। अभी भुगतान नहीं लिया जाएगा।",
                         fontSize = 12.sp,
