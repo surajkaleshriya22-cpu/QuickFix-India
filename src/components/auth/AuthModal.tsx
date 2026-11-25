@@ -35,6 +35,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     authenticateUser,
     authenticateFirebaseCustomer,
     registerNewPartner,
+    signInExistingPartner,
     currentCity,
     setCurrentCity,
     setActiveRole
@@ -95,10 +96,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (selectedRoleTab === 'admin' || (selectedRoleTab === 'technician' && !isSignupMode)) {
-      setFormError(selectedRoleTab === 'admin'
-        ? 'Admin sign-in must use the dedicated secure Admin Login screen.'
-        : 'Existing partner sign-in is not enabled yet. Use the registered customer account or contact support.');
+    if (selectedRoleTab === 'admin') {
+      setFormError('Admin sign-in must use the dedicated secure Admin Login screen.');
       return;
     }
     if (!isFirebaseConfigured) {
@@ -180,7 +179,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
       const credential = await confirmationResult.confirm(enteredOtp.trim());
       if (selectedRoleTab === 'technician') {
         if (!isSignupMode) {
-          setFormError('Existing partner sign-in is not enabled yet.');
+          const result = await signInExistingPartner();
+          if (!result.success) {
+            setFormError(result.message || 'Channel Partner sign-in failed. Please try again.');
+            return;
+          }
+          setActiveRole('technician');
+          onClose();
           return;
         }
         const result = await registerNewPartner({
