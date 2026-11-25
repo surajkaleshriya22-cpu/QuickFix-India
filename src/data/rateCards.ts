@@ -84,7 +84,7 @@ export function resolveLocationRateCard(
 }
 
 export function calculateRateQuote(
-  card: Pick<LocationRateCard, 'unit' | 'minimumRate' | 'maximumRate' | 'minimumCharge' | 'baseFee' | 'materialsIncluded'>,
+  card: Pick<LocationRateCard, 'unit' | 'minimumRate' | 'maximumRate' | 'minimumCharge' | 'baseFee' | 'materialsIncluded' | 'percentageAdjustment'>,
   quantity: number
 ): RateQuote {
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -97,7 +97,7 @@ export function calculateRateQuote(
   const adjustment = card.percentageAdjustment ?? 0;
   if (!Number.isFinite(adjustment) || adjustment < -100 || adjustment > 500) throw new Error('Percentage adjustment must be between -100% and +500%.');
   const factor = 1 + adjustment / 100;
-  const adjusted = (amount) => Math.round(amount * factor * 100) / 100;
+  const adjusted = (amount: number) => Math.round(amount * factor * 100) / 100;
   const rateMinimum = adjusted(card.minimumRate);
   const rateMaximum = adjusted(card.maximumRate);
   const minimumCharge = adjusted(card.minimumCharge);
