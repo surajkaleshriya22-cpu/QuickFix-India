@@ -220,8 +220,8 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
       if (data) {
         const roles = Array.isArray(data.roles) ? data.roles : [data.role];
         if (!roles.includes('CUSTOMER') || data.phoneNumber !== identity.phone_number) throw new Error('CUSTOMER_PROFILE_CONFLICT');
-        if (typeof data.quickFixId === 'string' && data.quickFixId) {
-          issuedId = data.quickFixId;
+        if (typeof data.customerQuickFixId === 'string' && data.customerQuickFixId) {
+          issuedId = data.customerQuickFixId;
           return;
         }
       }
@@ -240,7 +240,7 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
         uid: identity.uid, phoneNumber: identity.phone_number,
         displayName: displayName.trim(), email: email.trim().toLowerCase(),
         role: 'CUSTOMER', roles: ['CUSTOMER'], isVerified: false,
-        quickFixId: candidate, createdAt: data?.createdAt || FieldValue.serverTimestamp(),
+        quickFixId: candidate, customerQuickFixId: candidate, createdAt: data?.createdAt || FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         ...(typeof address === 'string' && address.trim() ? { address: address.trim() } : {}),
         ...(typeof city === 'string' && city.trim() ? { city: city.trim() } : {})
@@ -307,7 +307,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
-      let issuedQuickFixId = typeof existingData?.quickFixId === 'string' ? existingData.quickFixId : '';
+      let issuedQuickFixId = typeof existingData?.partnerQuickFixId === 'string' ? existingData.partnerQuickFixId : '';
       issuedPartnerQuickFixId = issuedQuickFixId;
       let quickFixIdRef: any = null;
       if (!issuedQuickFixId) {
@@ -336,7 +336,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
         roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
-        quickFixId: issuedQuickFixId,
+        partnerQuickFixId: issuedQuickFixId,
         subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
         subscriptionTrialDaysGranted: trialDays,
         ...(existingData?.subscriptionTrialStartedAt ? {} : { subscriptionTrialStartedAt: FieldValue.serverTimestamp() }),
@@ -401,7 +401,7 @@ app.get('/api/partners/profile', authenticateFirebaseUser, async (req: Request, 
       success: true,
       profile: {
         uid: identity.uid,
-        quickFixId: typeof data.quickFixId === 'string' ? data.quickFixId : '',
+        quickFixId: typeof data.partnerQuickFixId === 'string' ? data.partnerQuickFixId : '',
         phoneNumber: identity.phone_number,
         displayName: typeof data.displayName === 'string' ? data.displayName : '',
         email: typeof data.email === 'string' ? data.email : '',
@@ -2233,7 +2233,7 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
       db.collection('bookings').where('customerUid', '==', uid).limit(100).get(),
       db.collection('bookings').where('technicianUid', '==', uid).limit(100).get()
     ]);
-    const bookingsById = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    const bookingsById = new Map<string, QueryDocumentSnapshot>();
     [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
     const bookings = [...bookingsById.values()].map((item) => {
       const booking = item.data();
@@ -2251,7 +2251,7 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
     return res.json({
       success: true,
       profile: {
-        quickFixId, accountType: hasChannelPartnerRole(user) ? 'CHANNEL_PARTNER' : 'CUSTOMER',
+        quickFixId, accountType: String(index.data()?.accountType || (hasChannelPartnerRole(user) ? 'CHANNEL_PARTNER' : 'CUSTOMER')),
         displayName: String(user.displayName || ''), phoneNumber: String(user.phoneNumber || ''),
         email: String(user.email || ''), address: String(user.address || ''), city: String(user.city || ''),
         serviceArea: user.serviceArea || null,
