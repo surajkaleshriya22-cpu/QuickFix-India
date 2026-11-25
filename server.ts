@@ -2246,6 +2246,33 @@ app.post('/api/admin/kyc-submissions/:submissionId/decision', authenticateFireba
   }
 });
 
+// Authenticated support ticket intake. Tickets are real records, not chat-only placeholders.
+app.post('/api/support/tickets', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Support service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const category = typeof req.body?.category === 'string' ? req.body.category.trim().slice(0, 40) : '';
+    const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim().slice(0, 120) : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim().slice(0, 2000) : '';
+    if (!['booking','payment','wallet','account','partner','other'].includes(category) || subject.length < 4 || description.length < 10) {
+      return res.status(400).json({ success: false, error: 'Select a category and enter a subject and description.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const profile = await db.collection('users').doc(identity.uid).get();
+    const ticketRef = db.collection('support_tickets').doc();
+    await ticketRef.create({
+      ticketId: ticketRef.id, userUid: identity.uid,
+      quickFixId: String(profile.data()?.customerQuickFixId || profile.data()?.partnerQuickFixId || ''),
+      category, subject, description, status: 'open', priority: 'normal',
+      createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.status(201).json({ success: true, ticketId: ticketRef.id, status: 'open' });
+  } catch (error) {
+    console.error('Support ticket creation failed:', error);
+    return res.status(500).json({ success: false, error: 'Your support request could not be saved. Please try again.' });
+  }
+});
+
 // Customer Care: search by the permanent QuickFix ID. Only server-authorized admins can access it.
 app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireCustomerCareAccess, async (req: Request, res: Response) => {
   try {
@@ -2261,13 +2288,15 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
     if (!userSnap.exists) return res.status(404).json({ success: false, error: 'The account profile is unavailable.' });
     const user = userSnap.data()!;
     const isPartnerAccount = hasChannelPartnerRole(user) || index.data()?.accountType === 'CHANNEL_PARTNER';
-    const [customerBookings, partnerBookings, rechargeLedger, accountAudit, kycSubmissions, kycAudit] = await Promise.all([
+    const [customerBookings, partnerBookings, rechargeLedger, accountAudit, kycSubmissions, kycAudit, supportTickets, walletTransactions] = await Promise.all([
       db.collection('bookings').where('customerUid', '==', uid).limit(100).get(),
       db.collection('bookings').where('technicianUid', '==', uid).limit(100).get(),
       isPartnerAccount ? db.collection('partner_recharge_ledger').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null),
       db.collection('admin_audit_logs').where('targetUid', '==', uid).limit(100).get(),
       isPartnerAccount ? db.collection('partner_kyc_submissions').where('partnerUid', '==', uid).limit(50).get() : Promise.resolve(null),
-      isPartnerAccount ? db.collection('partner_kyc_audit').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null)
+      isPartnerAccount ? db.collection('partner_kyc_audit').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null),
+      db.collection('support_tickets').where('userUid', '==', uid).limit(100).get(),
+      isPartnerAccount ? db.collection('wallet_transactions').where('userUid', '==', uid).limit(100).get() : Promise.resolve(null)
     ]);
     const bookingsById = new Map<string, QueryDocumentSnapshot>();
     [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
@@ -2333,7 +2362,23 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
           decision: String(row.decision || ''), reason: String(row.reason || ''),
           createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
       }),
-      historyLimits: { bookings: 100, partnerRecharge: 100, accountAudit: 100, kycSubmissions: 50, kycAudit: 100 }
+      supportTickets: supportTickets.docs.map((item) => {
+        const row = item.data();
+        return { ticketId: item.id, category: String(row.category || 'other'),
+          subject: String(row.subject || ''), description: String(row.description || ''),
+          status: String(row.status || 'open'), priority: String(row.priority || 'normal'),
+          createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null,
+          updatedAt: row.updatedAt?.toDate?.()?.toISOString?.() || null };
+      }),
+      walletTransactions: (walletTransactions?.docs || []).map((item) => {
+        const row = item.data();
+        return { id: item.id, type: String(row.type || 'adjustment'),
+          amountPaise: typeof row.amountPaise === 'number' ? row.amountPaise : null,
+          status: String(row.status || 'unknown'), reference: String(row.reference || ''),
+          createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
+      }),
+      walletLedgerStatus: 'not_integrated',
+      historyLimits: { bookings: 100, partnerRecharge: 100, accountAudit: 100, kycSubmissions: 50, kycAudit: 100, supportTickets: 100, walletTransactions: 100 }
     });
   } catch (error) {
     console.error('Customer Care QuickFix ID lookup failed:', error);
