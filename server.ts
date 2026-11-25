@@ -1670,6 +1670,13 @@ const isPartnerRechargeEntitled = (
       return null;
     }
   };
+  // Never restrict job access until payment collection AND subscription enforcement
+  // have both been explicitly enabled by a separately reviewed server rollout.
+  // The current product intentionally keeps both flags false: no partner can be
+  // blocked for a recharge that they cannot yet pay for in-app.
+  if (policy?.paymentEnabled !== true || policy?.dutyGatingEnabled !== true) {
+    return true;
+  }
   const freeTrialDays = Number(policy?.freeTrialDays);
   const trialStartMs = timestampMs(profile.createdAt);
   const activeUntilMs = timestampMs(rechargeAccount?.activeUntil);
