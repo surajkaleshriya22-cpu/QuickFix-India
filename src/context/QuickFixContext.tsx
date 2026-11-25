@@ -824,21 +824,13 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const taxes = Math.round((taxableSubtotal * commissionSettings.gstPct) / 100);
     const totalAmount = taxableSubtotal + taxes;
 
-    const categoryCommissionPct =
-      service.category === 'electrician'
-        ? commissionSettings.electricianCommissionPct
-        : service.category === 'plumber'
-        ? commissionSettings.plumberCommissionPct
-        : service.category === 'ac_repair'
-        ? (commissionSettings.acCommissionPct || 15)
-        : (commissionSettings.fridgeCommissionPct || 15);
-
-    // Partner-specific commission overrides are applied by the trusted backend
-    // after a real partner has been assigned.
-    const commissionPct = categoryCommissionPct;
-
-    const adminCommission = Math.round((price * commissionPct) / 100) + visitingCharges;
-    const technicianPayout = totalAmount - adminCommission;
+    // Market-rate model: QuickFix does not deduct per-booking commission.
+    // The displayed service price is the partner's service earning; customer-side
+    // visiting charges, discounts and taxes remain separate booking components.
+    // Legacy commission settings are retained for historical records only.
+    const commissionPct = 0;
+    const adminCommission = 0;
+    const technicianPayout = price;
 
     const newBookingId = `QF-${Math.floor(7050 + Math.random() * 900)}`;
 
