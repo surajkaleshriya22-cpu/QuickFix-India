@@ -58,6 +58,8 @@ private fun partnerCategoryHindi(category: String): String = when (category.trim
     "gardener" -> "माली"
     "pest_control" -> "कीट नियंत्रण सेवा"
     "house_shifting" -> "घर शिफ्टिंग सेवा"
+    "car_wash" -> "कार / बाइक वॉश पार्टनर"
+    "transport" -> "ट्रांसपोर्ट / सामान डिलीवरी पार्टनर"
     else -> category.replace("_", " ").replaceFirstChar { it.uppercase() }
 }
 
