@@ -167,12 +167,14 @@ fun AdminDashboardScreen(
                     totalRevenueGmv = totalRevenueGmv,
                     totalCommissionCut = totalCommissionCut,
                     firestoreStatus = firestoreStatus,
+                    isEnglish = isEnglish,
                     onNavigateToTab = { activeTab = it }
                 )
-                AdminTab.CUSTOMERS -> CustomersTab(customers = customers)
+                AdminTab.CUSTOMERS -> CustomersTab(customers = customers, isEnglish = isEnglish)
                 AdminTab.TECHNICIANS -> TechniciansTab(
                     technicians = technicians,
                     selectedFilter = selectedTradeFilter,
+                    isEnglish = isEnglish,
                     onFilterChange = { selectedTradeFilter = it },
                     onApproveKyc = { viewModel.approveTechnicianKyc(it) },
                     onRejectKyc = { viewModel.rejectTechnicianKyc(it) }
@@ -180,6 +182,7 @@ fun AdminDashboardScreen(
                 AdminTab.BOOKINGS -> BookingsTab(
                     bookings = bookings,
                     selectedStatus = selectedBookingStatus,
+                    isEnglish = isEnglish,
                     onStatusChange = { selectedBookingStatus = it },
                     onReassign = { bId, techName -> viewModel.reassignBooking(bId, techName) }
                 )
@@ -216,6 +219,7 @@ fun OverviewTab(
     totalRevenueGmv: Int,
     totalCommissionCut: Int,
     firestoreStatus: String,
+    isEnglish: Boolean,
     onNavigateToTab: (AdminTab) -> Unit
 ) {
     Column(
@@ -351,7 +355,7 @@ fun KpiCard(
 }
 
 @Composable
-fun CustomersTab(customers: List<User>) {
+fun CustomersTab(customers: List<User>, isEnglish: Boolean) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -395,6 +399,7 @@ fun CustomersTab(customers: List<User>) {
 fun TechniciansTab(
     technicians: List<User>,
     selectedFilter: String,
+    isEnglish: Boolean,
     onFilterChange: (String) -> Unit,
     onApproveKyc: (String) -> Unit,
     onRejectKyc: (String) -> Unit
@@ -525,6 +530,7 @@ fun TechniciansTab(
 fun BookingsTab(
     bookings: List<Booking>,
     selectedStatus: String,
+    isEnglish: Boolean,
     onStatusChange: (String) -> Unit,
     onReassign: (String, String) -> Unit
 ) {
