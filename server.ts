@@ -442,7 +442,11 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     }
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const db = getFirestore(firebaseAdminApp);
-    const profileSnap = await db.collection('users').doc(identity.uid).get();
+    const [profileSnap, rechargePolicySnap, rechargeAccountSnap] = await Promise.all([
+      db.collection('users').doc(identity.uid).get(),
+      db.collection('system').doc('partner_recharge_policy').get(),
+      db.collection('partner_recharge_accounts').doc(identity.uid).get()
+    ]);
     if (!profileSnap.exists) {
       return res.status(403).json({ success: false, error: 'A registered Channel Partner profile is required.' });
     }
@@ -486,6 +490,15 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const eligible = isPartnerEligibleForDispatch(profile);
     if (!eligible) {
       return res.json({ success: true, bookings: [], assignedBookings });
+    }
+    const rechargePolicy = { ...DEFAULT_PARTNER_RECHARGE_POLICY, ...(rechargePolicySnap.exists ? rechargePolicySnap.data() : {}) };
+    const rechargeEntitled = isPartnerRechargeEntitled(
+      profile,
+      rechargePolicy,
+      rechargeAccountSnap.exists ? rechargeAccountSnap.data() : undefined
+    );
+    if (!rechargeEntitled) {
+      return res.json({ success: true, bookings: [], assignedBookings, rechargeRequired: true });
     }
 
     const city = typeof profile.city === 'string' ? profile.city.trim() : '';
@@ -581,6 +594,8 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     const db = getFirestore(firebaseAdminApp);
     const partnerRef = db.collection('users').doc(identity.uid);
     const bookingRef = db.collection('bookings').doc(bookingId);
+    const rechargePolicyRef = db.collection('system').doc('partner_recharge_policy');
+    const rechargeAccountRef = db.collection('partner_recharge_accounts').doc(identity.uid);
     const auditRef = db.collection('partner_job_audit_logs').doc();
     const otpRef = db.collection('booking_start_otps').doc(bookingId);
     const startOtp = String(randomInt(0, 1000000)).padStart(6, '0');
@@ -588,9 +603,11 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
     const deadline = new Date(acceptedAt.getTime() + 60 * 60 * 1000);
 
     await db.runTransaction(async (transaction) => {
-      const [partnerSnap, bookingSnap] = await Promise.all([
+      const [partnerSnap, bookingSnap, rechargePolicySnap, rechargeAccountSnap] = await Promise.all([
         transaction.get(partnerRef),
-        transaction.get(bookingRef)
+        transaction.get(bookingRef),
+        transaction.get(rechargePolicyRef),
+        transaction.get(rechargeAccountRef)
       ]);
       if (!partnerSnap.exists) throw new Error('PARTNER_PROFILE_NOT_FOUND');
       if (!bookingSnap.exists) throw new Error('BOOKING_NOT_FOUND');
@@ -598,6 +615,10 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const partner = partnerSnap.data()!;
       const booking = bookingSnap.data()!;
       if (!isPartnerEligibleForDispatch(partner)) throw new Error('PARTNER_NOT_ELIGIBLE');
+      const rechargePolicy = { ...DEFAULT_PARTNER_RECHARGE_POLICY, ...(rechargePolicySnap.exists ? rechargePolicySnap.data() : {}) };
+      if (!isPartnerRechargeEntitled(partner, rechargePolicy, rechargeAccountSnap.exists ? rechargeAccountSnap.data() : undefined)) {
+        throw new Error('PARTNER_RECHARGE_REQUIRED');
+      }
 
       const city = typeof partner.city === 'string' ? partner.city.trim() : '';
       const trades = Array.isArray(partner.trades)
@@ -1628,6 +1649,33 @@ const DEFAULT_PARTNER_RECHARGE_POLICY = {
   effectiveAt: null as string | null,
   enabled: true,
   currency: 'INR'
+};
+
+const isPartnerRechargeEntitled = (
+  profile: Record<string, any>,
+  policy: Record<string, any> | undefined,
+  rechargeAccount: Record<string, any> | undefined,
+  nowMs = Date.now()
+): boolean => {
+  // Missing/invalid timestamps or policy values fail closed. Firestore Timestamp
+  // values are converted with toDate(); Date values are accepted for tests.
+  const timestampMs = (value: unknown): number | null => {
+    try {
+      const date = value instanceof Date ? value :
+        value && typeof (value as any).toDate === 'function' ? (value as any).toDate() : null;
+      const ms = date instanceof Date ? date.getTime() : NaN;
+      return Number.isFinite(ms) ? ms : null;
+    } catch {
+      return null;
+    }
+  };
+  const freeTrialDays = Number(policy?.freeTrialDays);
+  const trialStartMs = timestampMs(profile.createdAt);
+  const activeUntilMs = timestampMs(rechargeAccount?.activeUntil);
+  const trialActive = Number.isInteger(freeTrialDays) && freeTrialDays >= 0 && freeTrialDays <= 365 &&
+    trialStartMs !== null && nowMs < trialStartMs + freeTrialDays * 86400000;
+  const paidRechargeActive = activeUntilMs !== null && activeUntilMs > nowMs;
+  return trialActive || paidRechargeActive;
 };
 
 // Partner pricing policy is server-owned. Client access is restricted to verified admins.
