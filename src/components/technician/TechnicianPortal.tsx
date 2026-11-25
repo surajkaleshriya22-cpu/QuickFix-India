@@ -105,6 +105,7 @@ const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; crea
 
 export const TechnicianPortal: React.FC = () => {
   const {
+    language,
     currentUser,
     logoutUser,
     currentTechnician,
@@ -206,7 +207,7 @@ export const TechnicianPortal: React.FC = () => {
     setAcceptedJobMessage('');
     const firebaseUser = auth.currentUser;
     if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn || currentUser?.uid !== firebaseUser.uid) {
-      setAcceptError('Please sign in again with your verified Channel Partner account.');
+      setAcceptError('{language === 'hi' ? 'अपने सत्यापित चैनल पार्टनर अकाउंट से दोबारा लॉगिन करें।' : 'Please sign in again with your verified Channel Partner account.'}');
       return;
     }
     setAcceptingBookingId(bookingId);
@@ -303,15 +304,15 @@ export const TechnicianPortal: React.FC = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Partner profile submitted</h2>
-            <p className="text-sm text-slate-600 mt-2">Thanks{currentUser.displayName ? `, ${currentUser.displayName}` : ''}. Your basic Channel Partner profile is waiting for admin review.</p>
+            <h2 className="text-lg font-bold text-slate-900">{language === 'hi' ? 'पार्टनर प्रोफ़ाइल जमा हो गई' : 'Partner profile submitted'}</h2>
+            <p className="text-sm text-slate-600 mt-2">Thanks{currentUser.displayName ? `, ${currentUser.displayName}` : ''}. {language === 'hi' ? 'आपकी चैनल पार्टनर प्रोफ़ाइल एडमिन की जाँच में है।' : 'Your basic Channel Partner profile is waiting for admin review.'}</p>
           </div>
           <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-900 space-y-1">
-            <p className="font-bold">Status: Pending review</p>
-            <p>You cannot accept jobs or go online until approval and secure partner sign-in are enabled.</p>
+            <p className="font-bold">{language === 'hi' ? 'स्थिति: जाँच बाकी' : 'Status: Pending review'}</p>
+            <p>{language === 'hi' ? 'मंज़ूरी और सुरक्षित पार्टनर लॉगिन होने तक आप काम स्वीकार या ऑनलाइन नहीं हो सकते।' : 'You cannot accept jobs or go online until approval and secure partner sign-in are enabled.'}</p>
             <p>No KYC documents or deposit were collected. Do not send money to anyone claiming to activate this account.</p>
           </div>
-          <button type="button" onClick={() => void logoutUser()} className="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm">Sign out</button>
+          <button type="button" onClick={() => void logoutUser()} className="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm">{language === 'hi' ? 'लॉग आउट' : 'Sign out'}</button>
         </div>
       </div>
     );
@@ -326,7 +327,7 @@ export const TechnicianPortal: React.FC = () => {
             <Wrench className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">QuickFix Partner Portal</h2>
+            <h2 className="text-base font-bold text-slate-900">{language === 'hi' ? 'QuickFix चैनल पार्टनर पोर्टल' : 'QuickFix Channel Partner Portal'}</h2>
             <p className="text-xs text-slate-500">Sign in to manage service jobs and withdraw verified earnings.</p>
           </div>
 
