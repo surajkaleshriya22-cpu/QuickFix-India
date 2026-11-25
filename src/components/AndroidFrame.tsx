@@ -21,6 +21,8 @@ interface AndroidFrameProps {
 
 export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
   const {
+    language,
+    setLanguage,
     viewMode,
     setViewMode,
     activeRole,
@@ -107,8 +109,16 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* Action Controls & Firebase Setup Guide */}
+        {/* One language switch for every web-app role and screen */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
+            aria-label={language === "hi" ? "Switch app to English" : "ऐप की भाषा हिंदी करें"}
+          >
+            {language === "hi" ? "हिंदी" : "English"}
+          </button>
           {/* User Account / Auth Button */}
           {isAuthenticated && currentUser ? (
             <button
