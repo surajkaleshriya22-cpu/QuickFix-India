@@ -443,7 +443,18 @@ class QuickFixViewModel : ViewModel() {
             ServiceItem(id = "pest-mosquito", category = "pest_control", title = "Mosquito and bedbug treatment", hindiTitle = "मच्छर और खटमल नियंत्रण", startingPrice = 599, rating = 4.8, warrantyDays = 7),
             ServiceItem(id = "shift-local", category = "house_shifting", title = "Local home shifting", hindiTitle = "स्थानीय घर शिफ्टिंग", startingPrice = 999, rating = 4.8, warrantyDays = 7),
             ServiceItem(id = "shift-packing", category = "house_shifting", title = "Packing and unpacking", hindiTitle = "सामान पैकिंग और खोलना", startingPrice = 499, rating = 4.8, warrantyDays = 7),
-            ServiceItem(id = "shift-office", category = "house_shifting", title = "Office and shop shifting", hindiTitle = "ऑफिस और दुकान शिफ्टिंग", startingPrice = 1499, rating = 4.8, warrantyDays = 7)
+            ServiceItem(id = "shift-office", category = "house_shifting", title = "Office and shop shifting", hindiTitle = "ऑफिस और दुकान शिफ्टिंग", startingPrice = 1499, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "car-wash-exterior", category = "car_wash", title = "Doorstep car washing", hindiTitle = "घर पर कार वॉश", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "car-wash-bike", category = "car_wash", title = "Bike and scooter washing", hindiTitle = "बाइक और स्कूटर वॉश", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "car-wash-interior", category = "car_wash", title = "Car interior deep cleaning", hindiTitle = "कार की अंदरूनी डीप क्लीनिंग", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "car-wash-detailing", category = "car_wash", title = "Car polishing and detailing", hindiTitle = "कार पॉलिशिंग और डिटेलिंग", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-shop-delivery", category = "transport", title = "Shop-to-home goods delivery", hindiTitle = "दुकान से घर सामान पहुँचाना", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-parcel", category = "transport", title = "Parcel and local delivery", hindiTitle = "पार्सल और लोकल डिलीवरी", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-three-wheeler", category = "transport", title = "E-rickshaw / three-wheeler goods", hindiTitle = "ई-रिक्शा / तीन पहिया माल वाहन", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-mini-pickup", category = "transport", title = "Mini pickup / Tata Ace", hindiTitle = "मिनी पिकअप / टाटा ऐस", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-tempo", category = "transport", title = "Tempo / small truck", hindiTitle = "टेंपो / छोटा ट्रक", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-house-shifting", category = "transport", title = "Room / house shifting vehicle", hindiTitle = "कमरा / घर शिफ्टिंग वाहन", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-large-truck", category = "transport", title = "Large truck / intercity goods", hindiTitle = "बड़ा ट्रक / शहरों के बीच सामान", startingPrice = 0, rating = 4.8, warrantyDays = 7)
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
