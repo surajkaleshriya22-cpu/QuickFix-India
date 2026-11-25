@@ -3289,13 +3289,23 @@ export const AdminDashboard: React.FC = () => {
                   <span>Amount (INR)</span>
                 </div>
                 <div className="p-3 space-y-2 bg-slate-950/80">
-                  <div className="flex justify-between items-center text-white">
+                  {selectedReceiptBooking.lineItems?.length ? selectedReceiptBooking.lineItems.map((line, index) => (
+                    <div key={line.serviceId + index} className="flex justify-between items-start gap-3 text-white">
+                      <div className="min-w-0">
+                        <span className="font-semibold block">{line.serviceTitle}</span>
+                        <span className="text-[10px] text-slate-400">{line.quantity} × {line.billingUnit.replaceAll('_', ' ')} · ₹{line.unitRateMinimum ?? 0}{line.unitRateMaximum !== undefined && line.unitRateMaximum !== line.unitRateMinimum ? '–₹' + line.unitRateMaximum : ''} per unit</span>
+                        <span className="text-[10px] text-slate-500 block">{line.materialsIncluded ? 'Materials included' : 'Materials/parts excluded unless separately approved'}</span>
+                      </div>
+                      <span className="font-mono font-semibold whitespace-nowrap">₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</span>
+                    </div>
+                  )) : <div className="flex justify-between items-center text-white">
                     <div>
                       <span className="font-semibold block">{selectedReceiptBooking.serviceTitle}</span>
-                      <span className="text-[10px] text-slate-400">Standard 30-Day QuickFix Warranty Included</span>
+                      <span className="text-[10px] text-slate-400">Legacy booking · no saved item-wise price snapshot</span>
                     </div>
                     <span className="font-mono font-semibold">₹{selectedReceiptBooking.price}</span>
-                  </div>
+                  </div>}
+                  {selectedReceiptBooking.lineItems?.length ? <div className="flex justify-between border-t border-slate-800 pt-2 text-white font-bold text-xs"><span>Item-wise service subtotal (estimate)</span><span>₹{selectedReceiptBooking.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)} – ₹{selectedReceiptBooking.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0)}</span></div> : null}
 
                   <div className="flex justify-between items-center text-slate-400 text-[11px]">
                     <span>Doorstep Visiting & Convenience Charges</span>
