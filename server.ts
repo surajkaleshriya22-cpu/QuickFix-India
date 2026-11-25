@@ -333,10 +333,10 @@ app.put('/api/partners/bank-account', authenticateFirebaseUser, async (req: Requ
     const cleanBank = typeof bankName === 'string' ? bankName.trim() : '';
     const cleanType = accountType === 'current' ? 'current' : accountType === 'savings' ? 'savings' : '';
     const cleanHolder = typeof accountHolderName === 'string' ? accountHolderName.trim() : '';
-    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\\s/g, '') : '';
+    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\s/g, '') : '';
     const cleanIfsc = typeof ifsc === 'string' ? ifsc.trim().toUpperCase() : '';
     if (!cleanBank || cleanBank.length > 100 || !cleanType || cleanHolder.length < 2 || cleanHolder.length > 100 ||
-        !/^\\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+        !/^\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
       return res.status(400).json({ success: false, error: 'Enter valid bank, Savings/Current type, account holder, 9–18 digit account number and IFSC.' });
     }
     const iv = randomBytes(12);
@@ -2294,11 +2294,11 @@ app.put('/api/admin/payment-bank', authenticateFirebaseUser, requireServerAdmin,
     const { bankName, accountType, accountHolderName, accountNumber, ifsc } = req.body ?? {};
     const cleanBank = typeof bankName === 'string' ? bankName.trim() : '';
     const cleanHolder = typeof accountHolderName === 'string' ? accountHolderName.trim() : '';
-    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\\s/g, '') : '';
+    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\s/g, '') : '';
     const cleanIfsc = typeof ifsc === 'string' ? ifsc.trim().toUpperCase() : '';
     const cleanAccountType = accountType === 'current' ? 'current' : accountType === 'savings' ? 'savings' : '';
     if (!cleanBank || cleanBank.length > 100 || cleanHolder.length < 2 || cleanHolder.length > 100 || !cleanAccountType ||
-        !/^\\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+        !/^\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
       return res.status(400).json({ success: false, error: 'Enter bank, Savings/Current account type, account holder name, 9–18 digit account number and valid IFSC.' });
     }
     const iv = randomBytes(12);
