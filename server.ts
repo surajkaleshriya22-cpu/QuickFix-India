@@ -298,6 +298,64 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
 
 // Partner-owned UPI payment profile. This only publishes a verified-format VPA for QR display;
 // it does not confirm payments or change booking payment status.
+// Partner bank destination: full account number is encrypted at rest; only the owner can read/update it.
+app.get('/api/partners/bank-account', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner bank service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    }
+    const data = snap.data()!;
+    return res.json({ success: true, configured: Boolean(data.bankAccountCiphertext), bankName: data.bankName || '', accountType: data.bankAccountType || 'savings', accountLast4: data.bankAccountLast4 || '', ifsc: data.bankIfsc || '', accountHolderName: data.bankAccountHolderName || '' });
+  } catch (error) {
+    console.error('Partner bank account read failed:', error);
+    return res.status(500).json({ success: false, error: 'Bank account could not be loaded securely.' });
+  }
+});
+
+app.put('/api/partners/bank-account', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure partner bank service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
+    const snap = await ref.get();
+    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    }
+    const keyText = process.env.PARTNER_BANK_ENCRYPTION_KEY || process.env.ADMIN_BANK_ENCRYPTION_KEY || '';
+    let key: Buffer;
+    try { key = Buffer.from(keyText, 'base64'); } catch { key = Buffer.alloc(0); }
+    if (key.length !== 32) return res.status(503).json({ success: false, error: 'Partner bank encryption is not configured. No bank details were saved.' });
+    const { bankName, accountType, accountHolderName, accountNumber, ifsc } = req.body ?? {};
+    const cleanBank = typeof bankName === 'string' ? bankName.trim() : '';
+    const cleanType = accountType === 'current' ? 'current' : accountType === 'savings' ? 'savings' : '';
+    const cleanHolder = typeof accountHolderName === 'string' ? accountHolderName.trim() : '';
+    const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\\s/g, '') : '';
+    const cleanIfsc = typeof ifsc === 'string' ? ifsc.trim().toUpperCase() : '';
+    if (!cleanBank || cleanBank.length > 100 || !cleanType || cleanHolder.length < 2 || cleanHolder.length > 100 ||
+        !/^\\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+      return res.status(400).json({ success: false, error: 'Enter valid bank, Savings/Current type, account holder, 9–18 digit account number and IFSC.' });
+    }
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(cleanAccount, 'utf8'), cipher.final()]);
+    await ref.update({
+      bankName: cleanBank, bankAccountType: cleanType, bankAccountHolderName: cleanHolder, bankIfsc: cleanIfsc,
+      bankAccountCiphertext: encrypted.toString('base64'), bankAccountIv: iv.toString('base64'),
+      bankAccountAuthTag: cipher.getAuthTag().toString('base64'), bankAccountLast4: cleanAccount.slice(-4),
+      bankAccountEncryption: 'AES-256-GCM', bankAccountUpdatedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.json({ success: true, configured: true, bankName: cleanBank, accountType: cleanType, accountLast4: cleanAccount.slice(-4), ifsc: cleanIfsc, accountHolderName: cleanHolder });
+  } catch (error) {
+    console.error('Partner bank account save failed:', error);
+    return res.status(500).json({ success: false, error: 'Bank account could not be saved securely.' });
+  }
+});
+
 app.get('/api/partners/payment-profile', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner payment profile is temporarily unavailable.' });
@@ -2219,7 +2277,7 @@ app.get('/api/admin/payment-bank', authenticateFirebaseUser, requireServerAdmin,
     const snapshot = await getFirestore(firebaseAdminApp).collection('system').doc('admin_payment_bank').get();
     if (!snapshot.exists) return res.json({ success: true, configured: false });
     const data = snapshot.data()!;
-    return res.json({ success: true, configured: true, bankName: data.bankName, accountLast4: data.accountLast4, ifsc: data.ifsc, accountHolderName: data.accountHolderName, updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() ?? null });
+    return res.json({ success: true, configured: true, bankName: data.bankName, accountType: data.accountType || 'savings', accountLast4: data.accountLast4, ifsc: data.ifsc, accountHolderName: data.accountHolderName, updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() ?? null });
   } catch (error) {
     console.error('Admin bank details lookup failed:', error);
     return res.status(500).json({ success: false, error: 'Bank details could not be loaded securely.' });
@@ -2233,21 +2291,22 @@ app.put('/api/admin/payment-bank', authenticateFirebaseUser, requireServerAdmin,
     let key: Buffer;
     try { key = Buffer.from(keyText, 'base64'); } catch { key = Buffer.alloc(0); }
     if (key.length !== 32) return res.status(503).json({ success: false, error: 'Bank encryption is not configured on the server. No bank details were saved.' });
-    const { bankName, accountHolderName, accountNumber, ifsc } = req.body ?? {};
+    const { bankName, accountType, accountHolderName, accountNumber, ifsc } = req.body ?? {};
     const cleanBank = typeof bankName === 'string' ? bankName.trim() : '';
     const cleanHolder = typeof accountHolderName === 'string' ? accountHolderName.trim() : '';
     const cleanAccount = typeof accountNumber === 'string' ? accountNumber.replace(/\\s/g, '') : '';
     const cleanIfsc = typeof ifsc === 'string' ? ifsc.trim().toUpperCase() : '';
-    if (!cleanBank || cleanBank.length > 100 || cleanHolder.length < 2 || cleanHolder.length > 100 ||
+    const cleanAccountType = accountType === 'current' ? 'current' : accountType === 'savings' ? 'savings' : '';
+    if (!cleanBank || cleanBank.length > 100 || cleanHolder.length < 2 || cleanHolder.length > 100 || !cleanAccountType ||
         !/^\\d{9,18}$/.test(cleanAccount) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
-      return res.status(400).json({ success: false, error: 'Enter a valid bank, account holder name, 9–18 digit account number and IFSC.' });
+      return res.status(400).json({ success: false, error: 'Enter bank, Savings/Current account type, account holder name, 9–18 digit account number and valid IFSC.' });
     }
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key, iv);
     const encrypted = Buffer.concat([cipher.update(cleanAccount, 'utf8'), cipher.final()]);
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     await getFirestore(firebaseAdminApp).collection('system').doc('admin_payment_bank').set({
-      bankName: cleanBank, accountHolderName: cleanHolder, ifsc: cleanIfsc,
+      bankName: cleanBank, accountType: cleanAccountType, accountHolderName: cleanHolder, ifsc: cleanIfsc,
       accountCiphertext: encrypted.toString('base64'), accountIv: iv.toString('base64'),
       accountAuthTag: cipher.getAuthTag().toString('base64'), accountLast4: cleanAccount.slice(-4),
       encryption: 'AES-256-GCM', updatedBy: identity.uid, updatedAt: FieldValue.serverTimestamp()
