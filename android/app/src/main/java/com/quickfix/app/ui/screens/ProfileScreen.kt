@@ -119,7 +119,7 @@ fun ProfileScreen(
 
                     ProfileItemRow(icon = Icons.Default.Email, label = "Email", value = user.email.ifEmpty { "Not set" })
                     ProfileItemRow(
-                        icon = Icons.Default.Badge,
+                        icon = Icons.Default.Person,
                         label = if (isEnglish) "QuickFix ID" else "QuickFix आईडी",
                         value = user.quickFixId.ifEmpty { if (isEnglish) "Assigning…" else "जारी हो रही है…" }
                     )
