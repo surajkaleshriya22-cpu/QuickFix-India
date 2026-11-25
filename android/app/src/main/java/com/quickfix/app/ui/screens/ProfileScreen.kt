@@ -118,6 +118,11 @@ fun ProfileScreen(
                     Text(if (isEnglish) "PROFILE DETAILS" else "प्रोफ़ाइल विवरण", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
 
                     ProfileItemRow(icon = Icons.Default.Email, label = "Email", value = user.email.ifEmpty { "Not set" })
+                    ProfileItemRow(
+                        icon = Icons.Default.Badge,
+                        label = if (isEnglish) "QuickFix ID" else "QuickFix आईडी",
+                        value = user.quickFixId.ifEmpty { if (isEnglish) "Assigning…" else "जारी हो रही है…" }
+                    )
                     ProfileItemRow(icon = Icons.Default.LocationOn, label = "Address", value = user.address.ifEmpty { "Default Bangalore address" })
                     ProfileItemRow(icon = Icons.Default.Place, label = "City", value = user.city)
 
