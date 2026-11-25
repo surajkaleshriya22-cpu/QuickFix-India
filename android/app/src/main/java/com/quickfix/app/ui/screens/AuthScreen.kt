@@ -40,6 +40,7 @@ fun AuthScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val authState by authViewModel.authState.collectAsState()
+    val isEnglish = LocalQuickFixLanguage.current.value == "en"
 
     var selectedRole by remember { mutableStateOf(initialRole) }
     var isSignUp by remember { mutableStateOf(false) }
@@ -78,7 +79,7 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("QuickFix India", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A))
-                            Text("Firebase Auth & Firestore Architecture", fontSize = 10.sp, color = Color.Gray)
+                            Text(if (isEnglish) "Secure sign-in and account setup" else "सुरक्षित लॉगिन और खाता सेटअप", fontSize = 10.sp, color = Color.Gray)
                         }
                     }
                 },
@@ -110,19 +111,19 @@ fun AuthScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         TabRoleButton(
-                            title = "Customer",
+                            title = if (isEnglish) "Customer" else "ग्राहक",
                             isSelected = selectedRole == UserRole.CUSTOMER,
                             onClick = { selectedRole = UserRole.CUSTOMER },
                             modifier = Modifier.weight(1f)
                         )
                         TabRoleButton(
-                            title = "Partner",
+                            title = if (isEnglish) "Partner" else "पार्टनर",
                             isSelected = selectedRole == UserRole.CHANNEL_PARTNER,
                             onClick = { selectedRole = UserRole.CHANNEL_PARTNER },
                             modifier = Modifier.weight(1f)
                         )
                         TabRoleButton(
-                            title = "Admin",
+                            title = if (isEnglish) "Admin" else "एडमिन",
                             isSelected = selectedRole == UserRole.ADMIN,
                             onClick = { selectedRole = UserRole.ADMIN },
                             modifier = Modifier.weight(1f)
@@ -190,7 +191,7 @@ fun AuthScreen(
                         OutlinedTextField(
                             value = otpCode,
                             onValueChange = { value -> otpCode = value.filter { it.isDigit() }.take(6) },
-                            label = { Text("Verification OTP") },
+                            label = { Text(if (isEnglish) "Verification OTP" else "ओटीपी सत्यापन") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -220,7 +221,7 @@ fun AuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Verify OTP & Login", fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Verify OTP & Login" else "ओटीपी जाँचें और लॉगिन करें", fontWeight = FontWeight.Bold)
                         }
                         TextButton(
                             enabled = activity != null && phone.filter { it.isDigit() }.length == 10,
@@ -243,13 +244,13 @@ fun AuthScreen(
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Text("Resend OTP", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                            Text(if (isEnglish) "Resend OTP" else "ओटीपी दोबारा भेजें", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
                         }
 
                     } else if (selectedRole == UserRole.ADMIN) {
                         // Admin access is based only on an existing Firebase session
                         // carrying an Admin SDK-issued custom claim. No client passcode is accepted.
-                        Text("Admin Secure Login", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(if (isEnglish) "Admin Secure Login" else "एडमिन सुरक्षित लॉगिन", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text(
                             "Admin access requires an already authenticated, authorized Firebase account with the server-issued admin permission. A passcode or phone number entered here cannot grant admin access.",
                             fontSize = 12.sp,
@@ -264,7 +265,7 @@ fun AuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Check Existing Admin Session", fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Check Existing Admin Session" else "मौजूदा एडमिन सत्र जाँचें", fontWeight = FontWeight.Bold)
                         }
                         Text(
                             "If you are not already signed in, sign in through the authorized Firebase account first. Admin permission must be assigned securely by the project administrator.",
@@ -295,23 +296,23 @@ fun AuthScreen(
                             OutlinedTextField(
                                 value = displayName,
                                 onValueChange = { displayName = it },
-                                label = { Text("Full Name") },
+                                label = { Text(if (isEnglish) "Full Name" else "पूरा नाम") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
                                 value = email,
                                 onValueChange = { email = it },
-                                label = { Text("Email Address") },
+                                label = { Text(if (isEnglish) "Email Address" else "ईमेल पता") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
                                 value = address,
                                 onValueChange = { address = it },
-                                label = { Text("Service Address") },
+                                label = { Text(if (isEnglish) "Service Address" else "सेवा का पता") },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Text("Operating City (शहर चुनें):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (isEnglish) "Operating City (choose city):" else "काम का शहर चुनें:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier
@@ -329,8 +330,8 @@ fun AuthScreen(
                             }
 
                             if (selectedRole == UserRole.CHANNEL_PARTNER) {
-                                Text("KYC details will be reviewed before activation. A ₹2,000 reserve is required only through a verified payment flow; this screen does not collect money.", fontSize = 11.sp, color = Color(0xFF92400E))
-                                Text("Select Channel Partner Trade Services (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(if (isEnglish) "KYC details are reviewed before activation. Any reserve payment must use a verified payment flow; this screen does not collect money." else "काम शुरू होने से पहले KYC की जाँच होगी। कोई भी रिज़र्व भुगतान केवल सुरक्षित भुगतान व्यवस्था से होगा; इस स्क्रीन पर पैसे नहीं लिए जाते।", fontSize = 11.sp, color = Color(0xFF92400E))
+                                Text(if (isEnglish) "Select Channel Partner services (you can choose more than one):" else "चैनल पार्टनर की सेवाएँ चुनें (एक से अधिक चुन सकते हैं):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 val partnerTrades = listOf(
                                     "electrician" to "इलेक्ट्रीशियन (बिजली मिस्त्री)",
                                     "plumber" to "प्लंबर (नलसाज़)",
@@ -370,12 +371,12 @@ fun AuthScreen(
                                 OutlinedTextField(
                                     value = experienceYears,
                                     onValueChange = { experienceYears = it.filter { ch -> ch.isDigit() }.take(2) },
-                                    label = { Text("Work Experience (years)") },
+                                    label = { Text(if (isEnglish) "Work Experience (years)" else "काम का अनुभव (वर्ष)") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 if (selectedTrades.isEmpty()) {
-                                    Text("कम से कम एक trade चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
+                                    Text(if (isEnglish) "Select at least one service." else "कम से कम एक सेवा चुनें।", color = Color(0xFFDC2626), fontSize = 11.sp)
                                 }
                                 Text(
                                     "Next step: enter your 10-digit mobile number below and tap Send Firebase Mobile OTP. Your partner profile is submitted only after Firebase verifies the OTP; KYC and payment setup happen later.",
@@ -388,7 +389,7 @@ fun AuthScreen(
                         OutlinedTextField(
                             value = phone,
                             onValueChange = { value -> phone = value.filter { it.isDigit() }.take(10) },
-                            label = { Text("Mobile Number for Firebase OTP (+91)") },
+                            label = { Text(if (isEnglish) "Mobile Number for OTP (+91)" else "ओटीपी के लिए मोबाइल नंबर (+91)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -398,7 +399,7 @@ fun AuthScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                            Text("Remember logged-in session", fontSize = 12.sp, color = Color.Gray)
+                            Text(if (isEnglish) "Keep me signed in" else "मुझे लॉगिन रखें", fontSize = 12.sp, color = Color.Gray)
                         }
 
                         Button(
@@ -424,7 +425,7 @@ fun AuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Send Firebase Mobile OTP", fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Send Mobile OTP" else "मोबाइल पर ओटीपी भेजें", fontWeight = FontWeight.Bold)
                         }
 
                         TextButton(
