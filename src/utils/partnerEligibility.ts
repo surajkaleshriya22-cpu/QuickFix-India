@@ -1,5 +1,6 @@
 export type PartnerDispatchProfile = {
   role?: unknown;
+  roles?: unknown;
   approvalStatus?: unknown;
   isVerified?: unknown;
   isOnline?: unknown;
@@ -17,7 +18,8 @@ export type PartnerDispatchProfile = {
  * balance or legacy security-deposit field.
  */
 export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): boolean {
-  return (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
+  const roles = Array.isArray(profile.roles) ? profile.roles : [profile.role];
+  return roles.some((role) => role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN') &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
