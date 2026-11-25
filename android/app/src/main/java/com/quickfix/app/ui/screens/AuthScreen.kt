@@ -346,7 +346,9 @@ fun AuthScreen(
                                     "painter" to "पेंटर (रंगाई-पुताई)",
                                     "gardener" to "माली",
                                     "pest_control" to "कीट नियंत्रण सेवा",
-                                    "house_shifting" to "घर शिफ्टिंग सेवा"
+                                    "house_shifting" to "घर शिफ्टिंग सेवा",
+                                    "car_wash" to "कार / बाइक वॉश पार्टनर",
+                                    "transport" to "ट्रांसपोर्ट / सामान डिलीवरी पार्टनर"
 
                                 )
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
