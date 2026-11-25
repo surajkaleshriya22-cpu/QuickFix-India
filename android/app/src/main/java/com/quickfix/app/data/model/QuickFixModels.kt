@@ -15,6 +15,8 @@ data class BookingLineItem(
     val serviceTitle: String = "Service item",
     val quantity: Double = 0.0,
     val billingUnit: String = "",
+    val unitRateMinimum: Double = 0.0,
+    val unitRateMaximum: Double = 0.0,
     val lineTotalMinimum: Double = 0.0,
     val lineTotalMaximum: Double = 0.0,
     val materialsIncluded: Boolean = false
