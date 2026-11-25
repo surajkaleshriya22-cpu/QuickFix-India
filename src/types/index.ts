@@ -265,6 +265,7 @@ export type UserRole = 'customer' | 'technician' | 'admin';
 
 export interface AppUser {
   uid: string;
+  quickFixId?: string;
   phoneNumber: string;
   displayName: string;
   email: string;
