@@ -17,6 +17,7 @@ export interface LocationRateCard {
   maximumRate: number;
   minimumCharge: number;
   baseFee?: number;
+  percentageAdjustment?: number;
   materialsIncluded: boolean;
   approvalStatus: RateApprovalStatus;
   effectiveFrom: string;
@@ -48,6 +49,7 @@ export interface RateQuote {
   totalMinimum: number;
   totalMaximum: number;
   materialsIncluded: boolean;
+  appliedAdjustmentPercent: number;
 }
 
 /**
@@ -92,22 +94,17 @@ export function calculateRateQuote(
     if (!Number.isFinite(amount) || amount < 0) throw new Error('Rate card contains an invalid amount.');
   }
   if (card.maximumRate < card.minimumRate) throw new Error('Maximum rate cannot be lower than minimum rate.');
-  const baseFee = card.baseFee || 0;
-  const subtotalMinimum = quantity * card.minimumRate + baseFee;
-  const subtotalMaximum = quantity * card.maximumRate + baseFee;
-  return {
-    unit: card.unit,
-    quantity,
-    rateMinimum: card.minimumRate,
-    rateMaximum: card.maximumRate,
-    subtotalMinimum,
-    subtotalMaximum,
-    baseFee,
-    minimumCharge: card.minimumCharge,
-    totalMinimum: Math.max(subtotalMinimum, card.minimumCharge),
-    totalMaximum: Math.max(subtotalMaximum, card.minimumCharge),
-    materialsIncluded: card.materialsIncluded
-  };
+  const adjustment = card.percentageAdjustment ?? 0;
+  if (!Number.isFinite(adjustment) || adjustment < -100 || adjustment > 500) throw new Error('Percentage adjustment must be between -100% and +500%.');
+  const factor = 1 + adjustment / 100;
+  const adjusted = (amount) => Math.round(amount * factor * 100) / 100;
+  const rateMinimum = adjusted(card.minimumRate);
+  const rateMaximum = adjusted(card.maximumRate);
+  const minimumCharge = adjusted(card.minimumCharge);
+  const baseFee = adjusted(card.baseFee || 0);
+  const subtotalMinimum = quantity * rateMinimum + baseFee;
+  const subtotalMaximum = quantity * rateMaximum + baseFee;
+  return { unit: card.unit, quantity, rateMinimum, rateMaximum, subtotalMinimum, subtotalMaximum, baseFee, minimumCharge, totalMinimum: Math.max(subtotalMinimum, minimumCharge), totalMaximum: Math.max(subtotalMaximum, minimumCharge), materialsIncluded: card.materialsIncluded, appliedAdjustmentPercent: adjustment };
 }
 
 /** MP statutory wage floor reference, not a customer-facing service tariff. */
