@@ -679,6 +679,9 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       rateCardId?: string;
       unitRateMinimum?: number;
       unitRateMaximum?: number;
+      baseFee?: number;
+      minimumCharge?: number;
+      appliedAdjustmentPercent?: number;
       lineTotalMinimum: number;
       lineTotalMaximum: number;
       materialsIncluded?: boolean;
@@ -706,8 +709,11 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
         pricingStatus: quote && card ? 'priced_from_published_rate' : 'inspection_quote_required',
         ...(card && quote ? {
           rateCardId: card.id,
-          unitRateMinimum: card.minimumRate,
-          unitRateMaximum: card.maximumRate,
+          unitRateMinimum: quote.rateMinimum,
+          unitRateMaximum: quote.rateMaximum,
+          baseFee: quote.baseFee,
+          minimumCharge: quote.minimumCharge,
+          appliedAdjustmentPercent: quote.appliedAdjustmentPercent,
           lineTotalMinimum: quote.totalMinimum,
           lineTotalMaximum: quote.totalMaximum,
           materialsIncluded: quote.materialsIncluded,
@@ -1105,6 +1111,27 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           status: String(booking.status || 'assigned'),
           price: Number(booking.price || 0),
           totalAmount: Number(booking.totalAmount || 0),
+          lineItems: Array.isArray(booking.lineItems) ? booking.lineItems.map((line: any) => ({
+            serviceId: String(line.serviceId || ''),
+            serviceTitle: String(line.serviceTitle || 'Service item'),
+            category: String(line.category || ''),
+            quantity: Number(line.quantity || 0),
+            billingUnit: String(line.billingUnit || ''),
+            pricingStatus: String(line.pricingStatus || 'quote_required'),
+            ...(Number.isFinite(line.unitRateMinimum) ? { unitRateMinimum: Number(line.unitRateMinimum) } : {}),
+            ...(Number.isFinite(line.unitRateMaximum) ? { unitRateMaximum: Number(line.unitRateMaximum) } : {}),
+            ...(Number.isFinite(line.baseFee) ? { baseFee: Number(line.baseFee) } : {}),
+            ...(Number.isFinite(line.minimumCharge) ? { minimumCharge: Number(line.minimumCharge) } : {}),
+            ...(Number.isFinite(line.appliedAdjustmentPercent) ? { appliedAdjustmentPercent: Number(line.appliedAdjustmentPercent) } : {}),
+            lineTotalMinimum: Number(line.lineTotalMinimum || 0),
+            lineTotalMaximum: Number(line.lineTotalMaximum || 0),
+            materialsIncluded: line.materialsIncluded === true,
+            rateSourceName: String(line.rateSourceName || '')
+          })) : [],
+          quoteRange: booking.quoteRange && typeof booking.quoteRange === 'object' ? {
+            minimum: Number(booking.quoteRange.minimum || 0),
+            maximum: Number(booking.quoteRange.maximum || 0)
+          } : null,
           technicianPayout: Number(booking.technicianPayout || 0),
           adminCommission: Number(booking.adminCommission || 0),
           commissionRate: Number(booking.commissionRate || 0),
@@ -1164,6 +1191,24 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           status: 'requested',
           price: Number(booking.price || 0),
           totalAmount: Number(booking.totalAmount || 0),
+          lineItems: Array.isArray(booking.lineItems) ? booking.lineItems.map((line: any) => ({
+            serviceId: String(line.serviceId || ''),
+            serviceTitle: String(line.serviceTitle || 'Service item'),
+            category: String(line.category || ''),
+            quantity: Number(line.quantity || 0),
+            billingUnit: String(line.billingUnit || ''),
+            pricingStatus: String(line.pricingStatus || 'quote_required'),
+            ...(Number.isFinite(line.unitRateMinimum) ? { unitRateMinimum: Number(line.unitRateMinimum) } : {}),
+            ...(Number.isFinite(line.unitRateMaximum) ? { unitRateMaximum: Number(line.unitRateMaximum) } : {}),
+            lineTotalMinimum: Number(line.lineTotalMinimum || 0),
+            lineTotalMaximum: Number(line.lineTotalMaximum || 0),
+            materialsIncluded: line.materialsIncluded === true,
+            rateSourceName: String(line.rateSourceName || '')
+          })) : [],
+          quoteRange: booking.quoteRange && typeof booking.quoteRange === 'object' ? {
+            minimum: Number(booking.quoteRange.minimum || 0),
+            maximum: Number(booking.quoteRange.maximum || 0)
+          } : null,
           paymentStatus: String(booking.paymentStatus || 'pending'),
           escrowStatus: String(booking.escrowStatus || 'not_funded')
         };

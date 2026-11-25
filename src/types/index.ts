@@ -27,6 +27,28 @@ export type BookingStatus =
 export type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cash';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
+export interface BookingLineItem {
+  serviceId: string;
+  serviceTitle: string;
+  category: ServiceCategoryType;
+  quantity: number;
+  billingUnit: string;
+  pricingStatus: string;
+  rateCardId?: string;
+  unitRateMinimum?: number;
+  unitRateMaximum?: number;
+  baseFee?: number;
+  minimumCharge?: number;
+  appliedAdjustmentPercent?: number;
+  lineTotalMinimum: number;
+  lineTotalMaximum: number;
+  materialsIncluded?: boolean;
+  rateSourceName?: string;
+  rateSourceUrl?: string | null;
+  rateEffectiveFrom?: string;
+  rateEffectiveTo?: string | null;
+}
+
 export interface Booking {
   id: string;
   serviceId: string;
@@ -40,6 +62,9 @@ export interface Booking {
   scheduledDate: string;
   scheduledTimeSlot: string;
   notes?: string;
+  /** Server-calculated item-wise pricing snapshot. */
+  lineItems?: BookingLineItem[];
+  quoteRange?: { minimum: number; maximum: number; materialsIncluded?: boolean; lineItems?: BookingLineItem[] };
   status: BookingStatus;
   technicianId?: string;
   technicianName?: string;

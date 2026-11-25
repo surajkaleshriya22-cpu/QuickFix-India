@@ -135,6 +135,7 @@ export const TechnicianPortal: React.FC = () => {
   const [availableJobs, setAvailableJobs] = useState<Array<{
     id: string; serviceTitle: string; category: string; customerName: string;
     status: 'requested'; price: number; totalAmount: number;
+    lineItems?: Array<{ serviceTitle: string; quantity: number; billingUnit: string; unitRateMinimum?: number; unitRateMaximum?: number; baseFee?: number; minimumCharge?: number; lineTotalMinimum: number; lineTotalMaximum: number; materialsIncluded?: boolean }>;
   }>>([]);
   const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
@@ -1099,6 +1100,14 @@ export const TechnicianPortal: React.FC = () => {
                   </div>
                   <span className="text-xs font-bold text-slate-800">₹{job.totalAmount || job.price || 0}</span>
                 </div>
+                {job.lineItems?.length ? <div className="rounded-lg bg-slate-50 border border-slate-100 p-2 space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Customer-approved item-wise rate</p>
+                  {job.lineItems.map((line, index) => <div key={line.serviceTitle + index} className="flex justify-between gap-2 text-[11px]">
+                    <span className="text-slate-700">{line.serviceTitle} × {line.quantity} {line.billingUnit.replaceAll('_', ' ')}{line.unitRateMinimum !== undefined ? ` · ₹${line.unitRateMinimum}${line.unitRateMaximum !== undefined && line.unitRateMaximum !== line.unitRateMinimum ? '–₹' + line.unitRateMaximum : ''}/unit` : ''}</span>
+                    <strong className="text-slate-900">₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</strong>
+                  </div>)}
+                  <div className="border-t border-slate-200 pt-1 flex justify-between text-xs font-bold"><span>Estimated total</span><span>₹{job.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)}{job.lineItems.some(line => line.lineTotalMaximum !== line.lineTotalMinimum) ? ' – ₹' + job.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0) : ''}</span></div>
+                </div> : <p className="text-[10px] text-amber-700">Item-wise approved price not available yet; do not add unapproved charges.</p>}
                 <button type="button" disabled={acceptingBookingId !== null || jobsLoading}
                   onClick={() => void handleAcceptJob(job.id)}
                   className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 text-xs disabled:bg-slate-300">
@@ -1135,6 +1144,15 @@ export const TechnicianPortal: React.FC = () => {
                   Customer Note: "{currentActiveJob.notes}"
                 </div>
               )}
+              {currentActiveJob.lineItems?.length ? <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase text-blue-800">Approved service price breakdown</p>
+                {currentActiveJob.lineItems.map((line, index) => <div key={line.serviceId + index} className="flex justify-between gap-2 text-[11px] text-slate-700">
+                  <span>{line.serviceTitle} × {line.quantity} {line.billingUnit.replaceAll('_', ' ')}</span>
+                  <strong>₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</strong>
+                </div>)}
+                <div className="border-t border-blue-200 pt-1 flex justify-between text-xs font-bold text-slate-900"><span>Estimated total</span><span>₹{currentActiveJob.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)} – ₹{currentActiveJob.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0)}</span></div>
+                <p className="text-[10px] text-blue-800">Extra work/materials only after a separate customer-approved quote.</p>
+              </div> : <p className="text-[10px] text-amber-700">No published item-wise rate snapshot on this older booking.</p>}
             </div>
 
             {/* Customer Details & Call Action */}

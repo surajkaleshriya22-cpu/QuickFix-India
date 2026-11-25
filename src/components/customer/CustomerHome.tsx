@@ -334,8 +334,9 @@ export const CustomerHome: React.FC = () => {
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Starts At</div>
-                  <div className="text-base font-extrabold text-blue-700 font-mono">₹{service.startingPrice}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Local item rate</div>
+                  <div className="text-sm font-extrabold text-blue-700 font-mono">{service.startingPrice > 0 ? `Indicative ₹${service.startingPrice}+` : 'Area rate check'}</div>
+                  <div className="text-[9px] text-slate-500">Exact approved rate before booking</div>
                 </div>
               </div>
 
