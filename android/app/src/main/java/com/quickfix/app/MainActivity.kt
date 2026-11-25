@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,6 +25,7 @@ import com.quickfix.app.viewmodel.QuickFixViewModel
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
 import com.quickfix.app.ui.screens.PartnerRechargePaymentResult
+import com.quickfix.app.ui.screens.LocalQuickFixLanguage
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     override fun onPaymentSuccess(razorpayPaymentID: String?, paymentData: PaymentData?) {
@@ -45,6 +49,10 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val languageState = remember {
+                mutableStateOf(getSharedPreferences("quickfix_preferences", MODE_PRIVATE).getString("app_language", "hi") ?: "hi")
+            }
+            CompositionLocalProvider(LocalQuickFixLanguage provides languageState) {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -55,6 +63,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
                         authViewModel = authViewModel
                     )
                 }
+            }
             }
         }
     }
