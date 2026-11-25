@@ -207,7 +207,7 @@ export const TechnicianPortal: React.FC = () => {
     setAcceptedJobMessage('');
     const firebaseUser = auth.currentUser;
     if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn || currentUser?.uid !== firebaseUser.uid) {
-      setAcceptError('{language === 'hi' ? 'अपने सत्यापित चैनल पार्टनर अकाउंट से दोबारा लॉगिन करें।' : 'Please sign in again with your verified Channel Partner account.'}');
+      setAcceptError(language === 'hi' ? 'अपने सत्यापित चैनल पार्टनर अकाउंट से दोबारा लॉगिन करें।' : 'Please sign in again with your verified Channel Partner account.');
       return;
     }
     setAcceptingBookingId(bookingId);
