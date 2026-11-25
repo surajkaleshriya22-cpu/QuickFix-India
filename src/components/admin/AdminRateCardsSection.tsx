@@ -142,7 +142,6 @@ export const AdminRateCardsSection: React.FC = () => {
         const key = [x.state,x.district,x.serviceCategory,x.serviceId||'',x.unit,x.sourceName].join('|').toLowerCase();
         return [key, { id: d.id, approvalStatus: typeof x.approvalStatus === 'string' ? x.approvalStatus : undefined }] as const;
       }));
-      let published = 0;
       let drafted = 0;
       let unchanged = 0;
       for (const row of rows) {
@@ -153,19 +152,19 @@ export const AdminRateCardsSection: React.FC = () => {
           state: 'Madhya Pradesh', district: 'Indore', city: null, tehsil: null,
           serviceCategory: row.serviceCategory, serviceId: row.serviceId || null, unit: row.unit, currency: 'INR',
           minimumRate: row.minimumRate, maximumRate: row.maximumRate, minimumCharge: row.minimumCharge, baseFee: ('baseFee' in row ? row.baseFee : 0) || 0, materialsIncluded: false,
-          approvalStatus: ('requiresAdminQuote' in row && row.requiresAdminQuote) ? 'draft' as RateApprovalStatus : 'approved' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
+          approvalStatus: 'draft' as RateApprovalStatus, effectiveFrom: new Date().toISOString().slice(0,10), effectiveTo: null,
           sourceName: row.sourceName, sourceUrl: row.sourceUrl, sourceCheckedAt,
-          notes: row.note + ' Active Indore market-based QuickFix default. Parts, materials and out-of-scope work are extra and must be itemised before customer confirmation.',
-          ...(('requiresAdminQuote' in row && row.requiresAdminQuote) ? {} : { approvedBy: user.uid, approvedAt: new Date().toISOString() }), updatedBy: user.uid, updatedAt: serverTimestamp()
+          notes: row.note + ' Research-only proposed Indore range. NOT customer-publishable until an admin verifies local provider quotes, scope, unit and partner economics, then explicitly approves this card. Parts, materials and out-of-scope work must be itemised.',
+          updatedBy: user.uid, updatedAt: serverTimestamp()
         };
         if (prior) {
           await updateDoc(doc(db, 'rate_cards', prior.id), payload);
         } else {
           await addDoc(collection(db, 'rate_cards'), { ...payload, createdBy: user.uid, createdAt: serverTimestamp() });
         }
-        if ('requiresAdminQuote' in row && row.requiresAdminQuote) drafted++; else published++;
+        drafted++;
       }
-      setMessage(published + ' Indore market rate cards published as active customer quote defaults; ' + drafted + ' quotation-only category cards saved as Draft for local admin pricing; ' + unchanged + ' existing approved/retired cards left unchanged. Admin can edit or retire rates anytime; edited rates return to Draft until re-approved.');
+      setMessage(drafted + ' Indore research-based rate cards saved as Draft only; ' + unchanged + ' existing approved/retired cards left unchanged. No customer prices were published. Verify local quotations, service scope, billing unit and partner economics, then approve each card individually.');
       await loadCards();
     } catch(e) { setError(e instanceof Error ? e.message : 'Could not add Indore draft cards.'); }
   };
@@ -244,8 +243,8 @@ export const AdminRateCardsSection: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800 bg-amber-950/20 p-4">
-        <div><h4 className="text-sm font-bold">Indore market rates (publish defaults)</h4><p className="mt-1 text-xs text-slate-400">Indore draft coverage: electrician, plumber, technician, AC, fridge, carpenter, painter, driver, bike taxi, laundry, pest control, deep cleaning, gardening, shifting, welding and tourist guide. Some categories still require measured/local quotations. Market-based defaults will be published for customer quotes; Admin can edit or retire them at any time.</p></div>
-        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Publish Indore market rates</button>
+        <div><h4 className="text-sm font-bold">Indore market rates (review drafts)</h4><p className="mt-1 text-xs text-slate-400">Research-based proposed ranges for electrician, plumber, technician, AC, fridge, carpenter, painter, driver, bike taxi, laundry, pest control, deep cleaning, gardening, shifting, welding and other services. These are drafts only—not verified tariffs. Review local quotations, service scope, billing unit and partner economics before approving each rate card.</p></div>
+        <button type="button" disabled={loading || !authorized} onClick={() => void addIndoreBenchmarkDrafts()} className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-50">Save Indore rate drafts</button>
       </div>
 
       <form onSubmit={saveDraft} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 md:grid-cols-2">
