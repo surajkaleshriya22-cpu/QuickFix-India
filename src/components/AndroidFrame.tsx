@@ -70,7 +70,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
                 Firebase Auth & Firestore
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Home Service Marketplace · MVVM Jetpack Compose</p>
+            <p className="text-[11px] text-slate-400 hidden sm:block">{language === 'hi' ? 'घरेलू सेवा मार्केटप्लेस' : 'Home Service Marketplace'} · MVVM Jetpack Compose</p>
           </div>
         </div>
 
@@ -84,7 +84,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Customer App
+            {language === 'hi' ? 'ग्राहक ऐप' : 'Customer App'}
           </button>
           <button
             onClick={() => handleRoleSwitch('technician')}
@@ -94,7 +94,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Technician Partner
+            {language === 'hi' ? 'चैनल पार्टनर' : 'Channel Partner'}
           </button>
           <button
             onClick={() => handleRoleSwitch('admin')}
@@ -105,7 +105,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
             }`}
           >
             <Lock className="w-3 h-3 text-amber-400" />
-            <span>{currentUser?.role === 'admin' ? 'Admin Dashboard' : 'Admin HQ Lock'}</span>
+            <span>{currentUser?.role === 'admin' ? (language === 'hi' ? 'एडमिन डैशबोर्ड' : 'Admin Dashboard') : (language === 'hi' ? 'एडमिन लॉगिन' : 'Admin HQ Lock')}</span>
           </button>
         </div>
 
@@ -124,7 +124,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
             <button
               onClick={() => setShowProfileDrawer(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-lg transition-colors"
-              title="View Profile and Addresses"
+              title={language === 'hi' ? 'प्रोफ़ाइल और पते देखें' : 'View Profile and Addresses'}
             >
               <div className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
                 {currentUser.displayName.charAt(0)}
@@ -140,7 +140,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-xs"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In / Up</span>
+              <span>{language === 'hi' ? 'लॉगिन / रजिस्टर' : 'Sign In / Up'}</span>
             </button>
           )}
 
@@ -148,17 +148,17 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
           <button
             onClick={() => setShowFirebaseConfig(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-950/80 text-amber-300 border border-amber-700/60 rounded-lg hover:bg-amber-900 transition-colors shadow-sm"
-            title="View Firebase Configuration, SHA-1 & Firestore Rules"
+            title={language === 'hi' ? 'Firebase कॉन्फ़िगरेशन और Firestore नियम देखें' : 'View Firebase Configuration, SHA-1 & Firestore Rules'}
           >
             <Flame className="w-3.5 h-3.5 fill-current" />
-            <span className="hidden md:inline">Firebase Setup</span>
+            <span className="hidden md:inline">{language === 'hi' ? 'Firebase सेटअप' : 'Firebase Setup'}</span>
           </button>
 
           {/* Kotlin Code Button */}
           <button
             onClick={() => setShowCodeInspector(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/60 rounded-lg hover:bg-emerald-900 transition-colors shadow-sm"
-            title="Inspect Kotlin & Jetpack Compose Android Source Files"
+            title={language === 'hi' ? 'Android सोर्स फ़ाइलें देखें' : 'Inspect Kotlin & Jetpack Compose Android Source Files'}
           >
             <Code2 className="w-3.5 h-3.5" />
             <span className="hidden md:inline">Kotlin / Compose</span>
@@ -172,7 +172,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'phone' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
               }`}
-              title="Android Phone Mockup View (Pixel 8)"
+              title={language === 'hi' ? 'मोबाइल दृश्य' : 'Android Phone Mockup View (Pixel 8)'}
             >
               <Smartphone className="w-4 h-4" />
             </button>
@@ -181,7 +181,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'fullscreen' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
               }`}
-              title="Responsive Web / Tablet View"
+              title={language === 'hi' ? 'वेब / टैबलेट दृश्य' : 'Responsive Web / Tablet View'}
             >
               <Maximize2 className="w-4 h-4" />
             </button>
