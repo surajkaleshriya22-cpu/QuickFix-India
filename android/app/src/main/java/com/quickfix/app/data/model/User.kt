@@ -14,6 +14,10 @@ data class User(
     val displayName: String = "",
     val email: String = "",
     val role: UserRole = UserRole.CUSTOMER,
+    // One Firebase identity may have both Customer and Channel Partner access.
+    val roles: List<String> = emptyList(),
+    // Set only when the user explicitly selected Partner Registration before OTP.
+    val isPartnerRegistration: Boolean = false,
     val address: String = "",
     val city: String = "Bengaluru",
     val pincode: String = "560034",
