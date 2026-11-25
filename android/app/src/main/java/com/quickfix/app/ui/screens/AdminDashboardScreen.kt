@@ -219,9 +219,10 @@ fun OverviewTab(
     totalRevenueGmv: Int,
     totalCommissionCut: Int,
     firestoreStatus: String,
-    isEnglish: Boolean,
+    englishMode: Boolean,
     onNavigateToTab: (AdminTab) -> Unit
 ) {
+    val englishMode = LocalQuickFixLanguage.current.value == "en"
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -249,7 +250,7 @@ fun OverviewTab(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text(if (isEnglish) "Cloud Firestore Real-Time Sync" else "Cloud Firestore लाइव सिंक", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(if (englishMode) "Cloud Firestore Real-Time Sync" else "Cloud Firestore लाइव सिंक", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Text(firestoreStatus, color = Color(0xFF93C5FD), fontSize = 11.sp)
                     }
                 }
@@ -258,11 +259,11 @@ fun OverviewTab(
         }
 
         // Metrics Grid (5 KPI Cards requested by User)
-        Text(if (isEnglish) "Primary Marketplace Metrics" else "मुख्य मार्केटप्लेस आँकड़े", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+        Text(if (englishMode) "Primary Marketplace Metrics" else "मुख्य मार्केटप्लेस आँकड़े", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = if (isEnglish) "Total Customers" else "कुल ग्राहक",
+                title = if (englishMode) "Total Customers" else "कुल ग्राहक",
                 value = totalCustomers.toString(),
                 subtitle = "Accounts in loaded data",
                 color = BrandBlue,
@@ -270,7 +271,7 @@ fun OverviewTab(
                 onClick = { onNavigateToTab(AdminTab.CUSTOMERS) }
             )
             KpiCard(
-                title = if (isEnglish) "Total Bookings" else "कुल बुकिंग",
+                title = if (englishMode) "Total Bookings" else "कुल बुकिंग",
                 value = totalBookings.toString(),
                 subtitle = "Requests in loaded data",
                 color = Color(0xFF8B5CF6),
@@ -281,7 +282,7 @@ fun OverviewTab(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KpiCard(
-                title = if (isEnglish) "Electricians" else "इलेक्ट्रीशियन",
+                title = if (englishMode) "Electricians" else "इलेक्ट्रीशियन",
                 value = totalElectricians.toString(),
                 subtitle = "Wiremen & Technicians",
                 color = Color(0xFFF59E0B),
@@ -289,7 +290,7 @@ fun OverviewTab(
                 onClick = { onNavigateToTab(AdminTab.TECHNICIANS) }
             )
             KpiCard(
-                title = if (isEnglish) "Plumbers" else "प्लंबर",
+                title = if (englishMode) "Plumbers" else "प्लंबर",
                 value = totalPlumbers.toString(),
                 subtitle = "Pipe & Sanity Pros",
                 color = Color(0xFF06B6D4),
