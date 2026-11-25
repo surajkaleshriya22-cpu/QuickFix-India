@@ -37,6 +37,9 @@ export interface BookingLineItem {
   rateCardId?: string;
   unitRateMinimum?: number;
   unitRateMaximum?: number;
+  baseFee?: number;
+  minimumCharge?: number;
+  appliedAdjustmentPercent?: number;
   lineTotalMinimum: number;
   lineTotalMaximum: number;
   materialsIncluded?: boolean;
