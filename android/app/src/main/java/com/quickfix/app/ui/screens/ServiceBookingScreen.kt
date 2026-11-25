@@ -269,9 +269,10 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(if (isEnglish) service.title else (service.hindiTitle ?: service.title), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    val serviceDisplayTitle: String = if (isEnglish) service.title.toString() else (service.hindiTitle ?: service.title).toString()
+                    Text(text = serviceDisplayTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
                     if (service.hindiTitle != null) {
-                        Text(if (isEnglish) service.hindiTitle else service.title, fontSize = 12.sp, color = TextSecondary)
+                        Text(text = if (isEnglish) service.hindiTitle.orEmpty() else service.title, fontSize = 12.sp, color = TextSecondary)
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
