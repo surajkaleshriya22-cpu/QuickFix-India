@@ -23,6 +23,15 @@ const activationEligible = {
   subscriptionExpiresAt: new Date(Date.now() + 86400000)
 };
 
+test('recognizes partner membership in roles[] when the primary role is CUSTOMER', () => {
+  const multiRoleActivation = { ...activationEligible, role: 'CUSTOMER', roles: ['CUSTOMER', 'CHANNEL_PARTNER'] };
+  const multiRoleDispatch = { ...eligible, role: 'CUSTOMER', roles: ['CUSTOMER', 'CHANNEL_PARTNER'] };
+  assert.equal(canActivatePartnerDuty(multiRoleActivation), true);
+  assert.equal(isPartnerEligibleForDispatch(multiRoleDispatch), true);
+  assert.equal(canActivatePartnerDuty({ ...multiRoleActivation, roles: ['CUSTOMER'] }), false);
+  assert.equal(isPartnerEligibleForDispatch({ ...multiRoleDispatch, roles: ['CUSTOMER'] }), false);
+});
+
 test('allows online duty only for approved, verified, subscribed partners with paid reserve', () => {
   assert.equal(canActivatePartnerDuty(activationEligible), true);
   assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: 1999 }), false);

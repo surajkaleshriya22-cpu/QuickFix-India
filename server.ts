@@ -89,6 +89,14 @@ try {
 
 type AuthenticatedRequest = Request & { firebaseUser?: import('firebase-admin/auth').DecodedIdToken };
 
+const hasChannelPartnerRole = (profile: unknown): boolean => {
+  if (!profile || typeof profile !== 'object') return false;
+  const data = profile as { role?: unknown; roles?: unknown };
+  const roles = Array.isArray(data.roles) ? data.roles : [data.role];
+  return roles.some((role: unknown) => typeof role === 'string' &&
+    ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role.toUpperCase()));
+};
+
 const apiRateLimit = rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
@@ -406,7 +414,7 @@ app.get('/api/partners/payment-profile', authenticateFirebaseUser, async (req: R
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!snap.exists || !hasChannelPartnerRole(snap.data())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     const profile = snap.data()!;
     return res.json({ success: true, upiId: typeof profile.paymentUpiId === 'string' ? profile.paymentUpiId : '', payeeName: String(profile.displayName || '').slice(0, 80) });
   } catch (error) {
@@ -423,7 +431,7 @@ app.put('/api/partners/payment-profile', authenticateFirebaseUser, async (req: R
     if (upiId.length > 100 || !/^[a-z0-9][a-z0-9._-]{1,80}@[a-z0-9][a-z0-9.-]{1,30}$/.test(upiId)) return res.status(400).json({ success: false, error: 'Enter a valid UPI ID, for example name@bank.' });
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!snap.exists || !hasChannelPartnerRole(snap.data())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     await ref.update({ paymentUpiId: upiId, paymentUpiUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     return res.json({ success: true, upiId, payeeName: String(snap.data()?.displayName || '').slice(0, 80) });
   } catch (error) {
@@ -556,7 +564,7 @@ app.post('/api/partners/recharge/orders', authenticateFirebaseUser, async (req: 
     const db = getFirestore(firebaseAdminApp);
     const profileRef = db.collection('users').doc(uid);
     const [profile, setting] = await Promise.all([profileRef.get(), db.collection('settings').doc('partner_recharge').get()]);
-    if (!profile.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Channel Partner account required.' });
+    if (!profile.exists || !hasChannelPartnerRole(profile.data())) return res.status(403).json({ success: false, error: 'Channel Partner account required.' });
     const packageId = typeof req.body?.packageId === 'string' ? req.body.packageId : '';
     const pkg = (Array.isArray(setting.data()?.packages) ? setting.data()!.packages : []).find((p: any) => p?.id === packageId && p.active === true);
     if (!pkg || !Number.isInteger(pkg.amountPaise) || !Number.isInteger(pkg.durationDays)) return res.status(400).json({ success: false, error: 'Select an active recharge package.' });
@@ -951,7 +959,7 @@ app.get('/api/partners/dispatch-settings', authenticateFirebaseUser, async (req:
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner settings are temporarily unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const snapshot = await getFirestore(firebaseAdminApp).collection('users').doc(identity.uid).get();
-    if (!snapshot.exists) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!snapshot.exists || !hasChannelPartnerRole(snapshot.data())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     const profile = snapshot.data()!;
     return res.json({ success: true, dispatchRadiusKm: typeof profile.dispatchRadiusKm === 'number' ? profile.dispatchRadiusKm : 5, locationConfigured: Boolean(profile.dispatchLocation) });
   } catch (error) {
@@ -972,7 +980,7 @@ app.put('/api/partners/dispatch-settings', authenticateFirebaseUser, async (req:
     const db = getFirestore(firebaseAdminApp);
     const userRef = db.collection('users').doc(identity.uid);
     const profile = await userRef.get();
-    if (!profile.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.data()?.role || ''))) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    if (!profile.exists || !hasChannelPartnerRole(profile.data())) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     await userRef.update({ dispatchRadiusKm, dispatchLocation: { latitude: dispatchLocation.latitude, longitude: dispatchLocation.longitude }, dispatchLocationUpdatedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     return res.json({ success: true, dispatchRadiusKm, locationConfigured: true });
   } catch (error) {
@@ -998,7 +1006,7 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
       const snapshot = await transaction.get(userRef);
       if (!snapshot.exists) throw new Error('PARTNER_PROFILE_NOT_FOUND');
       const profile = snapshot.data()!;
-      if (!['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(profile.role || '').toUpperCase())) throw new Error('PARTNER_PROFILE_REQUIRED');
+      if (!hasChannelPartnerRole(profile)) throw new Error('PARTNER_PROFILE_REQUIRED');
       if (profile.isSuspended === true || profile.status === 'suspended') throw new Error('PARTNER_SUSPENDED');
       if (!online) {
         transaction.update(userRef, {
@@ -1324,7 +1332,7 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
     const db = getFirestore(firebaseAdminApp);
     const partnerRef = db.collection('users').doc(identity.uid);
     const partnerSnap = await partnerRef.get();
-    if (!partnerSnap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(partnerSnap.data()?.role || ''))) {
+    if (!partnerSnap.exists || !hasChannelPartnerRole(partnerSnap.data())) {
       return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     }
 
@@ -1939,7 +1947,7 @@ app.post('/api/partners/kyc-submissions', authenticateFirebaseUser, async (req: 
     const auditRef = db.collection('partner_kyc_audit').doc(randomUUID());
     await db.runTransaction(async (transaction) => {
       const [partner, existing] = await Promise.all([transaction.get(partnerRef), transaction.get(submissionRef)]);
-      if (!partner.exists || partner.data()?.role !== 'CHANNEL_PARTNER') throw new Error('PARTNER_PROFILE_REQUIRED');
+      if (!partner.exists || !hasChannelPartnerRole(partner.data())) throw new Error('PARTNER_PROFILE_REQUIRED');
       if (existing.exists) throw new Error('KYC_SUBMISSION_ALREADY_EXISTS');
       if (partner.data()?.kycStatus === 'approved') throw new Error('KYC_ALREADY_APPROVED');
       transaction.create(submissionRef, {
@@ -2054,7 +2062,7 @@ app.post('/api/admin/kyc-submissions/:submissionId/decision', authenticateFireba
       if (data.status !== 'pending_review') throw new Error('KYC_SUBMISSION_ALREADY_REVIEWED');
       const partnerRef = db.collection('users').doc(data.partnerUid);
       const partner = await transaction.get(partnerRef);
-      if (!partner.exists || partner.data()?.role !== 'CHANNEL_PARTNER') throw new Error('PARTNER_PROFILE_REQUIRED');
+      if (!partner.exists || !hasChannelPartnerRole(partner.data())) throw new Error('PARTNER_PROFILE_REQUIRED');
       const nextStatus = decision === 'approved' ? 'approved' : decision;
       transaction.update(submissionRef, { status: nextStatus, reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: identity.uid, ...(cleanReason ? { partnerVisibleReason: cleanReason } : {}) });
@@ -2178,7 +2186,7 @@ app.post('/api/admin/partners/:partnerUid/review', authenticateFirebaseUser, req
       const partnerSnap = await transaction.get(partnerRef);
       if (!partnerSnap.exists) throw new Error('PARTNER_NOT_FOUND');
       const partner = partnerSnap.data()!;
-      if (partner.role !== 'CHANNEL_PARTNER') throw new Error('NOT_A_PARTNER');
+      if (!hasChannelPartnerRole(partner)) throw new Error('NOT_A_PARTNER');
       if (partner.approvalStatus !== 'pending_audit') throw new Error('PARTNER_NOT_PENDING');
       resultingStatus = decision === 'approve_profile' ? 'basic_profile_approved' : 'rejected';
       transaction.update(partnerRef, {

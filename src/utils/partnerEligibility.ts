@@ -1,5 +1,6 @@
 export type PartnerDispatchProfile = {
   role?: unknown;
+  roles?: unknown;
   approvalStatus?: unknown;
   isVerified?: unknown;
   isOnline?: unknown;
@@ -21,7 +22,7 @@ export function canActivatePartnerDuty(profile: PartnerDispatchProfile): boolean
   const subscriptionValid = profile.subscriptionStatus !== 'expired' &&
     (expiryMs === null || (Number.isFinite(expiryMs) && expiryMs > Date.now()));
   return subscriptionValid &&
-    (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
+    ((Array.isArray(profile.roles) ? profile.roles : [profile.role]).some((role) => role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN')) &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isSuspended !== true &&
@@ -43,7 +44,7 @@ export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): b
         : typeof expiryValue === 'string' ? Date.parse(expiryValue) : null;
   const subscriptionValid = profile.subscriptionStatus !== 'expired' &&
     (expiryMs === null || (Number.isFinite(expiryMs) && expiryMs > Date.now()));
-  return subscriptionValid && (profile.role === 'CHANNEL_PARTNER' || profile.role === 'TECHNICIAN') &&
+  return subscriptionValid && ((Array.isArray(profile.roles) ? profile.roles : [profile.role]).some((role) => role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN')) &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
