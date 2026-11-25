@@ -10,6 +10,7 @@ enum class UserRole {
 
 data class User(
     val uid: String = "",
+    val quickFixId: String = "",
     val phoneNumber: String = "",
     val displayName: String = "",
     val email: String = "",
