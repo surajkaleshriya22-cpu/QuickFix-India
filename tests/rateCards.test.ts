@@ -58,3 +58,18 @@ test('quote calculation rejects invalid quantities and inverted rate ranges', ()
     unit: 'per_day', minimumRate: 100, maximumRate: 120, minimumCharge: 0, materialsIncluded: false
   }, 0), /positive number/);
 });
+
+
+test('percentage adjustment changes per-km and per-square-foot rates', () => {
+  const km = calculateRateQuote({ unit: 'per_km', minimumRate: 100, maximumRate: 100, minimumCharge: 100, materialsIncluded: false, percentageAdjustment: 10 }, 1);
+  assert.equal(km.rateMinimum, 110);
+  assert.equal(km.totalMinimum, 110);
+  assert.equal(km.appliedAdjustmentPercent, 10);
+  const sqft = calculateRateQuote({ unit: 'per_sqft', minimumRate: 100, maximumRate: 100, minimumCharge: 100, materialsIncluded: false, percentageAdjustment: -10 }, 1);
+  assert.equal(sqft.rateMinimum, 90);
+  assert.equal(sqft.totalMinimum, 90);
+});
+
+test('percentage adjustment rejects values outside the safe range', () => {
+  assert.throws(() => calculateRateQuote({ unit: 'per_point', minimumRate: 100, maximumRate: 100, minimumCharge: 100, materialsIncluded: false, percentageAdjustment: -101 }, 1), /between -100% and \+500%/);
+});
