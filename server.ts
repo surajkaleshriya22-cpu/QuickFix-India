@@ -391,6 +391,60 @@ app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requir
   }
 });
 
+// Admin-only recharge ledger. A captured payment is not represented as bank-settled.
+app.get('/api/admin/partner-recharge/ledger', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge ledger is temporarily unavailable.' });
+    const requestedLimit = Number(req.query.limit ?? 50);
+    const limit = Number.isInteger(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 50;
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('partner_recharge_payments')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+    const rawItems = snapshot.docs.map(document => ({ id: document.id, ...(document.data() || {}) }));
+    const partnerUids = Array.from(new Set(rawItems
+      .map(item => typeof item.partnerUid === 'string' ? item.partnerUid : '')
+      .filter(Boolean)));
+    const partnerSnapshots = await Promise.all(partnerUids.map(uid => db.collection('users').doc(uid).get()));
+    const partnerProfiles = new Map(partnerSnapshots.map(profile => [profile.id, profile.exists ? profile.data() || {} : {}]));
+    const toIso = (value: any) => value && typeof value.toDate === 'function' ? value.toDate().toISOString() : null;
+    const items = rawItems.map(item => {
+      const profile = partnerProfiles.get(String(item.partnerUid || '')) || {};
+      const phone = typeof profile.phoneNumber === 'string' ? profile.phoneNumber : '';
+      return {
+        id: item.id,
+        partnerUid: String(item.partnerUid || ''),
+        partnerName: String(profile.displayName || profile.name || 'Channel Partner'),
+        partnerPhoneMasked: phone.length > 4 ? '••••' + phone.slice(-4) : '',
+        packageName: String(item.packageName || item.packageId || 'Recharge'),
+        amountPaise: Number.isInteger(item.amountPaise) ? item.amountPaise : 0,
+        currency: item.currency === 'INR' ? 'INR' : 'INR',
+        durationDays: Number.isInteger(item.durationDays) ? item.durationDays : 0,
+        status: String(item.status || 'unknown'),
+        orderId: String(item.orderId || ''),
+        paymentId: typeof item.paymentId === 'string' ? item.paymentId : null,
+        createdAt: toIso(item.createdAt),
+        verifiedAt: toIso(item.verifiedAt)
+      };
+    });
+    const recentPaidTotalPaise = items
+      .filter(item => item.status === 'paid')
+      .reduce((total, item) => total + item.amountPaise, 0);
+    return res.json({
+      success: true,
+      items,
+      count: items.length,
+      recentPaidTotalPaise,
+      currency: 'INR',
+      note: 'Paid means Razorpay capture was verified. Bank settlement must be confirmed separately in the Razorpay Dashboard.'
+    });
+  } catch (error) {
+    console.error('Admin partner recharge ledger read failed:', error);
+    return res.status(500).json({ success: false, error: 'Recharge ledger could not be loaded.' });
+  }
+});
+
 app.post('/api/partners/recharge/orders', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge is temporarily unavailable.' });
