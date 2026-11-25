@@ -408,7 +408,15 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ['painter','Painter','पेंटिंग का काम','Wall painting, touch-up and surface preparation',599,120],
     ['gardener','Gardener','माली','Garden maintenance, pruning and plant care',249,60],
     ['pest_control','Pest Control','कीट नियंत्रण','Cockroach, termite and mosquito treatment',499,60],
-    ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120]
+    ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120],
+    ['car_wash','Doorstep Car Washing','घर पर कार वॉश','Exterior wash, foam wash, interior vacuuming and detailing; final scope and price confirmed before booking',299,60],
+    ['car_wash','Bike Washing','बाइक वॉश','Two-wheeler exterior wash, chain-area cleaning and polishing',149,30],
+    ['car_wash','Car Interior Deep Cleaning','कार की अंदरूनी डीप क्लीनिंग','Seat, dashboard, mat and interior vacuum cleaning; vehicle condition affects quote',799,120],
+    ['car_wash','Car Polishing & Detailing','कार पॉलिशिंग और डिटेलिंग','Exterior polish, wax and detailing package after inspection',999,120],
+    ['transport','Shop-to-Home Goods Delivery','दुकान से घर सामान पहुँचाना','Pickup purchased goods from a shop and deliver to the customer; vehicle selected by size and load',199,60],
+    ['transport','Mini Goods Transport','छोटा सामान ढुलाई','Transport boxes, appliances, furniture or other small loads using a suitable goods vehicle',399,90],
+    ['transport','Room / House Shifting Vehicle','कमरा या घर खाली करना','Vehicle and helpers for room or house shifting; quote depends on inventory, floors, distance and vehicle size',999,120],
+    ['transport','Parcel & Local Delivery','पार्सल और लोकल डिलीवरी','Local parcel pickup and drop with proof of delivery',99,45]
   ] as const).map(([category,title,hindiTitle,description,startingPrice,durationMinutes]) => ({
     id: 'partner-' + category + '-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
     category,
