@@ -754,6 +754,14 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       startOtp: '',
       price: allLinesPriced ? totalMinimum : 0,
       totalAmount: allLinesPriced ? totalMinimum : 0,
+      // Market-rate model: no platform commission is charged on bookings.
+      // Partner earnings remain unset until the final service quote is confirmed.
+      commissionRate: 0,
+      effectiveCommissionRate: 0,
+      adminCommission: 0,
+      technicianPayout: 0,
+      acceptanceCommissionDebited: false,
+      acceptanceCommissionAmount: 0,
       paymentCollectionEnabled: false,
       paymentStatus: 'pending',
       escrowStatus: 'not_funded',
