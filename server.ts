@@ -1764,7 +1764,7 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
       db.collection('system').doc('partner_recharge_policy').get(),
       db.collection('partner_recharge_accounts').doc(identity.uid).get()
     ]);
-    if (!userSnapshot.exists || userSnapshot.data()?.role !== 'CHANNEL_PARTNER') {
+    if (!userSnapshot.exists || !([...(Array.isArray(userSnapshot.data()?.roles) ? userSnapshot.data()!.roles : []), userSnapshot.data()?.role].some((role) => role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN'))) {
       return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
     }
     const profile = userSnapshot.data()!;
