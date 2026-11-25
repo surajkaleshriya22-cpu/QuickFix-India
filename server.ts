@@ -296,6 +296,44 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   }
 });
 
+// Existing Channel Partner sign-in: Firebase verifies the phone; this endpoint verifies the partner role and returns only the signed-in user's own safe profile.
+app.get('/api/partners/profile', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner authentication is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users').doc(identity.uid).get();
+    if (!snapshot.exists) return res.status(403).json({ success: false, error: 'No registered Channel Partner account was found for this mobile number.' });
+    const data = snapshot.data()!;
+    const roles = Array.isArray(data.roles) ? data.roles : [data.role];
+    const isPartner = roles.some((role: unknown) => typeof role === 'string' && ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role.toUpperCase()));
+    if (!isPartner || data.phoneNumber !== identity.phone_number) {
+      return res.status(403).json({ success: false, error: 'This mobile number is not linked to a registered Channel Partner account.' });
+    }
+    return res.json({
+      success: true,
+      profile: {
+        uid: identity.uid,
+        phoneNumber: identity.phone_number,
+        displayName: typeof data.displayName === 'string' ? data.displayName : '',
+        email: typeof data.email === 'string' ? data.email : '',
+        city: typeof data.city === 'string' ? data.city : '',
+        address: typeof data.address === 'string' ? data.address : '',
+        trades: Array.isArray(data.trades) ? data.trades.filter((trade: unknown) => typeof trade === 'string') : [],
+        experienceYears: Number.isInteger(data.experienceYears) ? data.experienceYears : 0,
+        isVerified: data.isVerified === true,
+        approvalStatus: typeof data.approvalStatus === 'string' ? data.approvalStatus : 'pending_audit',
+        isOnline: data.isOnline === true,
+        isSuspended: data.isSuspended === true || data.status === 'suspended',
+        walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : 0,
+        securityDepositPaid: data.securityDepositPaid === true
+      }
+    });
+  } catch (error) {
+    console.error('Secure partner profile lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner account could not be loaded securely. Please try again.' });
+  }
+});
+
 // Partner-owned UPI payment profile. This only publishes a verified-format VPA for QR display;
 // it does not confirm payments or change booking payment status.
 // Partner bank destination: full account number is encrypted at rest; only the owner can read/update it.
