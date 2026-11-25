@@ -128,6 +128,9 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
   return next();
 };
 
+const createQuickFixId = (kind: 'CUSTOMER' | 'PARTNER') => 'QF' + (kind === 'CUSTOMER' ? 'C' : 'P') + '-' + randomInt(10000000, 100000000);
+
+
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
@@ -194,6 +197,66 @@ app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: 
   }
 });
 
+// Customer identity registration. The permanent QuickFix ID is issued only by the server.
+app.post('/api/customers/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure customer registration is temporarily unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) return res.status(403).json({ success: false, error: 'A verified mobile number is required.' });
+    const { displayName, email, address, city } = req.body ?? {};
+    if (typeof displayName !== 'string' || displayName.trim().length < 2 || displayName.trim().length > 100 ||
+        typeof email !== 'string' || email.trim().length > 254 ||
+        (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) ||
+        (address !== undefined && (typeof address !== 'string' || address.trim().length > 500)) ||
+        (city !== undefined && (typeof city !== 'string' || city.trim().length > 100))) {
+      return res.status(400).json({ success: false, error: 'Customer profile details are invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    let issuedId = '';
+    await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(userRef);
+      const data = existing.exists ? existing.data()! : undefined;
+      if (data) {
+        const roles = Array.isArray(data.roles) ? data.roles : [data.role];
+        if (!roles.includes('CUSTOMER') || data.phoneNumber !== identity.phone_number) throw new Error('CUSTOMER_PROFILE_CONFLICT');
+        if (typeof data.quickFixId === 'string' && data.quickFixId) {
+          issuedId = data.quickFixId;
+          return;
+        }
+      }
+      let candidate = '';
+      let idRef: any = null;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        candidate = createQuickFixId('CUSTOMER');
+        const candidateRef = db.collection('quickfix_id_index').doc(candidate);
+        const collision = await transaction.get(candidateRef);
+        if (!collision.exists) { idRef = candidateRef; break; }
+        candidate = '';
+      }
+      if (!candidate || !idRef) throw new Error('QUICKFIX_ID_ALLOCATION_FAILED');
+      issuedId = candidate;
+      const profile = {
+        uid: identity.uid, phoneNumber: identity.phone_number,
+        displayName: displayName.trim(), email: email.trim().toLowerCase(),
+        role: 'CUSTOMER', roles: ['CUSTOMER'], isVerified: false,
+        quickFixId: candidate, createdAt: data?.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(typeof address === 'string' && address.trim() ? { address: address.trim() } : {}),
+        ...(typeof city === 'string' && city.trim() ? { city: city.trim() } : {})
+      };
+      if (existing.exists) transaction.update(userRef, profile);
+      else transaction.create(userRef, profile);
+      transaction.create(idRef, { uid: identity.uid, accountType: 'CUSTOMER', createdAt: FieldValue.serverTimestamp() });
+    });
+    return res.status(200).json({ success: true, quickFixId: issuedId });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'CUSTOMER_PROFILE_CONFLICT') return res.status(409).json({ success: false, error: 'This account is not eligible for Customer registration.' });
+    console.error('Secure customer registration failed:', error);
+    return res.status(500).json({ success: false, error: 'Customer ID could not be issued securely. Please retry.' });
+  }
+});
+
 // Secure Channel Partner registration. Only basic profile data is accepted here;
 // government IDs, certificates, UPI details and deposits remain out of scope until
 // a compliant restricted KYC workflow and verified payment provider are deployed.
@@ -243,6 +306,17 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
+      let issuedQuickFixId = typeof existingData?.quickFixId === 'string' ? existingData.quickFixId : '';
+      let quickFixIdRef: any = null;
+      if (!issuedQuickFixId) {
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const candidate = createQuickFixId('PARTNER');
+          const candidateRef = db.collection('quickfix_id_index').doc(candidate);
+          const collision = await transaction.get(candidateRef);
+          if (!collision.exists) { issuedQuickFixId = candidate; quickFixIdRef = candidateRef; break; }
+        }
+        if (!issuedQuickFixId || !quickFixIdRef) throw new Error('QUICKFIX_ID_ALLOCATION_FAILED');
+      }
       if (existingData) {
         const existingRoles = Array.isArray(existingData.roles) ? existingData.roles : [existingData.role];
         const eligibleCustomer = existingData.role === 'CUSTOMER' &&
@@ -259,6 +333,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         email: email.trim().toLowerCase(),
         role: 'CHANNEL_PARTNER',
         roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
+        quickFixId: issuedQuickFixId,
         subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
         subscriptionTrialDaysGranted: trialDays,
         ...(existingData?.subscriptionTrialStartedAt ? {} : { subscriptionTrialStartedAt: FieldValue.serverTimestamp() }),
@@ -288,6 +363,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       };
       if (existing.exists) transaction.update(userRef, partnerFields);
       else transaction.create(userRef, partnerFields);
+      if (quickFixIdRef) transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
     });
 
     return res.status(201).json({
@@ -321,6 +397,7 @@ app.get('/api/partners/profile', authenticateFirebaseUser, async (req: Request, 
       success: true,
       profile: {
         uid: identity.uid,
+        quickFixId: typeof data.quickFixId === 'string' ? data.quickFixId : '',
         phoneNumber: identity.phone_number,
         displayName: typeof data.displayName === 'string' ? data.displayName : '',
         email: typeof data.email === 'string' ? data.email : '',
