@@ -145,3 +145,9 @@ test('routes appliance repair orders to registered technicians only', () => {
   assert.equal(canPartnerReceiveBookingCategory(['electrician'], 'appliance_repair'), false);
   assert.equal(canPartnerReceiveBookingCategory(['plumber'], 'appliance_repair'), false);
 });
+test('dispatches Car Washing and Transport partners only to their matching service categories', () => {
+  assert.deepEqual([...getPartnerServiceCategories(['car_wash', 'transport'])].sort(), ['car_wash', 'transport']);
+  assert.equal(canPartnerReceiveBookingCategory(['car_wash'], 'car_wash'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['transport'], 'transport'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['car_wash'], 'transport'), false);
+});
