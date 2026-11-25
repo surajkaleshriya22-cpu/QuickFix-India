@@ -712,8 +712,6 @@ class QuickFixViewModel : ViewModel() {
                                             billingUnit = row.optString("billingUnit", ""),
                                             unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
                                             unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
-                                            unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
-                                            unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
                                             lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
                                         )
@@ -741,6 +739,8 @@ class QuickFixViewModel : ViewModel() {
                                             serviceTitle = row.optString("serviceTitle", "Service item"),
                                             quantity = row.optDouble("quantity", 0.0),
                                             billingUnit = row.optString("billingUnit", ""),
+                                            unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
+                                            unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
                                             lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
                                         )
