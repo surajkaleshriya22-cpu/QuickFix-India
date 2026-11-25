@@ -192,7 +192,7 @@ fun AdminDashboardScreen(
                     onHoldPayout = { pId, reason -> viewModel.adminHoldPayout(pId, reason) },
                     onIssueRefund = { bId, amt, reason -> viewModel.adminIssueCustomerRefund(bId, amt, reason) },
                     onUpdateAdminConfig = { cfg -> viewModel.updateAdminPaymentConfig(cfg) },
-                    onSaveAdminBank = { bank, holder, account, ifsc -> viewModel.saveAdminBankDetails(bank, holder, account, ifsc) },
+                    onSaveAdminBank = { bank, type, holder, account, ifsc -> viewModel.saveAdminBankDetails(bank, type, holder, account, ifsc) },
                     onLoadAdminBank = { viewModel.loadAdminBankDetails() },
                     bankSaveStatus = firestoreStatus
                 )
@@ -599,7 +599,7 @@ fun CommissionsTab(
     onHoldPayout: (String, String) -> Unit,
     onIssueRefund: (String, Int, String) -> Unit,
     onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit,
-    onSaveAdminBank: (String, String, String, String) -> Unit,
+    onSaveAdminBank: (String, String, String, String, String) -> Unit,
     onLoadAdminBank: () -> Unit,
     bankSaveStatus: String
 ) {
@@ -611,6 +611,7 @@ fun CommissionsTab(
     var masterBank by remember { mutableStateOf(adminConfig.receivingBankName) }
     var bankNameInput by remember { mutableStateOf("") }
     var bankHolderInput by remember { mutableStateOf("") }
+    var bankAccountTypeInput by remember { mutableStateOf("savings") }
     var bankAccountInput by remember { mutableStateOf("") }
     var bankIfscInput by remember { mutableStateOf("") }
     var bankMenuExpanded by remember { mutableStateOf(false) }
@@ -757,11 +758,16 @@ fun CommissionsTab(
                             }
                         }
                     }
+                    Text("Account Type", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { bankAccountTypeInput = "savings" }, modifier = Modifier.weight(1f)) { Text(if (bankAccountTypeInput == "savings") "✓ Savings" else "Savings") }
+                        OutlinedButton(onClick = { bankAccountTypeInput = "current" }, modifier = Modifier.weight(1f)) { Text(if (bankAccountTypeInput == "current") "✓ Current" else "Current") }
+                    }
                     OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text("New bank account number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = bankIfscInput, onValueChange = { bankIfscInput = it.uppercase().take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     Text("Server encrypts bank details. Saving bank information does not transfer money or activate payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
-                    Button(onClick = { onSaveAdminBank(bankNameInput, bankHolderInput, bankAccountInput, bankIfscInput); bankAccountInput = "" }, colors = ButtonDefaults.buttonColors(containerColor = DeepBlue), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = { onSaveAdminBank(bankNameInput, bankAccountTypeInput, bankHolderInput, bankAccountInput, bankIfscInput); bankAccountInput = "" }, colors = ButtonDefaults.buttonColors(containerColor = DeepBlue), modifier = Modifier.fillMaxWidth()) {
                         Text("Save / Update Admin Bank Account", fontWeight = FontWeight.Bold)
                     }
                     if (bankSaveStatus.isNotBlank()) Text(bankSaveStatus, fontSize = 12.sp, color = TextSecondary)
