@@ -2296,7 +2296,7 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
       isPartnerAccount ? db.collection('partner_kyc_submissions').where('partnerUid', '==', uid).limit(50).get() : Promise.resolve(null),
       isPartnerAccount ? db.collection('partner_kyc_audit').where('partnerUid', '==', uid).limit(100).get() : Promise.resolve(null),
       db.collection('support_tickets').where('userUid', '==', uid).limit(100).get(),
-      isPartnerAccount ? db.collection('wallet_transactions').where('userUid', '==', uid).limit(100).get() : Promise.resolve(null)
+      db.collection('wallet_transactions').where('userUid', '==', uid).limit(100).get()
     ]);
     const bookingsById = new Map<string, QueryDocumentSnapshot>();
     [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
