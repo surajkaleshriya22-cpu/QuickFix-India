@@ -30,6 +30,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quickfix.app.viewmodel.QuickFixViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 
 
 private fun partnerCategoryHindi(category: String): String = when (category.trim().lowercase()) {
@@ -78,6 +82,15 @@ fun TechnicianScreen(
     val context = LocalContext.current
     var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
     var tradesLoadMessage by remember { mutableStateOf("आपकी सेवाएँ लोड हो रही हैं...") }
+    var partnerBankName by remember { mutableStateOf("") }
+    var partnerBankType by remember { mutableStateOf("savings") }
+    var partnerBankHolder by remember { mutableStateOf("") }
+    var partnerBankAccount by remember { mutableStateOf("") }
+    var partnerBankIfsc by remember { mutableStateOf("") }
+    var partnerBankSummary by remember { mutableStateOf("") }
+    var partnerBankStatus by remember { mutableStateOf("बैंक विवरण लोड हो रहे हैं...") }
+    var partnerBankSaving by remember { mutableStateOf(false) }
+    val bankScope = rememberCoroutineScope()
     var selectedDispatchRadius by remember(savedDispatchRadius) { mutableIntStateOf(savedDispatchRadius) }
     var locationSaveMessage by remember { mutableStateOf("") }
     var isLiveLocationSharing by remember { mutableStateOf(false) }
@@ -159,6 +172,44 @@ fun TechnicianScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            partnerBankStatus = "बैंक विवरण देखने के लिए Channel Partner में लॉगिन करें।"
+        } else {
+            try {
+                val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                val result = withContext(Dispatchers.IO) {
+                    val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bank-account").openConnection() as java.net.HttpURLConnection
+                    try {
+                        connection.requestMethod = "GET"
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 20000
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        val json = org.json.JSONObject(body)
+                        if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "Bank details could not be loaded (HTTP $status)." })
+                        json
+                    } finally { connection.disconnect() }
+                }
+                if (result.optBoolean("configured")) {
+                    partnerBankName = result.optString("bankName")
+                    partnerBankType = result.optString("accountType", "savings")
+                    partnerBankHolder = result.optString("accountHolderName")
+                    partnerBankIfsc = result.optString("ifsc")
+                    partnerBankSummary = "${result.optString("bankName")} • ${if (result.optString("accountType") == "current") "Current" else "Savings"} •••• ${result.optString("accountLast4")} • IFSC ${result.optString("ifsc")}"
+                    partnerBankStatus = "आपका सेव किया हुआ बैंक अकाउंट लोड हो गया।"
+                } else {
+                    partnerBankStatus = "अभी कोई बैंक अकाउंट सेव नहीं है।"
+                }
+            } catch (error: Exception) {
+                partnerBankStatus = error.message ?: "बैंक विवरण लोड नहीं हो सके।"
+            }
+        }
+    }
+
     LaunchedEffect(isLiveLocationSharing, hasActiveAssignedJob) {
         if (isLiveLocationSharing && hasActiveAssignedJob) {
             while (true) {
@@ -231,6 +282,108 @@ fun TechnicianScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             PartnerRechargeCard()
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("मेरा बैंक अकाउंट", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text("भविष्य में payout के लिए अपना बैंक अकाउंट सुरक्षित रूप से सेव करें।", fontSize = 12.sp, color = TextSecondary)
+                    if (partnerBankSummary.isNotBlank()) {
+                        Text("सेव किया गया: $partnerBankSummary", fontSize = 12.sp, color = Color(0xFF047857), fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedTextField(
+                        value = partnerBankName,
+                        onValueChange = { partnerBankName = it.take(100) },
+                        label = { Text("Bank Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Text("Account Type", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { partnerBankType = "savings" }, modifier = Modifier.weight(1f)) {
+                            Text(if (partnerBankType == "savings") "✓ Savings" else "Savings")
+                        }
+                        OutlinedButton(onClick = { partnerBankType = "current" }, modifier = Modifier.weight(1f)) {
+                            Text(if (partnerBankType == "current") "✓ Current" else "Current")
+                        }
+                    }
+                    OutlinedTextField(
+                        value = partnerBankHolder,
+                        onValueChange = { partnerBankHolder = it.take(100) },
+                        label = { Text("Account Holder Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = partnerBankAccount,
+                        onValueChange = { partnerBankAccount = it.filter(Char::isDigit).take(18) },
+                        label = { Text("Bank Account Number") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = partnerBankIfsc,
+                        onValueChange = { partnerBankIfsc = it.uppercase().take(11) },
+                        label = { Text("IFSC Code") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Button(
+                        onClick = {
+                            bankScope.launch {
+                                partnerBankSaving = true
+                                partnerBankStatus = "बैंक अकाउंट सुरक्षित रूप से सेव हो रहा है..."
+                                try {
+                                    val user = FirebaseAuth.getInstance().currentUser ?: error("कृपया दोबारा लॉगिन करें।")
+                                    val token = user.getIdToken(true).await().token ?: error("Secure sign-in token unavailable.")
+                                    val result = withContext(Dispatchers.IO) {
+                                        val connection = java.net.URL("https://quickfix-india.onrender.com/api/partners/bank-account").openConnection() as java.net.HttpURLConnection
+                                        try {
+                                            connection.requestMethod = "PUT"
+                                            connection.doOutput = true
+                                            connection.setRequestProperty("Authorization", "Bearer $token")
+                                            connection.setRequestProperty("Content-Type", "application/json")
+                                            connection.connectTimeout = 15000
+                                            connection.readTimeout = 20000
+                                            val payload = org.json.JSONObject()
+                                                .put("bankName", partnerBankName.trim())
+                                                .put("accountType", partnerBankType)
+                                                .put("accountHolderName", partnerBankHolder.trim())
+                                                .put("accountNumber", partnerBankAccount.filterNot { it.isWhitespace() })
+                                                .put("ifsc", partnerBankIfsc.trim().uppercase())
+                                            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                            val status = connection.responseCode
+                                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                            val json = org.json.JSONObject(body)
+                                            if (status !in 200..299 || !json.optBoolean("success")) error(json.optString("error").ifBlank { "Bank account could not be saved (HTTP $status)." })
+                                            json
+                                        } finally { connection.disconnect() }
+                                    }
+                                    partnerBankSummary = "${result.optString("bankName")} • ${if (result.optString("accountType") == "current") "Current" else "Savings"} •••• ${result.optString("accountLast4")} • IFSC ${result.optString("ifsc")}"
+                                    partnerBankAccount = ""
+                                    partnerBankStatus = "बैंक अकाउंट सुरक्षित रूप से सेव हो गया। Payout अभी अलग से activate नहीं है।"
+                                } catch (error: Exception) {
+                                    partnerBankStatus = error.message ?: "बैंक अकाउंट सेव नहीं हो सका।"
+                                } finally {
+                                    partnerBankSaving = false
+                                }
+                            }
+                        },
+                        enabled = !partnerBankSaving && partnerBankName.isNotBlank() && partnerBankHolder.trim().length >= 2 && partnerBankAccount.length in 9..18 && partnerBankIfsc.matches(Regex("[A-Z]{4}0[A-Z0-9]{6}")),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                    ) {
+                        Text(if (partnerBankSaving) "Saving..." else "Save / Update Bank Account")
+                    }
+                    Text(partnerBankStatus, fontSize = 11.sp, color = TextSecondary)
+                    Text("Account number server par AES-256-GCM se encrypted hota hai. Bank details save karne se payout/transfer activate nahi hota.", fontSize = 10.sp, color = Color(0xFFB45309))
+                }
+            }
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
