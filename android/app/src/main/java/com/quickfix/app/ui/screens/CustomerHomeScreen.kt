@@ -397,7 +397,9 @@ fun CustomerHomeScreen(
                     "painter" to "🖌️\nपेंट का काम",
                     "gardener" to "🌱\nमाली का काम",
                     "pest_control" to "🐜\nकीड़े-मकोड़े हटाएँ",
-                    "house_shifting" to "📦\nघर का सामान शिफ्ट करें"
+                    "house_shifting" to "📦\nघर का सामान शिफ्ट करें",
+                    "car_wash" to "🚘\nकार / बाइक वॉश",
+                    "transport" to "🚚\nसामान डिलीवरी / वाहन"
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
