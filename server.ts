@@ -128,6 +128,12 @@ const requireServerAdmin = (req: Request, res: Response, next: NextFunction) => 
   return next();
 };
 
+const requireCustomerCareAccess = (req: Request, res: Response, next: NextFunction) => {
+  const claims = (req as AuthenticatedRequest).firebaseUser;
+  if (claims?.admin === true || claims?.customerCare === true) return next();
+  return res.status(403).json({ success: false, error: 'Authorized Customer Care access is required.' });
+};
+
 const createQuickFixId = (kind: 'CUSTOMER' | 'PARTNER') => 'QF' + (kind === 'CUSTOMER' ? 'C' : 'P') + '-' + randomInt(10000000, 100000000);
 
 
@@ -2241,7 +2247,7 @@ app.post('/api/admin/kyc-submissions/:submissionId/decision', authenticateFireba
 });
 
 // Customer Care: search by the permanent QuickFix ID. Only server-authorized admins can access it.
-app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireCustomerCareAccess, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure Customer Care lookup is unavailable.' });
     const quickFixId = String(req.params.quickFixId || '').trim().toUpperCase();
@@ -2275,6 +2281,11 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
         scheduledDate: String(booking.scheduledDate || '')
       };
     }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    await db.collection('customer_care_access_logs').add({
+      actorUid: (req as AuthenticatedRequest).firebaseUser!.uid,
+      targetUid: uid, quickFixId,
+      createdAt: FieldValue.serverTimestamp()
+    });
     return res.json({
       success: true,
       profile: {
