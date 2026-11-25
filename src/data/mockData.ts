@@ -416,7 +416,13 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ['transport','Shop-to-Home Goods Delivery','दुकान से घर सामान पहुँचाना','Pickup purchased goods from a shop and deliver to the customer; vehicle selected by size and load',199,60],
     ['transport','Mini Goods Transport','छोटा सामान ढुलाई','Transport boxes, appliances, furniture or other small loads using a suitable goods vehicle',399,90],
     ['transport','Room / House Shifting Vehicle','कमरा या घर खाली करना','Vehicle and helpers for room or house shifting; quote depends on inventory, floors, distance and vehicle size',999,120],
-    ['transport','Parcel & Local Delivery','पार्सल और लोकल डिलीवरी','Local parcel pickup and drop with proof of delivery',99,45]
+    ['transport','Parcel & Local Delivery','पार्सल और लोकल डिलीवरी','Local parcel pickup and drop with proof of delivery',99,45],
+    ['transport','Bike / Scooter Delivery','बाइक / स्कूटर से डिलीवरी','Small parcels, documents and light shop purchases; load must fit safely',79,30],
+    ['transport','E-Rickshaw / Three-Wheeler Goods','ई-रिक्शा / तीन पहिया माल वाहन','Small household goods, cartons and local market purchases',249,60],
+    ['transport','Mini Pickup / Tata Ace','मिनी पिकअप / छोटा लोडिंग वाहन','Furniture, appliances and medium-sized shop goods; vehicle capacity confirmed before dispatch',499,90],
+    ['transport','Pickup / Goods Carrier','पिकअप मालवाहक वाहन','Bulk shop purchases, construction supplies and larger household loads',699,90],
+    ['transport','Tempo / Small Truck','टेंपो / छोटा ट्रक','Room shifting and multi-item transport; helper and floor charges quoted separately',999,120],
+    ['transport','Large Truck / House Shifting','बड़ा ट्रक / घर शिफ्टिंग','Full household or office shifting after inventory, route, floors and truck-size confirmation',1999,180]
   ] as const).map(([category,title,hindiTitle,description,startingPrice,durationMinutes]) => ({
     id: 'partner-' + category + '-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
     category,
