@@ -119,7 +119,7 @@ class AuthRepository(
             "displayName" to user.displayName,
             "email" to user.email,
             "role" to user.role.name,
-            "roles" to listOf("CUSTOMER"),
+            "roles" to (user.roles.ifEmpty { listOf(user.role.name) }),
             "address" to user.address,
             "city" to user.city,
             "pincode" to user.pincode,
@@ -197,6 +197,7 @@ class AuthRepository(
         val data = snapshot.data ?: return null
 
         val roleStr = data["role"] as? String ?: "CUSTOMER"
+        val roles = (data["roles"] as? List<*>)?.filterIsInstance<String>() ?: listOf(roleStr)
         val role = when (roleStr.uppercase()) {
             "CHANNEL_PARTNER", "TECHNICIAN" -> UserRole.TECHNICIAN
             "ADMIN" -> UserRole.ADMIN
@@ -210,6 +211,7 @@ class AuthRepository(
             displayName = data["displayName"] as? String ?: "",
             email = data["email"] as? String ?: "",
             role = role,
+            roles = roles,
             address = data["address"] as? String ?: "",
             city = data["city"] as? String ?: "Indore",
             pincode = data["pincode"] as? String ?: "452001",
