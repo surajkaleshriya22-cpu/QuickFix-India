@@ -550,6 +550,7 @@ export const AdminDashboard: React.FC = () => {
         if (result.configured) {
           setSavedBankSummary({ bankName: result.bankName, accountType: result.accountType || 'savings', accountLast4: result.accountLast4, ifsc: result.ifsc, accountHolderName: result.accountHolderName });
           setAdminBankName(result.bankName || '');
+          setAdminAccountType(result.accountType === 'current' ? 'current' : 'savings');
           setAdminAccountHolder(result.accountHolderName || '');
           setAdminIfsc(result.ifsc || '');
           setAdminAccountNo('');
@@ -2865,7 +2866,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
                     >
                       <Save className="w-4 h-4" />
-                      <span>Preview only — payment settings are not saved</span>
+                      <span>Save Admin Bank Details Securely</span>
                     </button>
                   </div>
                 </div>
