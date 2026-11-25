@@ -1084,6 +1084,25 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                     )) : <p className="text-[10px] text-slate-500">No linked booking records were found.</p>}
                   </div>
+                  {quickFixLookup.partnerRechargeHistory?.length > 0 && (
+                    <div className="border-t border-slate-700 pt-2">
+                      <div className="text-[11px] font-bold text-white mb-1">Partner Recharge History</div>
+                      {quickFixLookup.partnerRechargeHistory.map((item: any) => (
+                        <div key={item.id} className="text-[10px] text-slate-300 py-1 flex justify-between gap-2">
+                          <span>{item.status} · {item.durationDays ?? '—'} days</span>
+                          <span>{item.amountPaise !== null ? '₹' + (item.amountPaise / 100).toFixed(2) : 'Amount unavailable'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {quickFixLookup.accountAudit?.length > 0 && (
+                    <div className="border-t border-slate-700 pt-2">
+                      <div className="text-[11px] font-bold text-white mb-1">Account Activity / Admin History</div>
+                      {quickFixLookup.accountAudit.slice(0, 20).map((item: any) => (
+                        <div key={item.id} className="text-[10px] text-slate-400 py-1">{item.action}{item.reason ? ' — ' + item.reason : ''}</div>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-[9px] text-amber-300">Sensitive KYC documents and full bank details are intentionally hidden from this summary.</p>
                 </div>
               )}
