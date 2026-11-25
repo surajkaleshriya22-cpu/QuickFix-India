@@ -33,6 +33,8 @@ data class PartnerJobLineItem(
     val serviceTitle: String,
     val quantity: Double,
     val billingUnit: String,
+    val unitRateMinimum: Double = 0.0,
+    val unitRateMaximum: Double = 0.0,
     val lineTotalMinimum: Double,
     val lineTotalMaximum: Double
 )
