@@ -74,6 +74,11 @@ fun ServiceBookingScreen(
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
     var locationMessage by remember { mutableStateOf<String?>(null) }
+    var customerQuote by remember { mutableStateOf<com.quickfix.app.viewmodel.CustomerBookingQuote?>(null) }
+    var quoteLoading by remember { mutableStateOf(false) }
+    var priceConsentAccepted by remember { mutableStateOf(false) }
+    var quoteError by remember { mutableStateOf<String?>(null) }
+
     var customerLatitude by remember { mutableStateOf<Double?>(null) }
     var customerLongitude by remember { mutableStateOf<Double?>(null) }
     val scope = rememberCoroutineScope()
@@ -137,6 +142,22 @@ fun ServiceBookingScreen(
         }
     }
 
+    LaunchedEffect(serviceId, quantity, state, district, tehsil, currentCity, scheduledDate) {
+        customerQuote = null
+        priceConsentAccepted = false
+        quoteError = null
+        val amount = quantity.trim().replace(',', '.').toDoubleOrNull()
+        if (amount != null && amount > 0.0 && amount <= 100000.0 && state.isNotBlank() &&
+            district.isNotBlank() && tehsil.isNotBlank() && scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            quoteLoading = true
+            try {
+                customerQuote = viewModel.getCustomerBookingQuote(service.id, amount, state, district, tehsil, currentCity, scheduledDate)
+            } catch (error: Exception) {
+                quoteError = error.localizedMessage ?: "स्थानीय रेट नहीं मिल सका।"
+            } finally { quoteLoading = false }
+        }
+    }
+
     val isValidBookingDate = remember(scheduledDate) {
         runCatching {
             val parsedDate = java.time.LocalDate.parse(scheduledDate)
@@ -180,7 +201,7 @@ fun ServiceBookingScreen(
                     Column {
                         Text("अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
                         Text(
-                            "काम की पुष्टि के बाद",
+                            if (customerQuote?.quoteAvailable == true) "₹${String.format(Locale.US, "%.0f", customerQuote!!.minimum)}–₹${String.format(Locale.US, "%.0f", customerQuote!!.maximum)}" else "पहले अलग कोटेशन जरूरी",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BrandBlue
@@ -192,6 +213,8 @@ fun ServiceBookingScreen(
                                 bookingError = "कृपया आज या आगे की सही तारीख चुनें।"
                             } else if (!isValidQuantity) {
                                 bookingError = "कृपया मात्रा 0 से अधिक लिखें।"
+                            } else if (customerQuote == null || !priceConsentAccepted) {
+                                bookingError = "कृपया नवीनतम रेट/कोटेशन देखकर अपनी मंजूरी दें।"
                             } else if (address.isBlank()) {
                                 bookingError = "कृपया पूरा पता लिखें।"
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
@@ -214,7 +237,10 @@ fun ServiceBookingScreen(
                                             notes = notes,
                                             quantity = quantityValue!!,
                                             customerLatitude = customerLatitude,
-                                            customerLongitude = customerLongitude
+                                            customerLongitude = customerLongitude,
+                                            priceConsentAccepted = priceConsentAccepted,
+                                            acceptedQuoteMinimum = customerQuote?.minimum ?: 0.0,
+                                            acceptedQuoteMaximum = customerQuote?.maximum ?: 0.0
                                         )
                                         navController.navigate("live_tracking/${newB.id}") {
                                             popUpTo("customer_home")
@@ -481,6 +507,34 @@ fun ServiceBookingScreen(
                     )
                 }
             }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("4. बुकिंग से पहले रेट की जाँच", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    when {
+                        quoteLoading -> Text("आपके क्षेत्र का मंजूर रेट जाँचा जा रहा है…", color = TextSecondary, fontSize = 12.sp)
+                        quoteError != null -> Text(quoteError!!, color = Color(0xFFB45309), fontSize = 12.sp)
+                        customerQuote?.quoteAvailable == true -> {
+                            val q = customerQuote!!
+                            Text("\${q.serviceTitle} · \${q.quantity} \${q.billingUnit}", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("अनुमानित कुल: ₹\${String.format(Locale.US, "%.2f", q.minimum)} – ₹\${String.format(Locale.US, "%.2f", q.maximum)}", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(if (q.materialsIncluded) "रेट में सामग्री शामिल है (मंजूर रेट कार्ड के अनुसार)।" else "सामग्री शामिल नहीं है; अतिरिक्त सामग्री का अलग रेट पहले मंजूर कराएँ।", color = TextSecondary, fontSize = 11.sp)
+                            if (q.rateSourceName.isNotBlank()) Text("रेट स्रोत: \${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
+                        }
+                        customerQuote != null -> Text("इस सेवा और क्षेत्र के लिए अभी Admin-मंजूर रेट उपलब्ध नहीं है। बुकिंग के बाद काम शुरू होने से पहले पार्टनर से मदवार कोटेशन लें और उसे मंजूर करें।", color = Color(0xFFB45309), fontSize = 12.sp)
+                        else -> Text("राज्य, जिला, तहसील और मात्रा भरें; इसके बाद स्थानीय मंजूर रेट दिखेगा।", color = TextSecondary, fontSize = 12.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = priceConsentAccepted, onCheckedChange = { priceConsentAccepted = it }, enabled = customerQuote != null && !quoteLoading)
+                        Text(if (customerQuote?.quoteAvailable == true) "मैंने ऊपर दिखाया गया रेट/अनुमान पढ़ लिया है और इसे स्वीकार करता/करती हूँ।" else "मैं समझता/समझती हूँ कि अभी निश्चित रेट उपलब्ध नहीं है; काम शुरू होने से पहले मदवार कोटेशन लेकर मंजूर करूँगा/करूँगी।", color = TextPrimary, fontSize = 11.sp)
+                    }
+                }
+            }
+
             // Issue Notes
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
