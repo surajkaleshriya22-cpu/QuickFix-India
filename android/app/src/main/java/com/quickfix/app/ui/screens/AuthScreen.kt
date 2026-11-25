@@ -203,6 +203,7 @@ fun AuthScreen(
                                     displayName = displayName,
                                     email = email,
                                     role = selectedRole,
+                                    isPartnerRegistration = selectedRole == UserRole.CHANNEL_PARTNER && isSignUp,
                                     address = address,
                                     city = city,
                                     trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
@@ -230,6 +231,7 @@ fun AuthScreen(
                                     displayName = displayName,
                                     email = email,
                                     role = selectedRole,
+                                    isPartnerRegistration = selectedRole == UserRole.CHANNEL_PARTNER && isSignUp,
                                     address = address,
                                     city = city,
                                     trades = if (selectedRole == UserRole.CHANNEL_PARTNER) selectedTrades.toList() else emptyList(),
@@ -275,11 +277,19 @@ fun AuthScreen(
                             text = if (selectedRole == UserRole.CUSTOMER) {
                                 if (isSignUp) "Customer Registration" else "Customer Sign In"
                             } else {
-                                if (isSignUp) "Partner Trade & KYC Registration" else "Channel Partner Login"
+                                if (isSignUp) "Channel Partner Registration" else "Channel Partner Login"
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
+
+                        if (isSignUp && selectedRole == UserRole.CHANNEL_PARTNER) {
+                            Text(
+                                "Customer और Partner के लिए एक ही मोबाइल नंबर इस्तेमाल कर सकते हैं। आपका Customer अकाउंट बना रहेगा; Partner आवेदन अलग से जाँचा जाएगा।",
+                                fontSize = 11.sp,
+                                color = Color(0xFF047857)
+                            )
+                        }
 
                         if (isSignUp) {
                             OutlinedTextField(
