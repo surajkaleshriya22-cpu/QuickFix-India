@@ -328,25 +328,27 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!hasCustomerAccess || data.isVerified !== false) {
           return { success: false, message: 'This phone number is not registered for customer access. Please contact support.' };
         }
-      } else {
-        const profile: Record<string, unknown> = {
-          uid: firebaseUser.uid,
-          phoneNumber: firebaseUser.phoneNumber || '',
-          displayName: displayName.trim() || 'QuickFix Customer',
-          email: email.trim(),
-          role: 'CUSTOMER',
-          roles: ['CUSTOMER'],
-          isVerified: false,
-          // Firestore rules require a native timestamp, not an ISO string.
-          createdAt: Timestamp.now()
-        };
-        if (address?.trim()) profile.address = address.trim();
-        if (city.trim()) profile.city = city.trim();
-        await setDoc(profileRef, profile);
+      }
+
+      const idToken = await firebaseUser.getIdToken(true);
+      const registrationResponse = await fetch('/api/customers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          displayName: displayName.trim() || firebaseUser.displayName || 'QuickFix Customer',
+          email: email.trim() || firebaseUser.email || '',
+          address: address?.trim() || '',
+          city: city.trim()
+        })
+      });
+      const registrationResult = await registrationResponse.json().catch(() => ({}));
+      if (!registrationResponse.ok || !registrationResult.success || typeof registrationResult.quickFixId !== 'string') {
+        return { success: false, message: registrationResult.error || 'QuickFix ID could not be issued. Please retry.' };
       }
 
       const userObj: AppUser = {
         uid: firebaseUser.uid,
+        quickFixId: registrationResult.quickFixId,
         phoneNumber: firebaseUser.phoneNumber || '',
         displayName: displayName.trim() || firebaseUser.displayName || 'QuickFix Customer',
         email: email.trim() || firebaseUser.email || '',
@@ -476,6 +478,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         displayName: params.displayName.trim(),
         email: params.email.trim().toLowerCase(),
         role: 'technician',
+        quickFixId: result.quickFixId || '',
         city: params.city.trim(),
         address: params.address?.trim() || '',
         trades: params.trades,
@@ -515,6 +518,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const trades = Array.isArray(profile.trades) ? profile.trades : [];
       const partnerUser: AppUser = {
         uid: profile.uid,
+        quickFixId: profile.quickFixId || '',
         phoneNumber: profile.phoneNumber,
         displayName: profile.displayName,
         email: profile.email,
