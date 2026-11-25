@@ -343,7 +343,10 @@ app.get('/api/partners/bank-account', authenticateFirebaseUser, async (req: Requ
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) {
+    const profile = snap.exists ? snap.data() : undefined;
+    const roles = Array.isArray(profile?.roles) ? profile.roles : [profile?.role];
+    const isPartner = roles.some((role: unknown) => typeof role === 'string' && ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role.toUpperCase()));
+    if (!snap.exists || !isPartner) {
       return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     }
     const data = snap.data()!;
@@ -360,7 +363,10 @@ app.put('/api/partners/bank-account', authenticateFirebaseUser, async (req: Requ
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const ref = getFirestore(firebaseAdminApp).collection('users').doc(identity.uid);
     const snap = await ref.get();
-    if (!snap.exists || !['CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(snap.data()?.role || '').toUpperCase())) {
+    const profile = snap.exists ? snap.data() : undefined;
+    const roles = Array.isArray(profile?.roles) ? profile.roles : [profile?.role];
+    const isPartner = roles.some((role: unknown) => typeof role === 'string' && ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role.toUpperCase()));
+    if (!snap.exists || !isPartner) {
       return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     }
     const keyText = process.env.PARTNER_BANK_ENCRYPTION_KEY || process.env.ADMIN_BANK_ENCRYPTION_KEY || '';
