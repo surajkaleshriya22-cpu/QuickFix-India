@@ -551,6 +551,20 @@ fun TechnicianScreen(
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
+                            if (job.lineItems.isNotEmpty()) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("काम का अलग-अलग रेट / Item-wise rate", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandBlue)
+                                    job.lineItems.forEach { line ->
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("${line.serviceTitle} × ${line.quantity} ${line.billingUnit.replace('_', ' ')}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.weight(1f))
+                                            Text("₹${line.lineTotalMinimum.toInt()}${if (line.lineTotalMaximum != line.lineTotalMinimum) "–₹${line.lineTotalMaximum.toInt()}" else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        }
+                                    }
+                                    Text("हर अतिरिक्त काम/सामग्री के लिए ग्राहक की अलग मंजूरी जरूरी है।", fontSize = 10.sp, color = TextSecondary)
+                                }
+                            } else {
+                                Text("इस पुरानी booking में item-wise approved rate snapshot उपलब्ध नहीं है।", fontSize = 10.sp, color = Color(0xFFB45309))
+                            }
                             Button(
                                 onClick = {
                                     acceptingJobId = job.id
