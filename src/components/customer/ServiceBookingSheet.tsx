@@ -23,6 +23,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const [basketLines, setBasketLines] = useState<{ serviceId: string; quantity: string }[]>([{ serviceId: service.id, quantity: '1' }]);
   const [additionalServiceId, setAdditionalServiceId] = useState('');
   const [rateQuote, setRateQuote] = useState<any>(null);
+  const [priceAccepted, setPriceAccepted] = useState(false);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
@@ -123,11 +124,13 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     setBasketLines(current => [...current, { serviceId: additionalServiceId, quantity: '1' }]);
     setAdditionalServiceId('');
     setRateQuote(null);
+    setPriceAccepted(false);
     setQuoteMessage('');
   };
   const updateBasketQuantity = (index: number, value: string) => {
     setBasketLines(current => current.map((line, i) => i === index ? { ...line, quantity: value } : line));
     setRateQuote(null);
+    setPriceAccepted(false);
   };
   const removeBasketLine = (index: number) => {
     setBasketLines(current => current.filter((_, i) => i !== index));
@@ -183,13 +186,17 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         return {
           serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit,
           priced: true, minimum: data.quote.totalMinimum, maximum: data.quote.totalMaximum,
-          materialsIncluded: data.quote.materialsIncluded, source: data.source?.name || 'Published local rate'
+          materialsIncluded: data.quote.materialsIncluded, source: data.source?.name || 'Published local rate',
+          unitRateMinimum: data.quote.rateMinimum, unitRateMaximum: data.quote.rateMaximum,
+          baseFee: data.quote.baseFee, minimumCharge: data.quote.minimumCharge,
+          appliedAdjustmentPercent: data.quote.appliedAdjustmentPercent
         };
       }));
       const allPriced = results.every(line => line.priced);
       const totalMinimum = results.reduce((sum, line) => sum + (line.priced ? line.minimum : 0), 0);
       const totalMaximum = results.reduce((sum, line) => sum + (line.priced ? line.maximum : 0), 0);
       setRateQuote({ lines: results, allPriced, totalMinimum, totalMaximum });
+      setPriceAccepted(false);
       setQuoteMessage(allPriced
         ? 'Har item ka rate published local rate card se calculate hua hai.'
         : 'Kuch items ka published rate nahi mila. Unka estimate inspection ke baad milega; abhi payment nahi hogi.');
@@ -285,6 +292,14 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
   const handleConfirm = async () => {
     if (isSubmitting) return;
+    if (!rateQuote || !rateQuote.allPriced) {
+      window.alert('Pehle har item ka approved local rate calculate karein. Jis item ka rate available nahi hai, uski normal booking abhi nahi hogi.');
+      return;
+    }
+    if (!priceAccepted) {
+      window.alert('Booking se pehle poori price range, billing unit aur materials/extra charges ki shartein padhkar sahmati dein.');
+      return;
+    }
     if (!stateName.trim() || !districtName.trim() || !tehsilName.trim() || basketServices.length === 0 || basketServices.some(line => !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0)) {
       window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
       return;
@@ -376,7 +391,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                 <button
                   key={day.label}
                   type="button"
-                  onClick={() => setSelectedDate(day.value)}
+                  onClick={() => { setSelectedDate(day.value); setRateQuote(null); setPriceAccepted(false); }}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-all ${
                     selectedDate === day.value
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -600,6 +615,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                 {rateQuote.lines.map((line: any) => (
                   <div key={line.serviceId} className="flex items-start justify-between gap-3 border-t border-slate-200 pt-2 text-xs">
                     <div><strong>{line.title}</strong><div className="text-[10px] text-slate-500">Qty {line.quantity} · {line.unit}</div>
+                      {line.priced && <div className="text-[10px] text-slate-500">Rate ₹{line.unitRateMinimum}–₹{line.unitRateMaximum}/{line.unit}{line.baseFee > 0 ? ` · Base fee ₹${line.baseFee}` : ''}{line.minimumCharge > 0 ? ` · Minimum charge ₹${line.minimumCharge}` : ''}</div>}
+                      {line.priced && <div className="text-[10px] text-slate-500">Materials: {line.materialsIncluded ? 'included' : 'not included; extra only with your approval'} · Source: {line.source}</div>}
                       {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
                     </div>
                     <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'After inspection'}</strong>
@@ -609,11 +626,12 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                   <span>{rateQuote.allPriced ? 'Estimated total' : 'Priced items subtotal'}</span>
                   <strong>₹{rateQuote.totalMinimum} – ₹{rateQuote.totalMaximum}</strong>
                 </div>
-                <div className="text-[10px] text-slate-500">Rates are from approved local rate cards. Unpriced work is excluded until inspection; no payment is collected for an unpriced basket.</div>
+                <div className="text-[10px] text-slate-600">Rates are from approved local rate cards. This is an estimate range, not permission for unlisted work. Materials/parts and extra work are chargeable only after a separate itemised quote and your approval.</div>
+                {rateQuote.allPriced && <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950"><input type="checkbox" checked={priceAccepted} onChange={e => setPriceAccepted(e.target.checked)} className="mt-0.5" /><span><strong>I have reviewed the price.</strong> I understand the item-wise rates, quantity, minimum charge, total estimate range and material exclusions. No extra work or extra charge may be added without my approval.</span></label>}
               </>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                Published rate cards se total calculate karein. Jis item ka rate available nahi hoga, uska quotation inspection ke baad hoga.
+                Published rate cards se total calculate karein. Har item ka approved rate milna zaroori hai. Rate unavailable ho to pehle alag itemised quotation banega; bina rate dekhe normal order confirm nahi hoga.
               </div>
             )}
           </div>
@@ -629,7 +647,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !rateQuote?.allPriced || !priceAccepted}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <span>{pendingBookingId && paymentMethod === 'upi' ? 'Retry UPI Payment' : paymentMethod === 'upi' ? 'Book & Pay by UPI' : 'Confirm Service Request'}</span>}
