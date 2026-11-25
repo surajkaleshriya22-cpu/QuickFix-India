@@ -95,6 +95,48 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ]
   },
 
+  // Explicit installation line items are priced per installed unit/point.
+  // No default price is invented; Admin must approve a local rate card for each item.
+  {
+    id: 'elec-fan-install',
+    category: 'electrician',
+    title: 'Ceiling Fan Installation (per fan)',
+    hindiTitle: 'सीलिंग फैन लगाना (प्रति पंखा)',
+    description: 'Install one customer-supplied ceiling fan, including mounting and basic safety checks. New fan, hook reinforcement and extra wiring are separate unless included in an approved quote.',
+    startingPrice: 0,
+    durationMinutes: 35,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 30,
+    included: ['One fan installation', 'Basic mounting and electrical safety check', 'Additional wiring or materials only after customer approval']
+  },
+  {
+    id: 'elec-light-install',
+    category: 'electrician',
+    title: 'Light Fitting Installation (per point)',
+    hindiTitle: 'लाइट लगाना (प्रति पॉइंट)',
+    description: 'Install one customer-supplied LED/bulb/light fitting at one electrical point. Fixture, driver, cut-out and extra wiring are separate unless included in an approved quote.',
+    startingPrice: 0,
+    durationMinutes: 25,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 30,
+    included: ['One light fitting point', 'Basic connection and safety test', 'Fixture and extra wiring only after customer approval']
+  },
+  {
+    id: 'elec-mcb-install',
+    category: 'electrician',
+    title: 'MCB Installation / Replacement (per unit)',
+    hindiTitle: 'एमसीबी लगाना या बदलना (प्रति यूनिट)',
+    description: 'Install or replace one correctly rated MCB after load and panel compatibility checks. MCB hardware, panel repair and rewiring are separate unless included in an approved quote.',
+    startingPrice: 0,
+    durationMinutes: 35,
+    rating: 0,
+    reviewsCount: 0,
+    warrantyDays: 60,
+    included: ['One MCB installation/replacement', 'Basic load and safety compatibility check', 'MCB hardware and additional panel work only after customer approval']
+  },
+
   // Plumber Services
   {
     id: 'plumb-tap',
