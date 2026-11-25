@@ -82,6 +82,7 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    val isEnglish = LocalQuickFixLanguage.current.value == "en"
     var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
     var tradesLoadMessage by remember { mutableStateOf("आपकी सेवाएँ लोड हो रही हैं...") }
     var partnerBankName by remember { mutableStateOf("") }
@@ -291,8 +292,8 @@ fun TechnicianScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("मेरा बैंक अकाउंट", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("भविष्य में payout के लिए अपना बैंक अकाउंट सुरक्षित रूप से सेव करें।", fontSize = 12.sp, color = TextSecondary)
+                    Text(if (isEnglish) "My bank account" else "मेरा बैंक अकाउंट", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "Securely save your bank account for future payouts." else "भविष्य में payout के लिए अपना बैंक अकाउंट सुरक्षित रूप से सेव करें।", fontSize = 12.sp, color = TextSecondary)
                     if (partnerBankSummary.isNotBlank()) {
                         Text("सेव किया गया: $partnerBankSummary", fontSize = 12.sp, color = Color(0xFF047857), fontWeight = FontWeight.SemiBold)
                     }
@@ -393,13 +394,13 @@ fun TechnicianScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("मेरी सेवाएँ / मेरा काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "My services / My work" else "मेरी सेवाएँ / मेरा काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     if (registeredTrades.isNotEmpty()) {
                         registeredTrades.chunked(2).forEach { rowTrades ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 rowTrades.forEach { trade ->
                                     Surface(color = Color(0xFFEFF6FF), shape = RoundedCornerShape(20.dp)) {
-                                        Text(partnerCategoryHindi(trade), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF1E40AF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(if (isEnglish) trade.replace("_", " ").replaceFirstChar { it.uppercase() } else partnerCategoryHindi(trade), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF1E40AF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
@@ -416,8 +417,8 @@ fun TechnicianScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("मेरी बुकिंग की दूरी चुनें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("आपकी चुनी हुई दूरी के अंदर के काम दिखेंगे. अधिकतम 15 km.", fontSize = 12.sp, color = TextSecondary)
+                    Text(if (isEnglish) "Choose my booking radius" else "मेरी बुकिंग की दूरी चुनें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "Jobs within your selected radius will appear. Maximum 15 km." else "आपकी चुनी हुई दूरी के अंदर के काम दिखेंगे. अधिकतम 15 km.", fontSize = 12.sp, color = TextSecondary)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                         listOf(1, 3, 5, 10, 15).forEach { radius ->
                             FilterChip(selected = selectedDispatchRadius == radius, onClick = { selectedDispatchRadius = radius }, label = { Text("$radius km") })
@@ -427,7 +428,7 @@ fun TechnicianScreen(
                         onClick = { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
-                    ) { Text("दूरी और मेरी लोकेशन सेव करें") }
+                    ) { Text(if (isEnglish) "Save radius and my location" else "दूरी और मेरी लोकेशन सेव करें") }
                     if (locationSaveMessage.isNotBlank()) Text(locationSaveMessage, fontSize = 11.sp, color = TextSecondary)
                 }
             }
@@ -438,7 +439,7 @@ fun TechnicianScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("ग्राहक के साथ Live GPS साझा करें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "Share live GPS with customer" else "ग्राहक के साथ Live GPS साझा करें", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text("यह सुविधा केवल आपकी सक्रिय assigned booking के ग्राहक को आपकी लोकेशन दिखाती है। GPS हर 30 सेकंड में अपडेट होगा, जब तक Partner Portal खुला है।", fontSize = 11.sp, color = TextSecondary)
                     Text(if (hasActiveAssignedJob) "Active booking मिली है." else "Live sharing शुरू करने के लिए पहले कोई active assigned booking होनी चाहिए.", fontSize = 11.sp, color = if (hasActiveAssignedJob) Color(0xFF166534) else Color(0xFF9A3412))
                     Button(
@@ -524,8 +525,8 @@ fun TechnicianScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Partner Wallet", fontSize = 13.sp, color = Color(0xFF94A3B8))
-                    Text("Wallet balance unavailable", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
+                    Text(if (isEnglish) "Partner Wallet" else "पार्टनर वॉलेट", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Text(if (isEnglish) "Wallet balance unavailable" else "वॉलेट बैलेंस उपलब्ध नहीं", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
                     Text(
                         "Top-ups and withdrawals will be enabled after secure server-side ledger and payment-provider integration. No demo balance or payout confirmation is shown.",
                         color = Color(0xFFCBD5E1),
@@ -543,8 +544,8 @@ fun TechnicianScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Available Jobs / उपलब्ध काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                        TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text("Refresh") }
+                        Text(if (isEnglish) "Available Jobs" else "उपलब्ध काम", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                        TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text(if (isEnglish) "Refresh" else "रिफ्रेश करें") }
                     }
                     Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
                     partnerJobs.filter { it.status == "requested" }.forEach { job ->
