@@ -2254,9 +2254,11 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
     const userSnap = await db.collection('users').doc(uid).get();
     if (!userSnap.exists) return res.status(404).json({ success: false, error: 'The account profile is unavailable.' });
     const user = userSnap.data()!;
-    const [customerBookings, partnerBookings] = await Promise.all([
+    const [customerBookings, partnerBookings, rechargeLedger, accountAudit] = await Promise.all([
       db.collection('bookings').where('customerUid', '==', uid).limit(100).get(),
-      db.collection('bookings').where('technicianUid', '==', uid).limit(100).get()
+      db.collection('bookings').where('technicianUid', '==', uid).limit(100).get(),
+      db.collection('partner_recharge_ledger').where('partnerUid', '==', uid).limit(100).get(),
+      db.collection('admin_audit_logs').where('targetUid', '==', uid).limit(100).get()
     ]);
     const bookingsById = new Map<string, QueryDocumentSnapshot>();
     [...customerBookings.docs, ...partnerBookings.docs].forEach((item) => bookingsById.set(item.id, item));
@@ -2289,7 +2291,18 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
         securityDepositPaid: user.securityDepositPaid === true,
         createdAt: user.createdAt?.toDate?.()?.toISOString?.() || null
       },
-      bookings, bookingCount: bookings.length
+      bookings, bookingCount: bookings.length,
+      partnerRechargeHistory: rechargeLedger.docs.map((item) => {
+        const row = item.data();
+        return { id: item.id, amountPaise: typeof row.amountPaise === 'number' ? row.amountPaise : null,
+          status: String(row.status || 'unknown'), createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null,
+          durationDays: typeof row.durationDays === 'number' ? row.durationDays : null };
+      }),
+      accountAudit: accountAudit.docs.map((item) => {
+        const row = item.data();
+        return { id: item.id, action: String(row.action || row.event || 'account_event'),
+          reason: String(row.reason || ''), createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
+      })
     });
   } catch (error) {
     console.error('Customer Care QuickFix ID lookup failed:', error);
