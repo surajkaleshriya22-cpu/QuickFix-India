@@ -1095,6 +1095,26 @@ export const AdminDashboard: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {quickFixLookup.kycSubmissions?.length > 0 && (
+                    <div className="border-t border-slate-700 pt-2">
+                      <div className="text-[11px] font-bold text-white mb-1">KYC Submission History</div>
+                      {quickFixLookup.kycSubmissions.map((item: any) => (
+                        <div key={item.submissionId} className="text-[10px] text-slate-300 py-1">
+                          <div>{item.documentType} · {item.status}</div>
+                          <div className="text-slate-500">Submitted: {item.submittedAt ? new Date(item.submittedAt).toLocaleString() : '—'} · Reviewed: {item.reviewedAt ? new Date(item.reviewedAt).toLocaleString() : 'Pending'}</div>
+                          <div className="text-slate-500">Retention: {item.documentExpiryStatus}{item.documentDeletedAt ? ' · Deleted ' + new Date(item.documentDeletedAt).toLocaleDateString() : ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {quickFixLookup.kycAudit?.length > 0 && (
+                    <div className="border-t border-slate-700 pt-2">
+                      <div className="text-[11px] font-bold text-white mb-1">KYC Review Activity</div>
+                      {quickFixLookup.kycAudit.slice(0, 20).map((item: any) => (
+                        <div key={item.id} className="text-[10px] text-slate-400 py-1">{item.event}{item.decision ? ' · ' + item.decision : ''}{item.reason ? ' — ' + item.reason : ''}</div>
+                      ))}
+                    </div>
+                  )}
                   {quickFixLookup.accountAudit?.length > 0 && (
                     <div className="border-t border-slate-700 pt-2">
                       <div className="text-[11px] font-bold text-white mb-1">Account Activity / Admin History</div>
