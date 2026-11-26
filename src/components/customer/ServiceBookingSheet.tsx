@@ -207,7 +207,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     }
   };
 
-  const openRazorpayCheckout = async (bookingId: string): Promise<{ paid: boolean; message: string }> => {
+  const openRazorpayCheckout = async (bookingId: string, selectedMethod: 'upi' | 'card' | 'netbanking'): Promise<{ paid: boolean; message: string }> => {
     const user = auth.currentUser;
     if (!user) return { paid: false, message: 'Please sign in again before payment.' };
     const token = await user.getIdToken();
@@ -218,7 +218,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
     });
     const order = await orderResponse.json().catch(() => ({}));
     if (!orderResponse.ok || !order.success || !order.orderId || !order.keyId) {
-      return { paid: false, message: order.error || 'UPI payment is not available right now. Your booking remains unpaid.' };
+      return { paid: false, message: order.error || 'Online payment is not available right now. Your booking remains unpaid.' };
     }
 
     const RazorpayCheckout = (window as any).Razorpay;
@@ -257,7 +257,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         name: 'QuickFix India',
         description: `Service booking ${bookingId}`,
         order_id: order.orderId,
-        method: { upi: true, card: false, netbanking: false, wallet: false },
+        method: { upi: selectedMethod === 'upi', card: selectedMethod === 'card', netbanking: selectedMethod === 'netbanking', wallet: false },
         handler: async (response: any) => {
           try {
             const verifyResponse = await fetch('/api/payments/razorpay/verify', {
@@ -275,7 +275,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               finish({ paid: false, message: verification.error || 'Payment could not be verified. Do not retry until your bank/payment app confirms the result.' });
               return;
             }
-            finish({ paid: true, message: 'UPI payment verified successfully.' });
+            finish({ paid: true, message: `${selectedMethod.toUpperCase()} payment verified successfully.` });
           } catch {
             finish({ paid: false, message: 'Payment verification is temporarily unavailable. Your payment status will remain unconfirmed until the server verifies it.' });
           }
@@ -332,9 +332,9 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         setPendingBookingId(bookingId);
       }
 
-      if (paymentMethod === 'upi') {
-        setPaymentMessage('Secure UPI checkout khol rahe hain…');
-        const payment = await openRazorpayCheckout(bookingId);
+      if (paymentMethod === 'upi' || paymentMethod === 'card' || paymentMethod === 'netbanking') {
+        setPaymentMessage(`Secure ${paymentMethod.toUpperCase()} checkout khol rahe hain…`);
+        const payment = await openRazorpayCheckout(bookingId, paymentMethod);
         setPaymentMessage(payment.message);
         if (!payment.paid) {
           window.alert(`${payment.message} Booking ID: ${bookingId}`);
@@ -563,34 +563,26 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               <IndianRupee className="w-3.5 h-3.5 text-blue-600" /> Payment Option
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('upi')}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  paymentMethod === 'upi'
-                    ? 'border-blue-600 bg-blue-50/70 text-blue-900 font-semibold shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span>UPI Instant</span>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Fast</span>
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5 font-normal">GPay, PhonePe, Paytm, BHIM</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('cash')}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  paymentMethod === 'cash'
-                    ? 'border-blue-600 bg-blue-50/70 text-blue-900 font-semibold shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="text-xs font-bold">Cash After Service</div>
-                <p className="text-[11px] text-slate-500 mt-0.5 font-normal">Pay directly once satisfied</p>
-              </button>
+              {([
+                { value: 'upi' as const, title: 'UPI', detail: 'GPay, PhonePe, Paytm, BHIM' },
+                { value: 'card' as const, title: 'Debit / Credit Card', detail: 'Visa, Mastercard, RuPay' },
+                { value: 'netbanking' as const, title: 'Net Banking', detail: 'Supported banks' },
+                { value: 'cash' as const, title: 'Cash After Service', detail: 'Pay directly once satisfied' }
+              ]).map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(option.value)}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    paymentMethod === option.value
+                      ? 'border-blue-600 bg-blue-50/70 text-blue-900 font-semibold shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{option.title}</div>
+                  <p className="text-[11px] text-slate-500 mt-0.5 font-normal">{option.detail}</p>
+                </button>
+              ))}
             </div>
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
