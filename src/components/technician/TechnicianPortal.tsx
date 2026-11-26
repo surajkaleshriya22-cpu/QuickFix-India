@@ -41,6 +41,7 @@ import { PartnerKycPanel } from './PartnerKycPanel';
 import { PartnerRechargeCard } from './PartnerRechargeCard';
 import { PartnerUpiQrCard } from './PartnerUpiQrCard';
 import { BookingSosButton } from '../shared/BookingSosButton';
+import { PartnerEmergencyContactPanel } from './PartnerEmergencyContactPanel';
 import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
 
 // 1-Hour SLA Countdown Component
@@ -1167,6 +1168,7 @@ export const TechnicianPortal: React.FC = () => {
             {['assigned', 'technician_en_route', 'in_progress'].includes(currentActiveJob.status) && (
               <BookingSosButton bookingId={currentActiveJob.id} reporterRole="partner" />
             )}
+            <PartnerEmergencyContactPanel />
 
             {/* 1-Hour SLA Countdown Timer Banner */}
             {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
