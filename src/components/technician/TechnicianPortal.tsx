@@ -946,7 +946,7 @@ export const TechnicianPortal: React.FC = () => {
                               </span>
                             ) : tx.type === 'security_deposit' ? (
                               <span className="text-amber-400 flex items-center gap-0.5">
-                                <Lock className="w-3 h-3" /> Base Security Deposit
+                                <Lock className="w-3 h-3" /> Legacy Reserve Record (Historical Only)
                               </span>
                             ) : tx.type === 'withdrawal' ? (
                               <span className="text-slate-300 flex items-center gap-0.5">
