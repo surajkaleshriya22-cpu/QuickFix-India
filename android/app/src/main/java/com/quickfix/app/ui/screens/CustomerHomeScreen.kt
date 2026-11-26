@@ -282,7 +282,7 @@ fun CustomerHomeScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("SOS / ग्राहक सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239))
-                            Text("आपकी safety report QuickFix में save होगी. Emergency team/contact alerts अभी connected नहीं हैं.", fontSize = 11.sp, color = Color(0xFF881337))
+                            Text("SOS report QuickFix Admin तक दर्ज होगी। SMS alert की स्थिति रिपोर्ट भेजने के बाद दिखेगी। पुलिस/एम्बुलेंस dispatch नहीं होता; तत्काल खतरे में 112 call करें.", fontSize = 11.sp, color = Color(0xFF881337))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(
                                     onClick = {
