@@ -40,6 +40,7 @@ import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { PartnerKycPanel } from './PartnerKycPanel';
 import { PartnerRechargeCard } from './PartnerRechargeCard';
 import { PartnerUpiQrCard } from './PartnerUpiQrCard';
+import { BookingSosButton } from '../shared/BookingSosButton';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -1162,6 +1163,9 @@ export const TechnicianPortal: React.FC = () => {
                 active={currentActiveJob.status === 'assigned' || currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress'}
               />
             </div>
+            {['assigned', 'technician_en_route', 'in_progress'].includes(currentActiveJob.status) && (
+              <BookingSosButton bookingId={currentActiveJob.id} reporterRole="partner" />
+            )}
 
             {/* 1-Hour SLA Countdown Timer Banner */}
             {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
