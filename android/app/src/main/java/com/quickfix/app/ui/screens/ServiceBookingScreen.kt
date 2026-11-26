@@ -85,6 +85,10 @@ fun ServiceBookingScreen(
     val timeOptions = listOf("सुबह 8:00 - 10:00", "सुबह 10:00 - दोपहर 12:00", "दोपहर 12:00 - 2:00", "दोपहर 2:00 - शाम 4:00", "शाम 4:00 - 6:00", "शाम 6:00 - 8:00")
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
+    var customerQuote by remember { mutableStateOf<com.quickfix.app.viewmodel.CustomerBookingQuote?>(null) }
+    var quoteLoading by remember { mutableStateOf(false) }
+    var priceConsentAccepted by remember { mutableStateOf(false) }
+    var quoteError by remember { mutableStateOf<String?>(null) }
     var paymentMethod by remember { mutableStateOf("cash") }
     var pendingBookingId by remember { mutableStateOf<String?>(null) }
     var locationMessage by remember { mutableStateOf<String?>(null) }
@@ -158,6 +162,24 @@ fun ServiceBookingScreen(
         }.getOrDefault(false)
     }
 
+    LaunchedEffect(serviceId, quantity, state, district, tehsil, currentCity, scheduledDate) {
+        customerQuote = null
+        priceConsentAccepted = false
+        quoteError = null
+        val amount = quantity.trim().replace(',', '.').toDoubleOrNull()
+        if (amount != null && amount.isFinite() && amount > 0.0 && amount <= 100000.0 &&
+            state.isNotBlank() && district.isNotBlank() && tehsil.isNotBlank() && isValidBookingDate) {
+            quoteLoading = true
+            try {
+                customerQuote = viewModel.getCustomerBookingQuote(service.id, amount, state, district, tehsil, currentCity, scheduledDate)
+            } catch (error: Exception) {
+                quoteError = error.localizedMessage ?: if (isEnglish) "Local price could not be loaded." else "स्थानीय रेट नहीं मिल सका।"
+            } finally {
+                quoteLoading = false
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -194,7 +216,11 @@ fun ServiceBookingScreen(
                     Column {
                         Text(if (isEnglish) "Final price" else "अंतिम कीमत", fontSize = 11.sp, color = TextSecondary)
                         Text(
-                            if (isEnglish) "After job confirmation" else "काम की पुष्टि के बाद",
+                            when {
+                                quoteLoading -> if (isEnglish) "Checking local rate…" else "स्थानीय रेट जाँच रहे हैं…"
+                                customerQuote?.quoteAvailable == true -> "₹${String.format(Locale.US, "%.0f", customerQuote!!.minimum)}–₹${String.format(Locale.US, "%.0f", customerQuote!!.maximum)}"
+                                else -> if (isEnglish) "Quote required before work" else "काम से पहले कोटेशन जरूरी"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BrandBlue
@@ -206,6 +232,8 @@ fun ServiceBookingScreen(
                                 bookingError = if (isEnglish) "Please choose today or a future date." else "कृपया आज या आगे की सही तारीख चुनें।"
                             } else if (!isValidQuantity) {
                                 bookingError = if (isEnglish) "Please enter a quantity greater than 0." else "कृपया मात्रा 0 से अधिक लिखें।"
+                            } else if (customerQuote == null || !priceConsentAccepted) {
+                                bookingError = if (isEnglish) "Please review the price/quote and confirm before booking." else "बुकिंग से पहले रेट/कोटेशन देखकर मंजूरी दें।"
                             } else if (address.isBlank()) {
                                 bookingError = if (isEnglish) "Please enter the complete address." else "कृपया पूरा पता लिखें।"
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
@@ -230,7 +258,10 @@ fun ServiceBookingScreen(
                                             quantity = quantityValue!!,
                                             customerLatitude = customerLatitude,
                                             customerLongitude = customerLongitude,
-                                            paymentMethod = paymentMethod
+                                            paymentMethod = paymentMethod,
+                                            priceConsentAccepted = priceConsentAccepted,
+                                            acceptedQuoteMinimum = customerQuote?.minimum ?: 0.0,
+                                            acceptedQuoteMaximum = customerQuote?.maximum ?: 0.0
                                         ).id.also { pendingBookingId = it }
                                         if (paymentMethod == "cash") {
                                             navController.navigate("live_tracking/$bookingId") {
@@ -541,6 +572,35 @@ fun ServiceBookingScreen(
                     )
                 }
             }
+            // Approved local price preview and explicit customer consent.
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (isEnglish) "4. Review local price before booking" else "4. बुकिंग से पहले स्थानीय रेट जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    when {
+                        quoteLoading -> Text(if (isEnglish) "Checking the approved rate for your area…" else "आपके क्षेत्र का मंजूर रेट जाँचा जा रहा है…", color = TextSecondary, fontSize = 12.sp)
+                        quoteError != null -> Text(quoteError!!, color = Color(0xFFB45309), fontSize = 12.sp)
+                        customerQuote?.quoteAvailable == true -> {
+                            val q = customerQuote!!
+                            Text("${q.serviceTitle} · ${q.quantity} ${q.billingUnit}", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("₹${String.format(Locale.US, "%.2f", q.minimum)} – ₹${String.format(Locale.US, "%.2f", q.maximum)}", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(if (isEnglish) { if (q.materialsIncluded) "Materials are included as stated by the approved rate card." else "Materials are not included; approve any additional material cost first." } else { if (q.materialsIncluded) "मंजूर रेट कार्ड के अनुसार सामग्री शामिल है।" else "सामग्री शामिल नहीं है; अतिरिक्त सामग्री का रेट पहले मंजूर करें।" }, color = TextSecondary, fontSize = 11.sp)
+                            if (q.rateSourceName.isNotBlank()) Text("${if (isEnglish) "Rate source" else "रेट स्रोत"}: ${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
+                        }
+                        customerQuote != null -> Text(if (isEnglish) "No admin-approved rate is available for this service and area. Ask the partner for an itemised quote and approve it before work begins." else "इस सेवा और क्षेत्र के लिए एडमिन-मंजूर रेट उपलब्ध नहीं है। काम शुरू होने से पहले पार्टनर से मदवार कोटेशन लेकर मंजूर करें।", color = Color(0xFFB45309), fontSize = 12.sp)
+                        else -> Text(if (isEnglish) "Enter state, district, tehsil and quantity to check the approved local rate." else "मंजूर स्थानीय रेट देखने के लिए राज्य, जिला, तहसील और मात्रा भरें।", color = TextSecondary, fontSize = 12.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = priceConsentAccepted, onCheckedChange = { priceConsentAccepted = it }, enabled = customerQuote != null && !quoteLoading)
+                        Text(if (isEnglish) { if (customerQuote?.quoteAvailable == true) "I have reviewed and accept the displayed price range." else "I understand that no fixed rate is available yet; I will review and approve an itemised quote before work starts." } else { if (customerQuote?.quoteAvailable == true) "मैंने ऊपर दिखाया गया रेट/अनुमान पढ़ लिया है और इसे स्वीकार करता/करती हूँ।" else "मैं समझता/समझती हूँ कि अभी निश्चित रेट उपलब्ध नहीं है; काम शुरू होने से पहले मदवार कोटेशन लेकर मंजूर करूँगा/करूँगी।" }, color = TextPrimary, fontSize = 11.sp)
+                    }
+                }
+            }
+
             // Issue Notes
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
