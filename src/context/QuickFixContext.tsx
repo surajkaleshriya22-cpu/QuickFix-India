@@ -739,7 +739,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Technician requests payout -> Held in Admin Escrow awaiting Admin Approval
-  // Strict Enforcement: Cannot withdraw the mandatory ₹2,000 security reserve. Can ONLY withdraw amount above ₹2,000!
+  // Payouts remain disabled until a verified server-side wallet ledger is available.
   const requestPayout = (_technicianId: string, _amount: number): { success: boolean; message: string } => {
     return {
       success: false,
