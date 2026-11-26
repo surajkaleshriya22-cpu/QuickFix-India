@@ -2986,8 +2986,8 @@ app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, asyn
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-    const phone = typeof req.body?.phone === 'string' ? req.body.phone.replace(/[\\s()-]/g, '') : '';
-    if (name.length < 2 || name.length > 100 || !/^\\+?[1-9]\\d{9,14}$/.test(phone) || req.body?.consentConfirmed !== true) {
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone.replace(/[\s()-]/g, '') : '';
+    if (name.length < 2 || name.length > 100 || !/^\+?[1-9]\d{9,14}$/.test(phone) || req.body?.consentConfirmed !== true) {
       return res.status(400).json({ success: false, error: 'Enter a valid contact name and phone, and confirm consent.' });
     }
     const partner = await getPartnerSafetyProfile(uid);
