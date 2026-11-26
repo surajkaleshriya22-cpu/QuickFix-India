@@ -472,7 +472,8 @@ class QuickFixViewModel : ViewModel() {
         notes: String = "",
         quantity: Double = 1.0,
         customerLatitude: Double? = null,
-        customerLongitude: Double? = null
+        customerLongitude: Double? = null,
+        paymentMethod: String = "cash"
     ): Booking {
         val firebaseUser = auth.currentUser
             ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
@@ -480,6 +481,7 @@ class QuickFixViewModel : ViewModel() {
         require(scheduledDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { "Date must be in YYYY-MM-DD format." }
         require(scheduledTimeSlot.isNotBlank()) { "Please select a service time slot." }
         require(quantity.isFinite() && quantity > 0.0 && quantity <= 100000.0) { "Please enter a valid service quantity." }
+        require(paymentMethod == "cash" || paymentMethod == "upi") { "Please choose a valid payment method." }
 
         // Keep Android's legacy service IDs compatible with the trusted server catalogue.
         val serverServiceId = when (serviceId) {
@@ -508,7 +510,7 @@ class QuickFixViewModel : ViewModel() {
                     ))
                     .put("scheduledDate", scheduledDate)
                     .put("scheduledTimeSlot", scheduledTimeSlot)
-                    .put("paymentMethod", "cash")
+                    .put("paymentMethod", paymentMethod)
                     .put("address", customerAddress.trim())
                     .put("serviceArea", org.json.JSONObject()
                         .put("state", state.trim())

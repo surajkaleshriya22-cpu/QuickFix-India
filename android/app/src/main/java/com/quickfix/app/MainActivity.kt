@@ -32,7 +32,13 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         val paymentId = razorpayPaymentID ?: paymentData?.paymentId
         val orderId = paymentData?.orderId
         val signature = paymentData?.signature
-        if (!paymentId.isNullOrBlank() && !orderId.isNullOrBlank() && !signature.isNullOrBlank()) {
+        if (CustomerBookingPaymentResult.hasPending()) {
+            if (!paymentId.isNullOrBlank() && !orderId.isNullOrBlank() && !signature.isNullOrBlank()) {
+                CustomerBookingPaymentResult.success(paymentId, orderId, signature)
+            } else {
+                CustomerBookingPaymentResult.failure("Razorpay payment response incomplete; booking remains unpaid.")
+            }
+        } else if (!paymentId.isNullOrBlank() && !orderId.isNullOrBlank() && !signature.isNullOrBlank()) {
             PartnerRechargePaymentResult.success(paymentId, orderId, signature)
         } else {
             PartnerRechargePaymentResult.failure("Razorpay payment response incomplete; subscription not activated.")
@@ -40,7 +46,12 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     }
 
     override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
-        PartnerRechargePaymentResult.failure(response ?: "Payment cancelled or failed (code $code).")
+        val message = response ?: "Payment cancelled or failed (code $code)."
+        if (CustomerBookingPaymentResult.hasPending()) {
+            CustomerBookingPaymentResult.failure(message)
+        } else {
+            PartnerRechargePaymentResult.failure(message)
+        }
     }
 
     private val quickFixViewModel: QuickFixViewModel by viewModels()

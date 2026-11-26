@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.webkit.WebView
@@ -37,12 +40,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.quickfix.app.viewmodel.QuickFixViewModel
+import com.razorpay.Checkout
+import org.json.JSONObject
 
 private val BrandBlue = Color(0xFF2563EB)
 private val DeepNavy = Color(0xFF0F172A)
 private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +85,8 @@ fun ServiceBookingScreen(
     val timeOptions = listOf("सुबह 8:00 - 10:00", "सुबह 10:00 - दोपहर 12:00", "दोपहर 12:00 - 2:00", "दोपहर 2:00 - शाम 4:00", "शाम 4:00 - 6:00", "शाम 6:00 - 8:00")
     var isBooking by remember { mutableStateOf(false) }
     var bookingError by remember { mutableStateOf<String?>(null) }
+    var paymentMethod by remember { mutableStateOf("cash") }
+    var pendingBookingId by remember { mutableStateOf<String?>(null) }
     var locationMessage by remember { mutableStateOf<String?>(null) }
     var customerLatitude by remember { mutableStateOf<Double?>(null) }
     var customerLongitude by remember { mutableStateOf<Double?>(null) }
@@ -201,8 +214,9 @@ fun ServiceBookingScreen(
                                 isBooking = true
                                 bookingError = null
                                 scope.launch {
+                                    var waitingForPayment = false
                                     try {
-                                        val newB = viewModel.createBooking(
+                                        val bookingId = pendingBookingId ?: viewModel.createBooking(
                                             serviceId = service.id,
                                             serviceTitle = service.title,
                                             category = service.category,
@@ -215,16 +229,60 @@ fun ServiceBookingScreen(
                                             notes = notes,
                                             quantity = quantityValue!!,
                                             customerLatitude = customerLatitude,
-                                            customerLongitude = customerLongitude
-                                        )
-                                        navController.navigate("live_tracking/${newB.id}") {
-                                            popUpTo("customer_home")
+                                            customerLongitude = customerLongitude,
+                                            paymentMethod = paymentMethod
+                                        ).id.also { pendingBookingId = it }
+                                        if (paymentMethod == "cash") {
+                                            navController.navigate("live_tracking/$bookingId") {
+                                                popUpTo("customer_home")
+                                            }
+                                        } else {
+                                            val order = createCustomerBookingPaymentOrder(bookingId)
+                                            val activity = context.findActivity()
+                                                ?: throw IllegalStateException("Payment screen could not be opened. Please reopen QuickFix.")
+                                            val options = JSONObject().apply {
+                                                put("name", "QuickFix India")
+                                                put("description", "Service booking payment")
+                                                put("order_id", order.orderId)
+                                                put("currency", order.currency)
+                                                put("amount", order.amountPaise)
+                                                put("method", JSONObject().put("upi", 1).put("card", 0).put("netbanking", 0).put("wallet", 0))
+                                                put("theme", JSONObject().put("color", "#2563EB"))
+                                                put("prefill", JSONObject())
+                                                put("notes", JSONObject().put("bookingId", bookingId))
+                                            }
+                                            val checkout = Checkout()
+                                            checkout.setKeyID(order.keyId)
+                                            CustomerBookingPaymentResult.callback = { paymentId, paidOrderId, signature, failure ->
+                                                scope.launch {
+                                                    try {
+                                                        if (failure != null || paymentId.isNullOrBlank() || paidOrderId != order.orderId || signature.isNullOrBlank()) {
+                                                            bookingError = failure ?: "UPI payment response incomplete. Booking remains unpaid."
+                                                        } else {
+                                                            verifyCustomerBookingPayment(bookingId, paidOrderId, paymentId, signature)
+                                                            navController.navigate("live_tracking/$bookingId") {
+                                                                popUpTo("customer_home")
+                                                            }
+                                                        }
+                                                    } catch (verifyError: Exception) {
+                                                        bookingError = verifyError.localizedMessage
+                                                            ?: "Payment verification pending. Booking remains unpaid until server confirms it."
+                                                    } finally {
+                                                        isBooking = false
+                                                    }
+                                                }
+                                            }
+                                            waitingForPayment = true
+                                            checkout.open(activity, options)
+                                            return@launch
                                         }
                                     } catch (error: Exception) {
+                                        waitingForPayment = false
+                                        CustomerBookingPaymentResult.callback = null
                                         bookingError = error.localizedMessage
                                             ?: "Booking could not be saved. Please sign in and try again."
                                     } finally {
-                                        isBooking = false
+                                        if (!waitingForPayment) isBooking = false
                                     }
                                 }
                             }
@@ -235,7 +293,7 @@ fun ServiceBookingScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            if (isBooking) "बुकिंग भेज रहे हैं..." else "बुकिंग भेजें →",
+                            if (isBooking) "बुकिंग भेज रहे हैं..." else if (paymentMethod == "upi") { if (pendingBookingId != null) "UPI भुगतान दोबारा करें →" else "बुक करें और UPI से भुगतान करें →" } else "बुकिंग भेजें →",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -501,8 +559,8 @@ fun ServiceBookingScreen(
                 }
             }
 
-            // Payment choice is explicit; customer checkout is not enabled until its
-            // verified payment-order and webhook lifecycle is implemented.
+            // Customer can choose UPI or cash. UPI is captured only against an
+            // approved server-side rate card and marked paid only after verification.
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardBg),
                 shape = RoundedCornerShape(14.dp),
@@ -512,18 +570,34 @@ fun ServiceBookingScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (isEnglish) "4. Payment method" else "4. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = true, onClick = {})
+                        RadioButton(
+                            selected = paymentMethod == "cash",
+                            onClick = { if (pendingBookingId == null) paymentMethod = "cash" },
+                            enabled = pendingBookingId == null
+                        )
                         Column {
                             Text(if (isEnglish) "Cash after service completion" else "सेवा पूरी होने के बाद नकद (Cash)", fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Text(if (isEnglish) "Online payment is not available yet." else "अभी कोई ऑनलाइन भुगतान नहीं लिया जाएगा।", fontSize = 11.sp, color = TextSecondary)
+                            Text(if (isEnglish) "Pay directly after the work is completed." else "काम पूरा होने के बाद सीधे भुगतान करें।", fontSize = 11.sp, color = TextSecondary)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = false, onClick = {}, enabled = false)
+                        RadioButton(
+                            selected = paymentMethod == "upi",
+                            onClick = { if (pendingBookingId == null) paymentMethod = "upi" },
+                            enabled = pendingBookingId == null
+                        )
                         Column {
-                            Text(if (isEnglish) "UPI / Online payment" else "UPI / ऑनलाइन भुगतान", color = TextSecondary)
-                            Text(if (isEnglish) "Secure customer payments are not enabled yet." else "ग्राहक भुगतान की सुरक्षित सुविधा अभी चालू नहीं है।", fontSize = 11.sp, color = TextSecondary)
+                            Text(if (isEnglish) "UPI / Online payment" else "UPI / ऑनलाइन भुगतान", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text(if (isEnglish) "GPay, PhonePe, Paytm and BHIM via secure Razorpay checkout." else "सुरक्षित Razorpay से GPay, PhonePe, Paytm और BHIM।", fontSize = 11.sp, color = TextSecondary)
                         }
+                    }
+                    Text(
+                        if (isEnglish) "UPI is available only when an approved local rate card sets the booking amount. If no approved rate exists, no payment is collected and you can choose cash." else "UPI तभी चलेगा जब आपके क्षेत्र का approved rate card कीमत तय करे। Rate उपलब्ध न होने पर भुगतान नहीं कटेगा और आप Cash चुन सकते हैं।",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                    if (pendingBookingId != null && paymentMethod == "upi") {
+                        Text(if (isEnglish) "Booking saved. Retry UPI payment without creating another booking." else "बुकिंग सेव है। दोबारा UPI भुगतान करें—नई बुकिंग नहीं बनेगी।", fontSize = 11.sp, color = BrandBlue)
                     }
                 }
             }
