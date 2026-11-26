@@ -27,6 +27,12 @@ test('fails closed for missing or malformed profile dates while duty gating is e
   assert.equal(isPartnerRechargeEntitled({ createdAt: 'not-a-date' }, policy, undefined, now), false);
 });
 
+test('keeps the launch default fail-open when rollout flags are omitted', () => {
+  const launchDefaultPolicy = { freeTrialDays: 30 };
+  const expiredProfile = { createdAt: new Date(now - 60 * 86400000) };
+  assert.equal(isPartnerRechargeEntitled(expiredProfile, launchDefaultPolicy, undefined, now), true);
+});
+
 test('keeps duty gating disabled until payment and duty-gating rollout flags are both enabled', () => {
   assert.equal(isPartnerRechargeEntitled({ createdAt: new Date(now - 60 * 86400000) }, { ...policy, paymentEnabled: false }, undefined, now), true);
   assert.equal(isPartnerRechargeEntitled({ createdAt: new Date(now - 60 * 86400000) }, { ...policy, dutyGatingEnabled: false }, undefined, now), true);
