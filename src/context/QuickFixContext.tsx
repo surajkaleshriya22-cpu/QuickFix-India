@@ -581,7 +581,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     _coords?: { lat: number; lng: number }
   ): { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult } => ({
     success: false,
-    message: 'Partner online status is disabled until trusted server-side identity, verification, wallet reserve and GPS checks are deployed.'
+    message: 'Partner online status is disabled until trusted server-side identity, KYC verification and GPS checks are deployed.'
   });
 
   const validateAndSetTechnicianOnline = async (
@@ -634,7 +634,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Technician requests payout -> Held in Admin Escrow awaiting Admin Approval
-  // Strict Enforcement: Cannot withdraw the mandatory ₹2,000 security reserve. Can ONLY withdraw amount above ₹2,000!
+  // Payouts remain disabled until a verified server-side wallet ledger and payment provider are deployed.
   const requestPayout = (_technicianId: string, _amount: number): { success: boolean; message: string } => {
     return {
       success: false,
