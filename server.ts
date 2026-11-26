@@ -792,7 +792,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     if (typeof scheduledDate !== 'string' || !isValidBookingDate(scheduledDate)) invalidFields.push('scheduledDate');
     if (typeof scheduledTimeSlot !== 'string' || !/^[\p{L}\p{N}\s:().,+-]{1,80}$/u.test(scheduledTimeSlot)) invalidFields.push('scheduledTimeSlot');
     if (typeof address !== 'string' || !address.trim() || address.length > 500) invalidFields.push('address');
-    if (!['upi', 'cash'].includes(paymentMethod)) invalidFields.push('paymentMethod');
+    if (!['upi', 'card', 'netbanking', 'cash'].includes(paymentMethod)) invalidFields.push('paymentMethod');
     if (notes !== undefined && typeof notes !== 'string') invalidFields.push('notes');
     if (invalidFields.length) {
       return res.status(400).json({
@@ -874,10 +874,10 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       };
     });
     const allLinesPriced = lineItems.every(line => line.pricingStatus === 'priced_from_published_rate');
-    if (paymentMethod === 'upi' && !allLinesPriced) {
+    if (['upi', 'card', 'netbanking'].includes(paymentMethod) && !allLinesPriced) {
       return res.status(409).json({
         success: false,
-        error: 'UPI payment needs an approved local rate card and confirmed booking amount. Choose Cash or request an inspection quote; no payment has been collected.'
+        error: 'Online payment needs an approved local rate card and confirmed booking amount. Choose Cash or request an inspection quote; no payment has been collected.'
       });
     }
     const totalMinimum = lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0);
