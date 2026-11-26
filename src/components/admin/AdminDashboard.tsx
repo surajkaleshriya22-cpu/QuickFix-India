@@ -202,7 +202,6 @@ export const AdminDashboard: React.FC = () => {
   const [plumbRate, setPlumbRate] = useState(commissionSettings.plumberCommissionPct);
   const [acRate, setAcRate] = useState(commissionSettings.acCommissionPct || 15);
   const [fridgeRate, setFridgeRate] = useState(commissionSettings.fridgeCommissionPct || 15);
-  const [minDeposit, setMinDeposit] = useState(commissionSettings.minSecurityDeposit || 2000);
   const [convFee, setConvFee] = useState(commissionSettings.platformConvenienceFee);
   const [minPayout, setMinPayout] = useState(commissionSettings.minPayoutThreshold || 500);
   const [saveMessage, setSaveMessage] = useState('');
@@ -303,7 +302,6 @@ export const AdminDashboard: React.FC = () => {
       plumberCommissionPct: Number(plumbRate),
       acCommissionPct: Number(acRate),
       fridgeCommissionPct: Number(fridgeRate),
-      minSecurityDeposit: Number(minDeposit),
       platformConvenienceFee: Number(convFee),
       minPayoutThreshold: Number(minPayout)
     });
@@ -1076,7 +1074,6 @@ export const AdminDashboard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div><span className="text-slate-500 block">Identity verified</span><span className="text-white">{quickFixLookup.profile.isVerified ? 'Yes' : 'No'}</span></div>
                     {quickFixLookup.profile.accountType === 'CHANNEL_PARTNER' && <div><span className="text-slate-500 block">Duty status</span><span className="text-white">{quickFixLookup.profile.isOnline ? 'Online' : 'Offline'}</span></div>}
-                    {quickFixLookup.profile.accountType === 'CHANNEL_PARTNER' && <div><span className="text-slate-500 block">Security reserve</span><span className="text-white">{quickFixLookup.profile.securityDepositPaid ? 'Paid' : 'Not paid'}</span></div>}
                   </div>
                   <div className="text-[11px] text-slate-300"><span className="text-slate-500">Address:</span> {quickFixLookup.profile.address || 'Not provided'}</div>
                   {quickFixLookup.profile.trades?.length > 0 && <div className="text-[11px] text-slate-300"><span className="text-slate-500">Services:</span> {quickFixLookup.profile.trades.join(', ')}</div>}
@@ -1355,10 +1352,10 @@ export const AdminDashboard: React.FC = () => {
                   <p className="text-[11px] text-slate-400">Area: {[partner.serviceArea?.tehsil, partner.serviceArea?.district, partner.serviceArea?.state].filter(Boolean).join(', ') || partner.city || 'Not provided'}</p>
                   <p className="text-[11px] text-slate-300">KYC: {partner.kycStatus || 'not submitted'} · Verified: {partner.isVerified ? 'Yes' : 'No'} · Online: {partner.isOnline ? 'Yes' : 'No'}</p>
                   <p className="text-[11px] text-slate-300">Booking radius: {partner.dispatchRadiusKm ? `${partner.dispatchRadiusKm} km` : 'Not set'} · GPS pin: {partner.dispatchLocationConfigured ? 'Saved' : 'Not saved'}</p>
-                  <p className="text-[10px] text-slate-500">Wallet: {partner.walletBalance === null || partner.walletBalance === undefined ? 'Not available' : `₹${partner.walletBalance}`} · Reserve paid: {partner.securityDepositPaid ? 'Yes' : 'No'} · Account: {partner.role || 'CHANNEL_PARTNER'}</p>
+                  <p className="text-[10px] text-slate-500">Wallet: {partner.walletBalance === null || partner.walletBalance === undefined ? 'Not available' : `₹${partner.walletBalance}`} · Account: {partner.role || 'CHANNEL_PARTNER'}</p>
                 </div>
               ))}
-              <p className="text-[10px] text-slate-500">Dispatch ready means the server eligibility checks pass: approved, KYC verified, online, not suspended, reserve paid and wallet balance at least ₹2,000. GPS is shown separately.</p>
+              <p className="text-[10px] text-slate-500">Dispatch ready means the server eligibility checks pass: approved, KYC verified, online and not suspended. GPS is shown separately.</p>
             </section>
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1474,18 +1471,6 @@ export const AdminDashboard: React.FC = () => {
                         <span className="font-mono font-bold text-white text-xs">
                           ₹{tech.walletBalance ?? 0}
                         </span>
-                        {(tech.walletBalance ?? 0) >= 2000 ? (
-                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                            ₹2K Reserve OK
-                          </span>
-                        ) : (
-                          <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                            -₹{2000 - (tech.walletBalance ?? 0)} Deficit
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        Withdrawable: <strong className="text-emerald-400 font-mono">₹{Math.max(0, (tech.walletBalance ?? 0) - 2000)}</strong>
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
                         Cash Coll: ₹{tech.lifetimeCashCollected ?? 0} · Comm Cut: ₹{tech.lifetimeCommissionPaid ?? 0}
@@ -2629,24 +2614,6 @@ export const AdminDashboard: React.FC = () => {
                         />
                       </div>
 
-                      <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
-                        <label className="font-bold text-amber-300 block flex items-center gap-1.5">
-                          <Lock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Mandatory Security Deposit Reserve (₹)</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="500"
-                            max="5000"
-                            step="100"
-                            value={minDeposit}
-                            onChange={e => setMinDeposit(Number(e.target.value))}
-                            className="w-24 p-2 rounded-xl border border-amber-600/80 bg-slate-950 text-amber-300 font-mono font-bold text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                          />
-                          <span className="text-slate-400">Non-withdrawable wallet reserve required for duty</span>
-                        </div>
-                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
