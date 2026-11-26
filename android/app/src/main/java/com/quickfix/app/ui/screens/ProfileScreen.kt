@@ -36,7 +36,7 @@ fun ProfileScreen(
                 title = { Text(if (isEnglish) "My QuickFix Account" else "मेरा QuickFix खाता", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Back" else "वापस जाएँ")
                     }
                 },
                 actions = { QuickFixLanguageSelector() },
@@ -93,7 +93,7 @@ fun ProfileScreen(
                         }
                     ) {
                         Text(
-                            text = user.role.name,
+                            text = when (user.role) { UserRole.ADMIN -> if (isEnglish) "ADMIN" else "एडमिन"; UserRole.CHANNEL_PARTNER, UserRole.TECHNICIAN -> if (isEnglish) "CHANNEL PARTNER" else "चैनल पार्टनर"; UserRole.CUSTOMER -> if (isEnglish) "CUSTOMER" else "ग्राहक" },
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -117,18 +117,18 @@ fun ProfileScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isEnglish) "PROFILE DETAILS" else "प्रोफ़ाइल विवरण", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
 
-                    ProfileItemRow(icon = Icons.Default.Email, label = "Email", value = user.email.ifEmpty { "Not set" })
+                    ProfileItemRow(icon = Icons.Default.Email, label = if (isEnglish) "Email" else "ईमेल", value = user.email.ifEmpty { if (isEnglish) "Not set" else "सेट नहीं है" })
                     ProfileItemRow(
                         icon = Icons.Default.Person,
                         label = if (isEnglish) "QuickFix ID" else "QuickFix आईडी",
                         value = user.quickFixId.ifEmpty { if (isEnglish) "Assigning…" else "जारी हो रही है…" }
                     )
-                    ProfileItemRow(icon = Icons.Default.LocationOn, label = "Address", value = user.address.ifEmpty { "Default Bangalore address" })
-                    ProfileItemRow(icon = Icons.Default.Place, label = "City", value = user.city)
+                    ProfileItemRow(icon = Icons.Default.LocationOn, label = if (isEnglish) "Address" else "पता", value = user.address.ifEmpty { if (isEnglish) "Not set" else "सेट नहीं है" })
+                    ProfileItemRow(icon = Icons.Default.Place, label = if (isEnglish) "City" else "शहर", value = user.city)
 
                     if (user.role == UserRole.CHANNEL_PARTNER || user.role == UserRole.TECHNICIAN) {
-                        ProfileItemRow(icon = Icons.Default.Build, label = "Trades", value = user.trades.joinToString(", "))
-                        ProfileItemRow(icon = Icons.Default.CheckCircle, label = "KYC Status", value = if (user.isVerified) "Verified" else "Pending Review")
+                        ProfileItemRow(icon = Icons.Default.Build, label = if (isEnglish) "Services" else "सेवाएँ", value = user.trades.joinToString(", "))
+                        ProfileItemRow(icon = Icons.Default.CheckCircle, label = if (isEnglish) "KYC Status" else "KYC स्थिति", value = if (user.isVerified) { if (isEnglish) "Verified" else "सत्यापित" } else { if (isEnglish) "Pending Review" else "जाँच बाकी है" })
                     }
                 }
             }
@@ -145,7 +145,7 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                Icon(Icons.Default.ExitToApp, contentDescription = if (isEnglish) "Sign out" else "लॉगआउट")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(if (isEnglish) "Sign Out of QuickFix" else "QuickFix से लॉगआउट करें", fontWeight = FontWeight.Bold)
             }
