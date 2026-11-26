@@ -63,3 +63,8 @@ See `docs/FREE_PLAN_BACKEND_PREP.md` for the free-plan preparation, security bou
 ## Release checklist
 
 Before production release, verify web and Android builds, test Firestore rules against cross-user access, test admin custom-claim authorization, validate booking and OTP flows with trusted backend transactions, and perform physical-device SMS testing. Any billing or paid deployment decision must be reviewed and explicitly approved by a parent/guardian before enabling it.
+
+
+## Customer and Channel Partner protection policy
+
+The current draft policy is documented in [`docs/CUSTOMER_RULES_AND_PROTECTION_POLICY.md`](docs/CUSTOMER_RULES_AND_PROTECTION_POLICY.md). It describes transparent pricing, complaints, dispute handling, respectful conduct, privacy, and partner safety. It is a policy draft and must not be represented as an automated enforcement feature until the related workflows are implemented and tested.
