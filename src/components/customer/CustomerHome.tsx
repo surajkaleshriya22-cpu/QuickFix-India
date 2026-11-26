@@ -30,6 +30,7 @@ import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { ServiceBookingSheet } from './ServiceBookingSheet';
 import { LiveTrackingSheet } from './LiveTrackingSheet';
 import { ReviewModal } from './ReviewModal';
+import { BookingSosButton } from '../shared/BookingSosButton';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
 import { INDIAN_CITIES } from '../../data/mockData';
@@ -236,6 +237,10 @@ export const CustomerHome: React.FC = () => {
               <ChevronRight className="w-4 h-4" />
             </div>
           </div>
+        )}
+
+        {activeBooking && ['assigned', 'technician_en_route', 'in_progress'].includes(activeBooking.status) && (
+          <BookingSosButton bookingId={activeBooking.id} reporterRole="customer" />
         )}
 
         {/* Hero Promo Banner */}
