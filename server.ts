@@ -3054,8 +3054,8 @@ const dispatchAdminSafetySms = async (incident: {
   const adminNumber = process.env.SOS_ADMIN_ALERT_TO || '';
   if (!accountSid || !authToken || !fromNumber || !adminNumber) return { status: 'not_configured' };
   if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) ||
-      !/^\\+[1-9]\\d{7,14}$/.test(fromNumber) ||
-      !/^\\+[1-9]\\d{7,14}$/.test(adminNumber)) return { status: 'failed' };
+      !/^\+[1-9]\d{7,14}$/.test(fromNumber) ||
+      !/^\+[1-9]\d{7,14}$/.test(adminNumber)) return { status: 'failed' };
   const body = new URLSearchParams({
     To: adminNumber,
     From: fromNumber,
