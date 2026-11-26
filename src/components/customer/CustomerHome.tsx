@@ -21,7 +21,8 @@ import {
   Snowflake,
   X,
   Compass,
-  Music
+  Music,
+  Copy
 } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { Booking, ServiceItem, ServiceCategoryType } from '../../types';
@@ -196,6 +197,19 @@ export const CustomerHome: React.FC = () => {
 
       {/* Main Content Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isAuthenticated && currentUser?.role === 'customer' && currentUser.quickFixId && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-blue-700">{language === 'hi' ? 'आपकी स्थायी QuickFix ID' : 'Your permanent QuickFix ID'}</p>
+              <p className="font-mono text-sm font-extrabold tracking-wide text-blue-950">{currentUser.quickFixId}</p>
+              <p className="text-[10px] text-blue-700">{language === 'hi' ? 'Customer Care से मदद लेते समय यह ID बताएं।' : 'Share this ID with Customer Care when you need help.'}</p>
+            </div>
+            <button type="button" onClick={() => { void navigator.clipboard?.writeText(currentUser.quickFixId || ''); }}
+              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white inline-flex items-center gap-1">
+              <Copy className="w-3 h-3" /> {language === 'hi' ? 'कॉपी' : 'Copy ID'}
+            </button>
+          </div>
+        )}
         {/* Active Booking Banner (if exists and not completed) */}
         {activeBooking && activeBooking.status !== 'completed' && activeBooking.status !== 'cancelled' && (
           <div
