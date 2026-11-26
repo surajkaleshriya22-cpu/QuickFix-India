@@ -410,7 +410,7 @@ fun TechnicianScreen(
                         if (booking.status in listOf("assigned", "technician_en_route", "in_progress")) {
                             Divider(color = Color(0xFFFDA4AF))
                             Text("SOS / Channel Partner Safety", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239), fontSize = 12.sp)
-                            Text("Report QuickFix में save होगी; emergency team/contact alerts अभी connected नहीं हैं.", fontSize = 10.sp, color = Color(0xFF881337))
+                            Text("SOS report QuickFix में दर्ज होगी। SMS alert की स्थिति रिपोर्ट भेजने के बाद दिखेगी। पुलिस/एम्बुलेंस dispatch नहीं होता; तत्काल खतरे में 112 call करें.", fontSize = 10.sp, color = Color(0xFF881337))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(
                                     onClick = {
