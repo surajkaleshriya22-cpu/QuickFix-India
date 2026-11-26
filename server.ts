@@ -3164,6 +3164,7 @@ app.get('/api/admin/safety-incidents', authenticateFirebaseUser, requireServerAd
       const createdAt = data.createdAt?.toDate?.();
       return { incidentId: doc.id, bookingId: String(data.bookingId || ''), reporterRole: String(data.reporterRole || 'UNKNOWN'),
         incidentType: String(data.incidentType || 'other'), status: String(data.status || 'received_pending_review'),
+        adminSmsStatus: String(data.adminSmsStatus || 'not_configured'),
         createdAt: createdAt instanceof Date ? createdAt.toISOString() : null };
     });
     return res.json({ success: true, incidents });
