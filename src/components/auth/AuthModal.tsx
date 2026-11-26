@@ -497,7 +497,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             ['painter', 'Painter'],
                             ['gardener', 'Gardener'],
                             ['pest_control', 'Pest Control'],
-                            ['house_shifting', 'House Shifting']
+                            ['house_shifting', 'House Shifting'],
+                            ['car_wash', 'Car Washing / कार वॉश'],
+                            ['transport', 'Transport & Delivery / सामान ढुलाई']
                           ] as const).map(([trade, label]) => (
                             <button
                               key={trade}
