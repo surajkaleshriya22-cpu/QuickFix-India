@@ -65,6 +65,7 @@ import { PendingPayoutsSection } from './PendingPayoutsSection';
 import { AdminRateCardsSection } from './AdminRateCardsSection';
 import { AdminKycReviewSection } from './AdminKycReviewSection';
 import { AdminPartnerRechargeSection } from './AdminPartnerRechargeSection';
+import { AdminSafetyIncidentsSection } from './AdminSafetyIncidentsSection';
 import { auth } from '../../lib/firebase';
 
 const INDIAN_BANK_OPTIONS = [
@@ -865,6 +866,14 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => { setActiveTab('safety'); setSearchQuery(''); }}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === 'safety' ? 'bg-rose-700 text-white shadow-xs font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Safety / SOS</span>
+          </button>
+
+          <button
             onClick={() => { setActiveTab('firebase'); setSearchQuery(''); }}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
               activeTab === 'firebase'
@@ -883,6 +892,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'rates' && <AdminRateCardsSection />}
         {activeTab === 'kyc' && <AdminKycReviewSection />}
         {activeTab === 'partner_recharge' && <AdminPartnerRechargeSection />}
+        {activeTab === 'safety' && <AdminSafetyIncidentsSection />}
 
         {/* ================= TAB 1: OVERVIEW ================= */}
         {activeTab === 'overview' && (
