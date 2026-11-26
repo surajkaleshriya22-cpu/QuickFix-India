@@ -1168,7 +1168,6 @@ export const TechnicianPortal: React.FC = () => {
             {['assigned', 'technician_en_route', 'in_progress'].includes(currentActiveJob.status) && (
               <BookingSosButton bookingId={currentActiveJob.id} reporterRole="partner" />
             )}
-            <PartnerEmergencyContactPanel />
 
             {/* 1-Hour SLA Countdown Timer Banner */}
             {(currentActiveJob.status === 'technician_en_route' || currentActiveJob.status === 'in_progress') && (
@@ -1322,6 +1321,8 @@ export const TechnicianPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PartnerEmergencyContactPanel />
 
       <CustomerComplaintPanel />
 
