@@ -42,14 +42,14 @@ const createPhoneEmulatorUser = async (phoneNumber: string) => {
 
   const codesResponse = await fetch(`http://${authHost}/emulator/v1/projects/${projectId}/verificationCodes`);
   assert.equal(codesResponse.ok, true, 'Auth emulator SMS-code endpoint must be available');
-  const codesBody = await codesResponse.json() as { verificationCodes?: Array<{ phoneNumber: string; sessionCode: string }> };
+  const codesBody = await codesResponse.json() as { verificationCodes?: Array<{ phoneNumber: string; code: string }> };
   const verification = codesBody.verificationCodes?.find(item => item.phoneNumber === phoneNumber);
-  assert.ok(verification?.sessionCode, 'Auth emulator must expose the generated SMS verification code');
+  assert.ok(verification?.code, 'Auth emulator must expose the generated SMS verification code');
 
   const signedIn = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=fake-api-key`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionInfo: sentBody.sessionInfo, code: verification.sessionCode, returnSecureToken: true })
+    body: JSON.stringify({ sessionInfo: sentBody.sessionInfo, code: verification.code, returnSecureToken: true })
   });
   const signedInBody = await signedIn.json() as { idToken?: string; localId?: string; error?: { message?: string } };
   assert.equal(signedIn.ok, true, signedInBody.error?.message || 'Auth emulator phone verification failed');
