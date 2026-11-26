@@ -1650,6 +1650,9 @@ const DEFAULT_PARTNER_RECHARGE_POLICY = {
   ],
   effectiveAt: null as string | null,
   enabled: true,
+  // Explicit launch safety: policy editing must never activate payments or duty gating.
+  paymentEnabled: false,
+  dutyGatingEnabled: false,
   currency: 'INR'
 };
 
@@ -1703,6 +1706,9 @@ app.put('/api/admin/partner-recharge-policy', authenticateFirebaseUser, requireS
       plans,
       effectiveAt,
       enabled: body.enabled !== false,
+      // Keep both enforcement switches server-disabled until verified payment rollout is deployed.
+      paymentEnabled: false,
+      dutyGatingEnabled: false,
       currency: 'INR',
       updatedBy: (req as AuthenticatedRequest).firebaseUser?.uid || 'unknown',
       updatedAt: FieldValue.serverTimestamp()
