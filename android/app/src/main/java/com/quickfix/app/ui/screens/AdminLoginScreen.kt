@@ -39,6 +39,7 @@ fun AdminLoginScreen(
     authViewModel: AuthViewModel
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val isEnglish = LocalQuickFixLanguage.current.value == "en"
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -61,17 +62,18 @@ fun AdminLoginScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "QuickFix Admin HQ",
+                        if (isEnglish) "QuickFix Admin HQ" else "QuickFix एडमिन मुख्यालय",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 18.sp
                     )
                 },
+                actions = { QuickFixLanguageSelector() },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("customer_home") }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Back to Customer App",
+                            contentDescription = if (isEnglish) "Back to Customer App" else "ग्राहक ऐप पर वापस जाएँ",
                             tint = Color.White
                         )
                     }
@@ -109,13 +111,13 @@ fun AdminLoginScreen(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "Super Admin Gateway Lock",
+                    if (isEnglish) "Super Admin Gateway Lock" else "सुपर एडमिन प्रवेश सुरक्षा",
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    "Zero-Trust Access: Restricted Exclusively to Whitelisted Admins",
+                    if (isEnglish) "Secure access: Only approved admins can sign in" else "सुरक्षित प्रवेश: केवल अधिकृत एडमिन ही लॉगिन कर सकते हैं",
                     color = Color(0xFF94A3B8),
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 4.dp)
@@ -136,7 +138,7 @@ fun AdminLoginScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Authorized Super Admin Whitelist",
+                            if (isEnglish) "Authorized Super Admin List" else "अधिकृत सुपर एडमिन सूची",
                             color = Color(0xFF93C5FD),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -146,7 +148,7 @@ fun AdminLoginScreen(
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                "STRICT LOCK",
+                                if (isEnglish) "STRICT LOCK" else "सख्त सुरक्षा",
                                 color = Color(0xFF34D399),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
@@ -156,7 +158,7 @@ fun AdminLoginScreen(
                     }
 
                     Text(
-                        "Sign in with the authorized Firebase email and password. Access is granted only when the account has the server-issued admin security claim.",
+                        if (isEnglish) "Sign in with your authorized Firebase email and password. Access is granted only when the server confirms admin permission." else "अपने अधिकृत Firebase ईमेल और पासवर्ड से लॉगिन करें। प्रवेश तभी मिलेगा जब सर्वर एडमिन अनुमति की पुष्टि करेगा।",
                         color = Color(0xFF94A3B8),
                         fontSize = 11.sp
                     )
@@ -182,7 +184,7 @@ fun AdminLoginScreen(
                     email = it
                     localError = null
                 },
-                label = { Text("Whitelisted Admin Email") },
+                label = { Text(if (isEnglish) "Authorized Admin Email" else "अधिकृत एडमिन ईमेल") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color(0xFF64748B)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -200,7 +202,7 @@ fun AdminLoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Firebase Account Password") },
+                label = { Text(if (isEnglish) "Firebase Account Password" else "Firebase खाते का पासवर्ड") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -222,7 +224,7 @@ fun AdminLoginScreen(
                 color = Color(0xFF1E293B)
             ) {
                 Text(
-                    "Firebase email/password sign-in is checked against a server-issued admin claim. Static passcodes and PINs are not accepted.",
+                    if (isEnglish) "Firebase email and password are checked against server-issued admin permission. Static passcodes and PINs are not accepted." else "Firebase ईमेल और पासवर्ड की जाँच सर्वर की एडमिन अनुमति से होती है। सामान्य पासकोड या PIN स्वीकार नहीं होते।",
                     color = Color(0xFFBFDBFE),
                     fontSize = 11.sp,
                     modifier = Modifier.padding(12.dp)
@@ -254,7 +256,7 @@ fun AdminLoginScreen(
                 onClick = {
                     val cleanEmail = email.trim().lowercase()
                     if (cleanEmail.isBlank() || password.isBlank()) {
-                        localError = "Enter your authorized Firebase admin email and password."
+                        localError = if (isEnglish) "Enter your authorized Firebase admin email and password." else "अपना अधिकृत Firebase एडमिन ईमेल और पासवर्ड भरें।"
                         return@Button
                     }
 
@@ -282,14 +284,14 @@ fun AdminLoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Sign In & Verify Admin Permission", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(if (isEnglish) "Sign In & Verify Admin Permission" else "लॉगिन करें और एडमिन अनुमति जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
                 }
             }
 
             // Non-Admin info
             Text(
-                "Accounts without the server-issued admin claim will be rejected.",
+                if (isEnglish) "Accounts without server-issued admin permission will be rejected." else "सर्वर से एडमिन अनुमति न मिलने पर खाता स्वीकार नहीं होगा।",
                 color = Color(0xFF64748B),
                 fontSize = 11.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
