@@ -57,7 +57,7 @@ test('maps legacy domestic-work registrations to Kaamkaaj Partner', () => {
 test('maps all other Channel Partner trades to their matching service categories', () => {
   const trades = [
     'electrician', 'plumber', 'welder', 'mechanic', 'driver', 'tourist_guide',
-    'contractor', 'bike_taxi', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'car_washing', 'transport'
+    'contractor', 'bike_taxi', 'carpenter', 'painter', 'gardener', 'pest_control', 'house_shifting', 'car_wash', 'transport'
   ];
   assert.deepEqual([...getPartnerServiceCategories(trades)].sort(), [...trades].sort());
 });
@@ -98,9 +98,11 @@ test('routes appliance repair orders to registered technicians only', () => {
 
 
 test('routes car washing and transport bookings only to matching registered partners', () => {
-  assert.equal(canPartnerReceiveBookingCategory(['car_washing'], 'car_washing'), true);
+  assert.equal(canPartnerReceiveBookingCategory(['car_wash'], 'car_wash'), true);
   assert.equal(canPartnerReceiveBookingCategory(['transport'], 'transport'), true);
   assert.equal(canPartnerReceiveBookingCategory(['driver'], 'transport'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['car_wash'], 'car_wash'), true);
   assert.equal(canPartnerReceiveBookingCategory(['car_washing'], 'transport'), false);
+  assert.equal(canPartnerReceiveBookingCategory(['car_washing'], 'car_wash'), false);
   assert.equal(canPartnerReceiveBookingCategory(['transport'], 'car_washing'), false);
 });
