@@ -5,6 +5,7 @@ export type PartnerDispatchProfile = {
   isVerified?: unknown;
   isOnline?: unknown;
   isSuspended?: unknown;
+  /** @deprecated Legacy reserve fields are ignored; they never gate duty. */
   securityDepositPaid?: unknown;
   walletBalance?: unknown;
   subscriptionStatus?: unknown;
@@ -25,11 +26,7 @@ export function canActivatePartnerDuty(profile: PartnerDispatchProfile): boolean
     ((Array.isArray(profile.roles) ? profile.roles : [profile.role]).some((role) => role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN')) &&
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
-    profile.isSuspended !== true &&
-    profile.securityDepositPaid === true &&
-    typeof profile.walletBalance === 'number' &&
-    Number.isFinite(profile.walletBalance) &&
-    profile.walletBalance >= 2000;
+    profile.isSuspended !== true;
 }
 
 /** Fail-closed dispatch eligibility shared by partner job-feed and acceptance APIs. */
@@ -48,11 +45,7 @@ export function isPartnerEligibleForDispatch(profile: PartnerDispatchProfile): b
     profile.approvalStatus === 'approved' &&
     profile.isVerified === true &&
     profile.isOnline === true &&
-    profile.isSuspended !== true &&
-    profile.securityDepositPaid === true &&
-    typeof profile.walletBalance === 'number' &&
-    Number.isFinite(profile.walletBalance) &&
-    profile.walletBalance >= 2000;
+    profile.isSuspended !== true;
 }
 
 const DISPATCHABLE_PARTNER_TRADES = new Set([
