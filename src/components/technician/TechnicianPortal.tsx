@@ -41,6 +41,7 @@ import { PartnerKycPanel } from './PartnerKycPanel';
 import { PartnerRechargeCard } from './PartnerRechargeCard';
 import { PartnerUpiQrCard } from './PartnerUpiQrCard';
 import { BookingSosButton } from '../shared/BookingSosButton';
+import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -1319,6 +1320,8 @@ export const TechnicianPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CustomerComplaintPanel />
 
       {/* Geofence Service Radius Validation Modal */}
       <GeofenceModal
