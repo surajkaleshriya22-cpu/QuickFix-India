@@ -1066,7 +1066,11 @@ class QuickFixViewModel : ViewModel() {
                         if (status !in 200..299 || !json.optBoolean("success")) {
                             error(json.optString("error").ifBlank { "Safety report save नहीं हो सका (HTTP $status)." })
                         }
-                        "Report QuickFix में save हो गई. Emergency dispatch/contact alerts जुड़े नहीं हैं; तुरंत खतरे में 112 call करें."
+                        when (json.optString("adminSmsStatus")) {
+                            "sent" -> "Safety report save हो गई। Twilio ने QuickFix Admin SMS request स्वीकार की है; handset delivery की गारंटी नहीं है। यह emergency dispatch नहीं है। तत्काल खतरे में 112 call करें।"
+                            "failed" -> "Safety report save हो गई, लेकिन Admin SMS नहीं भेजा जा सका। तत्काल खतरे में 112 call करें।"
+                            else -> "Safety report save हो गई। Admin SMS configure नहीं है। तत्काल खतरे में 112 call करें।"
+                        }
                     } finally { connection.disconnect() }
                 }
             }.onSuccess { result -> onResult(true, result) }
