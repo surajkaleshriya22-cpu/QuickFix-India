@@ -476,9 +476,10 @@ class QuickFixViewModel : ViewModel() {
         serviceId: String, quantity: Double, state: String, district: String, tehsil: String, city: String, date: String
     ): CustomerBookingQuote {
         val user = auth.currentUser ?: throw SecurityException("Please sign in before checking the local service rate.")
+        val serverServiceId = when (serviceId) { "plumb-drain" -> "plumb-block"; "plumb-flush" -> "plumb-toilet"; else -> serviceId }
         val token = user.getIdToken(true).await().token ?: throw SecurityException("Secure sign-in token unavailable.")
         val params = listOf(
-            "serviceId" to serviceId, "quantity" to quantity.toString(), "state" to state,
+            "serviceId" to serverServiceId, "quantity" to quantity.toString(), "state" to state,
             "district" to district, "tehsil" to tehsil, "city" to city, "date" to date
         ).joinToString("&") { (key, value) ->
             java.net.URLEncoder.encode(key, "UTF-8") + "=" + java.net.URLEncoder.encode(value, "UTF-8")
