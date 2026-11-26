@@ -259,7 +259,7 @@ fun TechnicianScreen(
                             }
                         }
                         Text(
-                            "Signed-in partner account",
+                            if (isEnglish) "Signed-in partner account" else "लॉगिन किया हुआ पार्टनर खाता",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
                         )
@@ -267,7 +267,7 @@ fun TechnicianScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Back" else "वापस जाएँ", tint = Color.White)
                     }
                 },
                 actions = { QuickFixLanguageSelector() },
@@ -295,35 +295,35 @@ fun TechnicianScreen(
                     Text(if (isEnglish) "My bank account" else "मेरा बैंक अकाउंट", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text(if (isEnglish) "Securely save your bank account for future payouts." else "भविष्य में payout के लिए अपना बैंक अकाउंट सुरक्षित रूप से सेव करें।", fontSize = 12.sp, color = TextSecondary)
                     if (partnerBankSummary.isNotBlank()) {
-                        Text("सेव किया गया: $partnerBankSummary", fontSize = 12.sp, color = Color(0xFF047857), fontWeight = FontWeight.SemiBold)
+                        Text("${if (isEnglish) "Saved" else "सेव किया गया"}: $partnerBankSummary", fontSize = 12.sp, color = Color(0xFF047857), fontWeight = FontWeight.SemiBold)
                     }
                     OutlinedTextField(
                         value = partnerBankName,
                         onValueChange = { partnerBankName = it.take(100) },
-                        label = { Text("Bank Name") },
+                        label = { Text(if (isEnglish) "Bank Name" else "बैंक का नाम") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    Text("Account Type", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(if (isEnglish) "Account Type" else "खाते का प्रकार", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(onClick = { partnerBankType = "savings" }, modifier = Modifier.weight(1f)) {
-                            Text(if (partnerBankType == "savings") "✓ Savings" else "Savings")
+                            Text(if (isEnglish) { if (partnerBankType == "savings") "✓ Savings" else "Savings" } else { if (partnerBankType == "savings") "✓ बचत खाता" else "बचत खाता" })
                         }
                         OutlinedButton(onClick = { partnerBankType = "current" }, modifier = Modifier.weight(1f)) {
-                            Text(if (partnerBankType == "current") "✓ Current" else "Current")
+                            Text(if (isEnglish) { if (partnerBankType == "current") "✓ Current" else "Current" } else { if (partnerBankType == "current") "✓ चालू खाता" else "चालू खाता" })
                         }
                     }
                     OutlinedTextField(
                         value = partnerBankHolder,
                         onValueChange = { partnerBankHolder = it.take(100) },
-                        label = { Text("Account Holder Name") },
+                        label = { Text(if (isEnglish) "Account Holder Name" else "खाताधारक का नाम") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = partnerBankAccount,
                         onValueChange = { partnerBankAccount = it.filter(Char::isDigit).take(18) },
-                        label = { Text("Bank Account Number") },
+                        label = { Text(if (isEnglish) "Bank Account Number" else "बैंक खाता नंबर") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -331,7 +331,7 @@ fun TechnicianScreen(
                     OutlinedTextField(
                         value = partnerBankIfsc,
                         onValueChange = { partnerBankIfsc = it.uppercase().take(11) },
-                        label = { Text("IFSC Code") },
+                        label = { Text(if (isEnglish) "IFSC Code" else "IFSC कोड") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -577,7 +577,7 @@ fun TechnicianScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                             ) {
-                                Text(if (acceptingJobId == job.id) "Accepting..." else "काम स्वीकार करें / Accept Job")
+                                Text(if (isEnglish) { if (acceptingJobId == job.id) "Accepting..." else "Accept Job" } else { if (acceptingJobId == job.id) "स्वीकार हो रहा है..." else "काम स्वीकार करें" })
                             }
                         }
                     }
@@ -586,7 +586,7 @@ fun TechnicianScreen(
                             onClick = { viewModel.loadMorePartnerJobs() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("और काम देखें / Load more jobs")
+                            Text(if (isEnglish) "Load more jobs" else "और काम देखें")
                         }
                     }
                 }
@@ -594,9 +594,9 @@ fun TechnicianScreen(
 
             // The server feed returns assignedBookings separately from new requests.
             val serverAssignedJobs = partnerJobs.filter { it.status != "requested" }
-            Text("Assigned Customer Bookings / आपको मिले काम", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text(if (isEnglish) "Assigned Customer Bookings" else "आपको मिले ग्राहक के काम", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
             if (serverAssignedJobs.isEmpty() && myBookings.isEmpty()) {
-                Text("अभी कोई booking आपको assign नहीं हुई है.", fontSize = 12.sp, color = TextSecondary)
+                Text(if (isEnglish) "No bookings have been assigned to you yet." else "अभी कोई booking आपको नहीं मिली है।", fontSize = 12.sp, color = TextSecondary)
             }
             serverAssignedJobs.forEach { job ->
                 Card(
@@ -649,14 +649,14 @@ fun TechnicianScreen(
                         }
 
                         Text(booking.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                        Text("Customer: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
-                        Text("Location: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
-                        Text("Partner payout details unavailable until server-side settlement is enabled.", fontSize = 11.sp, color = TextSecondary)
+                        Text("${if (isEnglish) "Customer" else "ग्राहक"}: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
+                        Text("${if (isEnglish) "Location" else "पता"}: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
+                        Text(if (isEnglish) "Partner payout details are unavailable until server-side settlement is enabled." else "सर्वर से सुरक्षित भुगतान शुरू होने तक पार्टनर payout की जानकारी उपलब्ध नहीं है।", fontSize = 11.sp, color = TextSecondary)
 
                         // OTP Verification when assigned
                         if (booking.status in listOf("assigned", "technician_en_route")) {
                             Divider(color = Color(0xFFE2E8F0))
-                            Text("ग्राहक से मिला 6-digit Start OTP दर्ज करें:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                            Text(if (isEnglish) "Enter the 6-digit Start OTP received from the customer:" else "ग्राहक से मिला 6 अंकों का Start OTP दर्ज करें:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = enteredOtp,
@@ -665,7 +665,7 @@ fun TechnicianScreen(
                                         otpErrors = otpErrors - booking.id
                                     },
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("6-digit OTP") },
+                                    placeholder = { Text(if (isEnglish) "6-digit OTP" else "6 अंकों का OTP") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                                     singleLine = true
                                 )
@@ -683,7 +683,7 @@ fun TechnicianScreen(
                                     enabled = enteredOtp.length == 6,
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                                 ) {
-                                    Text("Verify OTP")
+                                    Text(if (isEnglish) "Verify OTP" else "OTP सत्यापित करें")
                                 }
                             }
                             if (otpError != null) {
