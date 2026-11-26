@@ -381,30 +381,31 @@ fun CustomerHomeScreen(
             // Large, easy-to-tap Hindi service tiles for first-time and low-literacy users.
             item {
                 val categoryOptions = listOf(
-                    "all" to "🧰\nसभी काम",
-                    "electrician" to "⚡\nबिजली का काम",
-                    "plumber" to "🔧\nनल-पाइप का काम",
-                    "ac_repair" to "❄️\nAC ठीक करवाएँ",
-                    "fridge_repair" to "🧊\nफ्रिज ठीक करवाएँ",
-                    "appliance_repair" to "🛠️\nघर के सामान की मरम्मत",
-                    "welder" to "🔥\nवेल्डिंग का काम",
-                    "mechanic" to "🚗\nगाड़ी ठीक करवाएँ",
-                    "driver" to "🚕\nड्राइवर बुलाएँ",
-                    "tourist_guide" to "🧭\nघूमने के लिए गाइड",
-                    "contractor" to "🏗️\nठेकेदार",
-                    "bike_taxi" to "🏍️\nबाइक से सफर",
-                    "kaamkaaj_partner" to "🏠\nघर के काम में मदद",
-                    "carpenter" to "🪚\nबढ़ई का काम",
-                    "painter" to "🖌️\nपेंट का काम",
-                    "gardener" to "🌱\nमाली का काम",
-                    "pest_control" to "🐜\nकीड़े-मकोड़े हटाएँ",
-                    "house_shifting" to "📦\nघर का सामान शिफ्ट करें",
-                    "car_wash" to "🚘\nकार / बाइक वॉश",
-                    "transport" to "🚚\nसामान डिलीवरी / वाहन"
+                    "all" to if (isEnglish) "🧰\\nAll services" else "🧰\\nसभी काम",
+                    "electrician" to if (isEnglish) "⚡\\nElectrical work" else "⚡\\nबिजली का काम",
+                    "plumber" to if (isEnglish) "🔧\\nPlumbing" else "🔧\\nनल-पाइप का काम",
+                    "ac_repair" to if (isEnglish) "❄️\\nAC repair" else "❄️\\nAC ठीक करवाएँ",
+                    "fridge_repair" to if (isEnglish) "🧊\\nFridge repair" else "🧊\\nफ्रिज ठीक करवाएँ",
+                    "appliance_repair" to if (isEnglish) "🛠️\\nHome appliance repair" else "🛠️\\nघर के सामान की मरम्मत",
+                    "welder" to if (isEnglish) "🔥\\nWelding" else "🔥\\nवेल्डिंग का काम",
+                    "mechanic" to if (isEnglish) "🚗\\nVehicle repair" else "🚗\\nगाड़ी ठीक करवाएँ",
+                    "driver" to if (isEnglish) "🚕\\nBook a driver" else "🚕\\nड्राइवर बुलाएँ",
+                    "tourist_guide" to if (isEnglish) "🧭\\nTourist guide" else "🧭\\nघूमने के लिए गाइड",
+                    "contractor" to if (isEnglish) "🏗️\\nContractor" else "🏗️\\nठेकेदार",
+                    "bike_taxi" to if (isEnglish) "🏍️\\nBike taxi" else "🏍️\\nबाइक से सफर",
+                    "kaamkaaj_partner" to if (isEnglish) "🏠\\nHome help" else "🏠\\nघर के काम में मदद",
+                    "carpenter" to if (isEnglish) "🪚\\nCarpenter" else "🪚\\nबढ़ई का काम",
+                    "painter" to if (isEnglish) "🖌️\\nPainting" else "🖌️\\nपेंट का काम",
+                    "gardener" to if (isEnglish) "🌱\\nGardener" else "🌱\\nमाली का काम",
+                    "pest_control" to if (isEnglish) "🐜\\nPest control" else "🐜\\nकीड़े-मकोड़े हटाएँ",
+                    "house_shifting" to if (isEnglish) "📦\\nHouse shifting" else "📦\\nघर का सामान शिफ्ट करें",
+                    "car_wash" to if (isEnglish) "🚘\\nCar / bike washing" else "🚘\\nकार / बाइक वॉश",
+                    "transport" to if (isEnglish) "🚚\\nGoods delivery / transport" else "🚚\\nसामान डिलीवरी / वाहन"
+
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        "काम चुनने के लिए तस्वीर वाले बटन दबाएँ",
+                        if (isEnglish) "Tap a picture to choose a service" else "काम चुनने के लिए तस्वीर वाले बटन दबाएँ",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = TextPrimary
