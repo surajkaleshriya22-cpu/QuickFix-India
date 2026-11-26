@@ -194,10 +194,14 @@ export interface CustomerUser {
 }
 
 export interface CommissionSettings {
-  electricianCommissionPct: number; // e.g. 12%
-  plumberCommissionPct: number;     // e.g. 15%
-  acCommissionPct: number;          // e.g. 15%
-  fridgeCommissionPct: number;      // e.g. 15%
+  /** @deprecated Legacy setting retained for compatibility; per-booking partner commission is disabled. */
+  electricianCommissionPct: number;
+  /** @deprecated Legacy setting retained for compatibility; per-booking partner commission is disabled. */
+  plumberCommissionPct: number;
+  /** @deprecated Legacy setting retained for compatibility; per-booking partner commission is disabled. */
+  acCommissionPct: number;
+  /** @deprecated Legacy setting retained for compatibility; per-booking partner commission is disabled. */
+  fridgeCommissionPct: number;
   /** @deprecated Retained only for reading old settings; no reserve is enforced. */
   minSecurityDeposit?: number;
   platformConvenienceFee: number;   // e.g. ₹29
