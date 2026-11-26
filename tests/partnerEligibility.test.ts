@@ -8,8 +8,8 @@ const eligible = {
   isVerified: true,
   isOnline: true,
   isSuspended: false,
-  securityDepositPaid: true,
-  walletBalance: 2500
+  securityDepositPaid: false,
+  walletBalance: 0
 };
 
 const activationEligible = {
@@ -17,8 +17,8 @@ const activationEligible = {
   approvalStatus: 'approved',
   isVerified: true,
   isSuspended: false,
-  securityDepositPaid: true,
-  walletBalance: 2000,
+  securityDepositPaid: false,
+  walletBalance: 0,
   subscriptionStatus: 'trial',
   subscriptionExpiresAt: new Date(Date.now() + 86400000)
 };
@@ -32,10 +32,9 @@ test('recognizes partner membership in roles[] when the primary role is CUSTOMER
   assert.equal(isPartnerEligibleForDispatch({ ...multiRoleDispatch, roles: ['CUSTOMER'] }), false);
 });
 
-test('allows online duty only for approved, verified, subscribed partners with paid reserve', () => {
+test('allows online duty for approved and verified subscribed partners without a wallet reserve', () => {
   assert.equal(canActivatePartnerDuty(activationEligible), true);
-  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: 1999 }), false);
-  assert.equal(canActivatePartnerDuty({ ...activationEligible, securityDepositPaid: false }), false);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: 0, securityDepositPaid: false }), true);
   assert.equal(canActivatePartnerDuty({ ...activationEligible, approvalStatus: 'pending_audit' }), false);
   assert.equal(canActivatePartnerDuty({ ...activationEligible, isVerified: false }), false);
   assert.equal(canActivatePartnerDuty({ ...activationEligible, isSuspended: true }), false);
@@ -44,10 +43,9 @@ test('allows online duty only for approved, verified, subscribed partners with p
   assert.equal(canActivatePartnerDuty({ ...activationEligible, subscriptionExpiresAt: new Date(Date.now() - 1000) }), false);
 });
 
-test('rejects malformed wallet balances for online duty activation', () => {
-  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: '2500' }), false);
-  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: Number.NaN }), false);
-  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: Number.POSITIVE_INFINITY }), false);
+test('legacy wallet balance values do not affect online duty activation', () => {
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: 'invalid' }), true);
+  assert.equal(canActivatePartnerDuty({ ...activationEligible, walletBalance: Number.NaN }), true);
 });
 
 test('allows a fully approved and funded active partner', () => {
@@ -68,18 +66,16 @@ test('blocks suspended partners even when all other checks pass', () => {
   assert.equal(isPartnerEligibleForDispatch({ ...eligible, isSuspended: true }), false);
 });
 
-test('blocks reserve below ₹2,000 and non-numeric wallet values', () => {
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: 1999 }), false);
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: '2500' }), false);
-  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: Number.NaN }), false);
+test('legacy reserve and wallet values never block partner dispatch', () => {
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: 0, securityDepositPaid: false }), true);
+  assert.equal(isPartnerEligibleForDispatch({ ...eligible, walletBalance: 'invalid', securityDepositPaid: undefined }), true);
 });
 
-test('blocks unapproved, unverified, offline, unpaid and non-partner profiles', () => {
+test('blocks unapproved, unverified, offline and non-partner profiles', () => {
   for (const patch of [
     { approvalStatus: 'basic_profile_approved' },
     { isVerified: false },
     { isOnline: false },
-    { securityDepositPaid: false },
     { role: 'CUSTOMER' }
   ]) {
     assert.equal(isPartnerEligibleForDispatch({ ...eligible, ...patch }), false);
