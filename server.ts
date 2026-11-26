@@ -1663,10 +1663,10 @@ const partnerOtpStartLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, 
 
 // Assigned partner verifies the customer-shared OTP; the transition is atomic and one-time.
 app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, authenticateFirebaseUser, async (req: Request, res: Response) => {
+  const bookingId = String(req.params.bookingId || '');
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
     if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !isValidStartOtp(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
@@ -1694,6 +1694,21 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
     if (code === 'INVALID_BOOKING_STATE') return res.status(409).json({ success: false, error: 'This booking is not waiting to start.' });
     if (code === 'OTP_EXPIRED') return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
     if (code === 'OTP_INVALID') return res.status(400).json({ success: false, error: 'The customer OTP is incorrect.' });
+    // A concurrent request may lose the Firestore transaction race after the
+    // winning request consumes the one-time OTP. Confirm the persisted state
+    // before returning an error so a consumed OTP is consistently reported
+    // as not found; never retry the state transition outside the transaction.
+    if (firebaseAdminApp) {
+      try {
+        const latestOtp = await getFirestore(firebaseAdminApp)
+          .collection('booking_start_otps').doc(bookingId).get();
+        if (!latestOtp.exists) {
+          return res.status(404).json({ success: false, error: 'Service-start code was not found.' });
+        }
+      } catch (stateCheckError) {
+        console.error('Could not confirm concurrent service-start state:', stateCheckError);
+      }
+    }
     console.error('Partner service-start verification failed:', error);
     return res.status(500).json({ success: false, error: 'The service could not be started securely.' });
   }
