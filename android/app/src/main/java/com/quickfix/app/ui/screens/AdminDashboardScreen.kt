@@ -197,7 +197,8 @@ fun AdminDashboardScreen(
                     onUpdateAdminConfig = { cfg -> viewModel.updateAdminPaymentConfig(cfg) },
                     onSaveAdminBank = { bank, type, holder, account, ifsc -> viewModel.saveAdminBankDetails(bank, type, holder, account, ifsc) },
                     onLoadAdminBank = { viewModel.loadAdminBankDetails() },
-                    bankSaveStatus = firestoreStatus
+                    bankSaveStatus = firestoreStatus,
+                    isEnglish = isEnglish
                 )
                 AdminTab.REVIEWS -> ReviewsTab(bookings = bookings)
                 AdminTab.FIRESTORE -> FirestoreTab(
@@ -623,7 +624,8 @@ fun CommissionsTab(
     onUpdateAdminConfig: (AdminMasterPaymentConfig) -> Unit,
     onSaveAdminBank: (String, String, String, String, String) -> Unit,
     onLoadAdminBank: () -> Unit,
-    bankSaveStatus: String
+    bankSaveStatus: String,
+    isEnglish: Boolean
 ) {
     var elecPct by remember { mutableStateOf(settings.electricianCommissionPct.toString()) }
     var plumbPct by remember { mutableStateOf(settings.plumberCommissionPct.toString()) }
