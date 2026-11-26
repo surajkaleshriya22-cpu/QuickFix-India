@@ -148,7 +148,7 @@ fun CustomerHomeScreen(
                         ) {
                             Icon(
                                 Icons.Default.LocationOn,
-                                contentDescription = "City",
+                                contentDescription = if (isEnglish) "City" else "शहर",
                                 tint = Color(0xFF60A5FA),
                                 modifier = Modifier.size(16.dp)
                             )
@@ -161,7 +161,7 @@ fun CustomerHomeScreen(
                             )
                             Icon(
                                 Icons.Default.ArrowDropDown,
-                                contentDescription = "Select City",
+                                contentDescription = if (isEnglish) "Select City" else "शहर चुनें",
                                 tint = Color(0xFF94A3B8)
                             )
                         }
@@ -192,10 +192,10 @@ fun CustomerHomeScreen(
                         }
                     }
                     IconButton(onClick = { navController.navigate("profile_screen") }) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = Color.White)
+                        Icon(Icons.Default.AccountCircle, contentDescription = if (isEnglish) "Profile" else "प्रोफ़ाइल", tint = Color.White)
                     }
                     IconButton(onClick = { navController.navigate("admin_login") }) {
-                        Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin", tint = Color(0xFF60A5FA))
+                        Icon(Icons.Default.AdminPanelSettings, contentDescription = if (isEnglish) "Admin" else "एडमिन", tint = Color(0xFF60A5FA))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepNavy)
@@ -241,7 +241,7 @@ fun CustomerHomeScreen(
                                 horizontalArrangement = Arrangement.End
                             ) {
                                 TextButton(onClick = { cityInput = currentCity; showCityMenu = false }) {
-                                    Text("Cancel")
+                                    Text(if (isEnglish) "Cancel" else "रद्द करें")
                                 }
                                 Button(
                                     onClick = {
@@ -254,7 +254,7 @@ fun CustomerHomeScreen(
                                     enabled = cityInput.trim().length in 2..60,
                                     colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                                 ) {
-                                    Text("Save City")
+                                    Text(if (isEnglish) "Save City" else "शहर सेव करें")
                                 }
                             }
                         }
