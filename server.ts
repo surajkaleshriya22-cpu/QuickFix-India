@@ -1007,7 +1007,7 @@ app.post('/api/payments/razorpay/orders', authenticateFirebaseUser, async (req: 
     if (!snap.exists) return res.status(404).json({success:false,error:'Booking not found.'});
     const b = snap.data()!;
     if (b.customerUid !== uid) return res.status(403).json({success:false,error:'Booking ownership check failed.'});
-    if (b.paymentMethod !== 'upi' || b.status !== 'requested' || b.paymentStatus !== 'pending') return res.status(409).json({success:false,error:'Booking is not eligible for online payment.'});
+    if (!['upi', 'card', 'netbanking'].includes(b.paymentMethod) || b.status !== 'requested' || b.paymentStatus !== 'pending') return res.status(409).json({success:false,error:'Booking is not eligible for online payment.'});
     if (b.pricingStatus !== 'estimated_from_approved_rate_card' || !b.rateCardId) return res.status(409).json({success:false,error:'Payment requires an approved local rate card.'});
     const rupees = Number(b.totalAmount), paise = Math.round(rupees * 100);
     if (!Number.isFinite(rupees) || paise < 100 || paise > 100000000 || Math.abs(paise / 100 - rupees) > 0.000001) return res.status(409).json({success:false,error:'Approved booking amount is invalid.'});
