@@ -14,7 +14,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt, randomUUID, timingSafeEqual, createCipheriv, randomBytes, createHmac } from 'node:crypto';
+import { randomInt, randomUUID, timingSafeEqual, createCipheriv, createDecipheriv, randomBytes, createHmac } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -2950,18 +2950,34 @@ const getPartnerSafetyProfile = async (uid: string) => {
   return roles.some(role => ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role)) ? { snap, profile } : null;
 };
 
+const getPartnerContactEncryptionKey = (): Buffer | null => {
+  const keyText = process.env.PARTNER_CONTACT_ENCRYPTION_KEY || process.env.PARTNER_BANK_ENCRYPTION_KEY || '';
+  const key = Buffer.from(keyText, 'base64');
+  return key.length === 32 ? key : null;
+};
+
 app.get('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
     const partner = await getPartnerSafetyProfile(uid);
     if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
-    const contact = partner.profile.emergencyContact;
-    return res.json({ success: true, contact: contact && contact.consentConfirmed === true
-      ? { name: String(contact.name || ''), phone: String(contact.phone || ''), consentConfirmed: true } : null });
+    const data = partner.profile;
+    if (!data.emergencyContactCiphertext || !data.emergencyContactIv || !data.emergencyContactAuthTag) {
+      return res.json({ success: true, contact: null });
+    }
+    const key = getPartnerContactEncryptionKey();
+    if (!key) return res.status(503).json({ success: false, error: 'Emergency contact encryption is not configured on the server.' });
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(data.emergencyContactIv, 'base64'));
+    decipher.setAuthTag(Buffer.from(data.emergencyContactAuthTag, 'base64'));
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(data.emergencyContactCiphertext, 'base64')), decipher.final()
+    ]).toString('utf8');
+    const contact = JSON.parse(decrypted) as { name: string; phone: string };
+    return res.json({ success: true, contact: { name: contact.name, phone: contact.phone, consentConfirmed: true } });
   } catch (error) {
     console.error('Partner emergency contact read failed:', error);
-    return res.status(500).json({ success: false, error: 'Emergency contact could not be loaded.' });
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be loaded securely.' });
   }
 });
 
@@ -2976,18 +2992,28 @@ app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, asyn
     }
     const partner = await getPartnerSafetyProfile(uid);
     if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const key = getPartnerContactEncryptionKey();
+    if (!key) return res.status(503).json({ success: false, error: 'Emergency contact encryption is not configured. No contact details were saved.' });
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(JSON.stringify({ name, phone }), 'utf8'), cipher.final()]);
     const db = getFirestore(firebaseAdminApp);
     await db.collection('users').doc(uid).update({
-      emergencyContact: { name, phone, consentConfirmed: true, updatedAt: FieldValue.serverTimestamp() },
+      emergencyContactCiphertext: encrypted.toString('base64'),
+      emergencyContactIv: iv.toString('base64'),
+      emergencyContactAuthTag: cipher.getAuthTag().toString('base64'),
+      emergencyContactLast4: phone.slice(-4),
+      emergencyContactConsentConfirmed: true,
+      emergencyContactUpdatedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     });
     await db.collection('partner_job_audit_logs').add({
       action: 'partner_emergency_contact_saved', partnerUid: uid, createdAt: FieldValue.serverTimestamp()
     });
-    return res.json({ success: true, saved: true, message: 'Emergency contact saved. No SMS or call is sent by saving it.' });
+    return res.json({ success: true, saved: true, message: 'Emergency contact encrypted and saved. No SMS or call is sent by saving it.' });
   } catch (error) {
     console.error('Partner emergency contact update failed:', error);
-    return res.status(500).json({ success: false, error: 'Emergency contact could not be saved.' });
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be saved securely.' });
   }
 });
 
@@ -2998,7 +3024,15 @@ app.delete('/api/partners/safety/emergency-contact', authenticateFirebaseUser, a
     const partner = await getPartnerSafetyProfile(uid);
     if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
     const db = getFirestore(firebaseAdminApp);
-    await db.collection('users').doc(uid).update({ emergencyContact: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+    await db.collection('users').doc(uid).update({
+      emergencyContactCiphertext: FieldValue.delete(),
+      emergencyContactIv: FieldValue.delete(),
+      emergencyContactAuthTag: FieldValue.delete(),
+      emergencyContactLast4: FieldValue.delete(),
+      emergencyContactConsentConfirmed: FieldValue.delete(),
+      emergencyContactUpdatedAt: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
     await db.collection('partner_job_audit_logs').add({
       action: 'partner_emergency_contact_removed', partnerUid: uid, createdAt: FieldValue.serverTimestamp()
     });
