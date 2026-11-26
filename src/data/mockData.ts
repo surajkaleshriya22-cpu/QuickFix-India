@@ -366,7 +366,16 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ['painter','Painter','पेंटिंग का काम','Wall painting, touch-up and surface preparation',599,120],
     ['gardener','Gardener','माली','Garden maintenance, pruning and plant care',249,60],
     ['pest_control','Pest Control','कीट नियंत्रण','Cockroach, termite and mosquito treatment',499,60],
-    ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120]
+    ['house_shifting','Packers & House Shifting','घर शिफ्टिंग','Packing, loading, moving and unpacking assistance',999,120],
+    ['car_washing','Car exterior wash','कार की बाहरी धुलाई','Exterior body wash, glass and tyre cleaning',249,45],
+    ['car_washing','Car interior cleaning','कार के अंदर की सफाई','Dashboard, seats, mats and cabin vacuum cleaning',399,60],
+    ['car_washing','Complete car deep cleaning','कार की पूरी डीप क्लीनिंग','Interior and exterior deep cleaning package',999,150],
+    ['car_washing','Bike wash and polish','बाइक धुलाई और पॉलिश','Two-wheeler wash, chain area and polish',149,30],
+    ['transport','Local goods pickup and delivery','सामान पिकअप और डिलीवरी','Shop purchases, parcel and household goods delivery by suitable vehicle',299,60],
+    ['transport','Mini truck and tempo booking','मिनी ट्रक और टेम्पो बुकिंग','Local goods transport with vehicle and driver',799,90],
+    ['transport','House and room shifting vehicle','घर और कमरा शिफ्टिंग वाहन','Vehicle and loading support based on inventory and distance',1499,120],
+    ['transport','Office and shop goods shifting','ऑफिस और दुकान का सामान शिफ्ट करना','Commercial goods pickup, loading and transport',1999,180],
+    ['transport','Large goods truck booking','बड़ा मालवाहक ट्रक बुकिंग','Truck booking for bulky or long-distance goods transport',2499,180]
   ] as const).map(([category,title,hindiTitle,description,startingPrice,durationMinutes]) => ({
     id: 'partner-' + category + '-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
     category,
