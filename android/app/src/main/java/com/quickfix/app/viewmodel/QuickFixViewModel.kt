@@ -21,6 +21,19 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
+data class CustomerBookingQuote(
+    val quoteAvailable: Boolean,
+    val pricingStatus: String,
+    val serviceTitle: String,
+    val billingUnit: String,
+    val quantity: Double,
+    val minimum: Double = 0.0,
+    val maximum: Double = 0.0,
+    val materialsIncluded: Boolean = false,
+    val rateSourceName: String = ""
+)
+
+
 data class PartnerLiveLocation(
     val latitude: Double,
     val longitude: Double,
@@ -459,6 +472,52 @@ class QuickFixViewModel : ViewModel() {
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
 
+    suspend fun getCustomerBookingQuote(
+        serviceId: String, quantity: Double, state: String, district: String, tehsil: String, city: String, date: String
+    ): CustomerBookingQuote {
+        val user = auth.currentUser ?: throw SecurityException("Please sign in before checking the local service rate.")
+        val token = user.getIdToken(true).await().token ?: throw SecurityException("Secure sign-in token unavailable.")
+        val params = listOf(
+            "serviceId" to serviceId, "quantity" to quantity.toString(), "state" to state,
+            "district" to district, "tehsil" to tehsil, "city" to city, "date" to date
+        ).joinToString("&") { (key, value) ->
+            java.net.URLEncoder.encode(key, "UTF-8") + "=" + java.net.URLEncoder.encode(value, "UTF-8")
+        }
+        val body = withContext(Dispatchers.IO) {
+            val connection = java.net.URL("https://quickfix-india.onrender.com/api/bookings/quote?$params")
+                .openConnection() as java.net.HttpURLConnection
+            try {
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("Authorization", "Bearer $token")
+                connection.connectTimeout = 15000
+                connection.readTimeout = 20000
+                val status = connection.responseCode
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (status !in 200..299) {
+                    val message = runCatching { org.json.JSONObject(response).optString("error") }.getOrNull()
+                    throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Rate lookup failed (HTTP $status).")
+                }
+                response
+            } finally { connection.disconnect() }
+        }
+        val json = org.json.JSONObject(body)
+        if (!json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Rate lookup failed."))
+        val quote = json.optJSONObject("quote")
+        return CustomerBookingQuote(
+            quoteAvailable = json.optBoolean("quoteAvailable"),
+            pricingStatus = json.optString("pricingStatus", "inspection_quote_required"),
+            serviceTitle = json.optString("serviceTitle", "Service"),
+            billingUnit = json.optString("billingUnit", "unit"),
+            quantity = json.optDouble("quantity", quantity),
+            minimum = quote?.optDouble("totalMinimum", 0.0) ?: 0.0,
+            maximum = quote?.optDouble("totalMaximum", 0.0) ?: 0.0,
+            materialsIncluded = json.optBoolean("materialsIncluded"),
+            rateSourceName = json.optString("rateSourceName", "")
+        )
+    }
+
+
     suspend fun createBooking(
         serviceId: String,
         serviceTitle: String,
@@ -473,7 +532,10 @@ class QuickFixViewModel : ViewModel() {
         quantity: Double = 1.0,
         customerLatitude: Double? = null,
         customerLongitude: Double? = null,
-        paymentMethod: String = "cash"
+        paymentMethod: String = "cash",
+        priceConsentAccepted: Boolean = false,
+        acceptedQuoteMinimum: Double = 0.0,
+        acceptedQuoteMaximum: Double = 0.0
     ): Booking {
         val firebaseUser = auth.currentUser
             ?: throw SecurityException("Please sign in with your mobile number before creating a booking.")
@@ -517,6 +579,7 @@ class QuickFixViewModel : ViewModel() {
                         .put("district", district.trim())
                         .put("tehsil", tehsil.trim()))
                     .put("notes", notes.trim())
+                    .put("priceConsent", org.json.JSONObject().put("accepted", priceConsentAccepted).put("quoteMinimum", acceptedQuoteMinimum).put("quoteMaximum", acceptedQuoteMaximum))
                 if (customerLatitude != null && customerLongitude != null) {
                     payload.put("customerLocation", org.json.JSONObject()
                         .put("latitude", customerLatitude)
