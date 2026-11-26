@@ -3043,6 +3043,47 @@ app.delete('/api/partners/safety/emergency-contact', authenticateFirebaseUser, a
   }
 });
 
+type AdminSafetySmsResult = { status: 'not_configured' | 'sent' | 'failed' };
+
+const dispatchAdminSafetySms = async (incident: {
+  incidentId: string; bookingId: string; reporterRole: string; incidentType: string;
+}): Promise<AdminSafetySmsResult> => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID || '';
+  const authToken = process.env.TWILIO_AUTH_TOKEN || '';
+  const fromNumber = process.env.TWILIO_FROM_NUMBER || '';
+  const adminNumber = process.env.SOS_ADMIN_ALERT_TO || '';
+  if (!accountSid || !authToken || !fromNumber || !adminNumber) return { status: 'not_configured' };
+  if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) ||
+      !/^\\+[1-9]\\d{7,14}$/.test(fromNumber) ||
+      !/^\\+[1-9]\\d{7,14}$/.test(adminNumber)) return { status: 'failed' };
+  const body = new URLSearchParams({
+    To: adminNumber,
+    From: fromNumber,
+    Body: 'QuickFix SOS: ' + incident.incidentType + ' for booking ' + incident.bookingId +
+      '. Incident ' + incident.incidentId + '. Reporter: ' + incident.reporterRole +
+      '. This is not emergency dispatch. Call 112 if immediate danger.'
+  });
+  try {
+    const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body,
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) {
+      console.error('QuickFix admin SOS SMS provider rejected request:', response.status);
+      return { status: 'failed' };
+    }
+    return { status: 'sent' };
+  } catch (error) {
+    console.error('QuickFix admin SOS SMS request failed:', error instanceof Error ? error.name : 'unknown error');
+    return { status: 'failed' };
+  }
+};
+
 app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure emergency reporting is temporarily unavailable.' });
@@ -3074,18 +3115,38 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
         reporterRole: isCustomer ? 'CUSTOMER' : 'CHANNEL_PARTNER',
         reporterPhoneVerified: true, incidentType,
         message: typeof message === 'string' ? message.trim().slice(0, 500) : '',
-        status: 'received_pending_review',
+        status: 'received_pending_review', adminSmsStatus: 'not_configured',
         createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
       });
-      return { status: 'created' as const, incidentId: incidentRef.id };
+      return { status: 'created' as const, incidentId: incidentRef.id,
+        reporterRole: isCustomer ? 'CUSTOMER' : 'CHANNEL_PARTNER' };
     });
     if (result.status === 'not_found') return res.status(404).json({ success: false, error: 'Booking not found.' });
     if (result.status === 'forbidden') return res.status(403).json({ success: false, error: 'Only the customer or assigned Channel Partner can report an incident for this booking.' });
     if (result.status === 'inactive') return res.status(409).json({ success: false, error: 'Emergency reporting is available only during an active assigned booking.' });
+    let adminSmsStatus: AdminSafetySmsResult['status'] = 'not_configured';
+    if (result.status === 'created') {
+      const sms = await dispatchAdminSafetySms({
+        incidentId: result.incidentId,
+        bookingId,
+        reporterRole: result.reporterRole,
+        incidentType
+      });
+      adminSmsStatus = sms.status;
+      await incidentRef.update({ adminSmsStatus, adminSmsAttemptedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    } else {
+      const existing = await incidentRef.get();
+      const savedStatus = existing.data()?.adminSmsStatus;
+      if (savedStatus === 'sent' || savedStatus === 'failed' || savedStatus === 'not_configured') adminSmsStatus = savedStatus;
+    }
     return res.status(result.status === 'created' ? 202 : 200).json({
       success: true, incidentId: result.incidentId, duplicate: result.status === 'duplicate',
-      status: 'received_pending_review', emergencyDispatchConfigured: false,
-      message: 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Emergency services या contact को सूचना भेजे जाने की पुष्टि नहीं है। तत्काल खतरे में स्थानीय आपातकालीन सेवा से सीधे संपर्क करें।'
+      status: 'received_pending_review', emergencyDispatchConfigured: false, adminSmsStatus,
+      message: adminSmsStatus === 'sent'
+        ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है। QuickFix Admin को SMS request provider ने स्वीकार की है; handset delivery या emergency dispatch की पुष्टि नहीं है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
+        : adminSmsStatus === 'failed'
+          ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है, लेकिन QuickFix Admin SMS नहीं भेजा जा सका। तत्काल खतरे में 112 पर सीधे कॉल करें।'
+          : 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Admin SMS अभी configure नहीं है। Emergency services को सूचना नहीं भेजी गई है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
     });
   } catch (error) {
     console.error('Secure SOS incident intake failed:', error);
