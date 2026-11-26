@@ -11,7 +11,7 @@ export const BookingSosButton: React.FC<{ bookingId: string; reporterRole: 'cust
   const submitReport = async () => {
     const user = auth.currentUser;
     if (!user) { setStatus('Please sign in again with your verified mobile number.'); return; }
-    if (!window.confirm('Send a safety report for this active booking? QuickFix will save the report only; emergency dispatch is not connected.')) return;
+    if (!window.confirm('Send a safety report for this active booking? QuickFix will save it and may send an optional SMS to the configured admin number. This does not contact emergency services.')) return;
     setSaving(true); setStatus('');
     try {
       const token = await user.getIdToken(true);
@@ -22,7 +22,7 @@ export const BookingSosButton: React.FC<{ bookingId: string; reporterRole: 'cust
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || 'Safety report could not be saved. If urgent, call 112.');
-      setStatus('QuickFix report saved. Emergency services/contact alerts are not connected. Call 112 if urgent.');
+      setStatus(result.adminSmsStatus === 'sent' ? 'Report saved. Twilio accepted the admin SMS request; handset delivery is not guaranteed. This is not emergency dispatch. Call 112 if urgent.' : result.adminSmsStatus === 'failed' ? 'Report saved, but admin SMS failed. Call 112 if urgent.' : 'Report saved. Admin SMS is not configured. Call 112 if urgent.');
       setMessage('');
     } catch (error) { setStatus(error instanceof Error ? error.message : 'Safety report failed. Call 112 if urgent.'); }
     finally { setSaving(false); }
