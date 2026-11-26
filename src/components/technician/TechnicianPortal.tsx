@@ -777,33 +777,27 @@ export const TechnicianPortal: React.FC = () => {
 
           {/* Wallet Balances Grid */}
           <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-            {/* Total Balance */}
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Profile Balance</span>
-              <div className="text-lg font-extrabold font-mono text-white mt-0.5">
-                ₹{currentTechnician.walletBalance ?? 0}
-              </div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Verified Wallet Balance</span>
+              <div className="text-sm font-extrabold text-amber-300 mt-1">Not available yet</div>
+              <span className="text-[9px] text-slate-500 block leading-tight">Server ledger not connected</span>
             </div>
 
-            {/* Net Withdrawable Earnings */}
             <div>
               <span className="text-[10px] text-emerald-400 uppercase font-semibold block">Withdrawable</span>
-              <div className="text-lg font-extrabold font-mono text-emerald-400 mt-0.5">
-                ₹{withdrawableAmount}
-              </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Not payout-confirmed</span>
+              <div className="text-sm font-extrabold text-amber-300 mt-1">Not calculated</div>
+              <span className="text-[9px] text-slate-500 block leading-tight">No verified balance</span>
             </div>
           </div>
 
-          {/* Cash Ledger & Commission Breakdown Stats */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80 text-slate-300">
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Cash Handed by Customers</span>
-              <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
+              <span className="text-[10px] text-slate-400 block">Customer cash collection</span>
+              <span className="font-semibold text-amber-300">Not ledger-verified</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Legacy commission records (historical)</span>
-              <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
+              <span className="text-[10px] text-slate-400 block">Commission deductions</span>
+              <span className="font-semibold text-amber-300">Not ledger-verified</span>
             </div>
           </div>
 
