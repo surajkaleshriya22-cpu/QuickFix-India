@@ -650,7 +650,6 @@ fun CommissionsTab(
     val totalReceived = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
     val pendingAmount = bookings.filter { it.paymentStatus != "paid" }.sumOf { it.totalAmount }
     val techPayments = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.technicianPayout }
-    val platformComm = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.adminCommission }
     val pendingEscrowPayouts = payouts.filter { it.status == "pending_approval" || it.status == "held_in_escrow" }
 
     Column(
@@ -708,9 +707,9 @@ fun CommissionsTab(
                 onClick = { activeSubTab = "payouts" }
             )
             KpiCard(
-                title = "Platform Net Cut",
-                value = "₹$platformComm",
-                subtitle = "Retained in Admin A/C",
+                title = if (isEnglish) "Pricing model" else "कीमत का तरीका",
+                value = if (isEnglish) "Market rates" else "बाज़ार दर",
+                subtitle = if (isEnglish) "No per-booking commission" else "हर बुकिंग पर कमीशन नहीं",
                 color = Color(0xFF8B5CF6),
                 modifier = Modifier.weight(1f),
                 onClick = { activeSubTab = "settings" }
@@ -949,8 +948,7 @@ fun CommissionsTab(
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("November 2026 (Month-to-Date)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                                Text("Month GMV in Admin A/C: ₹${bookings.sumOf { it.totalAmount }} • Orders: ${bookings.size}", fontSize = 12.sp, color = TextSecondary)
-                                Text("Total Platform Cut Retained: ₹$platformComm (15% Margin)", fontSize = 12.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.SemiBold)
+                                Text("Booking value: ₹${bookings.sumOf { it.totalAmount }} • Orders: ${bookings.size}", fontSize = 12.sp, color = TextSecondary)
                             }
                         }
                     }
