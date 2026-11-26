@@ -837,6 +837,12 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       };
     });
     const allLinesPriced = lineItems.every(line => line.pricingStatus === 'priced_from_published_rate');
+    if (paymentMethod === 'upi' && !allLinesPriced) {
+      return res.status(409).json({
+        success: false,
+        error: 'UPI payment needs an approved local rate card and confirmed booking amount. Choose Cash or request an inspection quote; no payment has been collected.'
+      });
+    }
     const totalMinimum = lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0);
     const totalMaximum = lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0);
     const primary = resolvedLines[0];
