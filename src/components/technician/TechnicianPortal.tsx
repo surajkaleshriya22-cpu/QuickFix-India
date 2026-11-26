@@ -307,6 +307,16 @@ export const TechnicianPortal: React.FC = () => {
             <h2 className="text-lg font-bold text-slate-900">{language === 'hi' ? 'पार्टनर प्रोफ़ाइल जमा हो गई' : 'Partner profile submitted'}</h2>
             <p className="text-sm text-slate-600 mt-2">Thanks{currentUser.displayName ? `, ${currentUser.displayName}` : ''}. {language === 'hi' ? 'आपकी चैनल पार्टनर प्रोफ़ाइल एडमिन की जाँच में है।' : 'Your basic Channel Partner profile is waiting for admin review.'}</p>
           </div>
+          {currentUser.quickFixId && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold text-blue-700">Your permanent QuickFix ID</p>
+                <p className="font-mono text-sm font-extrabold tracking-wide text-blue-950">{currentUser.quickFixId}</p>
+              </div>
+              <button type="button" onClick={() => { void navigator.clipboard?.writeText(currentUser.quickFixId || ''); }}
+                className="rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white">Copy ID</button>
+            </div>
+          )}
           <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-900 space-y-1">
             <p className="font-bold">{language === 'hi' ? 'स्थिति: जाँच बाकी' : 'Status: Pending review'}</p>
             <p>{language === 'hi' ? 'मंज़ूरी और सुरक्षित पार्टनर लॉगिन होने तक आप काम स्वीकार या ऑनलाइन नहीं हो सकते।' : 'You cannot accept jobs or go online until approval and secure partner sign-in are enabled.'}</p>
@@ -521,6 +531,20 @@ export const TechnicianPortal: React.FC = () => {
               <span className="capitalize">{currentTechnician.trades.join(', ')}</span>
               <span>· {currentTechnician.rating} ★</span>
             </div>
+            {currentUser?.quickFixId && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[9px] font-semibold text-blue-700">QuickFix ID</span>
+                <span className="font-mono text-[10px] font-extrabold tracking-wide text-slate-800">{currentUser.quickFixId}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(currentUser.quickFixId || '');
+                  }}
+                  className="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700"
+                  aria-label="Copy QuickFix ID"
+                >Copy</button>
+              </div>
+            )}
           </div>
         </div>
 
