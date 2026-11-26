@@ -56,7 +56,6 @@ fun CustomerHomeScreen(
     var showCityMenu by remember { mutableStateOf(false) }
     var cityInput by remember(currentCity) { mutableStateOf(currentCity) }
     var voiceMessage by remember { mutableStateOf("") }
-    val context = LocalContext.current
     val languagePrefs = remember { context.getSharedPreferences("quickfix_preferences", android.content.Context.MODE_PRIVATE) }
     val languageState = LocalQuickFixLanguage.current
     val appLanguage = languageState.value
