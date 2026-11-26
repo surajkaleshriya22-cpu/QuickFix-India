@@ -233,8 +233,8 @@ fun CustomerHomeScreen(
                                 onValueChange = { cityInput = it },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                label = { Text("City / शहर") },
-                                supportingText = { Text("भारत के किसी भी शहर का नाम लिख सकते हैं। सेवा उपलब्धता की पुष्टि बुकिंग के समय होगी।") }
+                                label = { Text(if (isEnglish) "City" else "शहर") },
+                                supportingText = { Text(if (isEnglish) "Enter any city in India. Service availability is confirmed when you book." else "भारत के किसी भी शहर का नाम लिख सकते हैं। सेवा उपलब्धता की पुष्टि बुकिंग के समय होगी।") }
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -303,7 +303,7 @@ fun CustomerHomeScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Icon(Icons.Default.Mic, contentDescription = "आवाज़ से काम बताएं", tint = BrandBlue)
+                            Icon(Icons.Default.Mic, contentDescription = if (isEnglish) "Describe the work by voice" else "आवाज़ से काम बताएं", tint = BrandBlue)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(if (isEnglish) "Tell us what you need" else "बोलकर अपना काम बताइए", color = BrandBlue, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
@@ -370,7 +370,7 @@ fun CustomerHomeScreen(
                             }
                             Icon(
                                 Icons.Default.ChevronRight,
-                                contentDescription = "Track",
+                                contentDescription = if (isEnglish) "Track booking" else "बुकिंग ट्रैक करें",
                                 tint = BrandBlue
                             )
                         }
@@ -498,14 +498,14 @@ fun CustomerHomeScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("कीमत काम देखकर बताएँगे", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
+                            Text(if (isEnglish) "Price after inspection" else "कीमत काम देखकर बताएँगे", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
                             Button(
                                 onClick = { navController.navigate("service_booking/${service.id}") },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("काम चुनें", fontSize = 11.sp)
+                                Text(if (isEnglish) "Choose service" else "काम चुनें", fontSize = 11.sp)
                             }
                         }
                     }
