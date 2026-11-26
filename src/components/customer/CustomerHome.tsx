@@ -34,6 +34,7 @@ import { BookingSosButton } from '../shared/BookingSosButton';
 import { CustomerAuthModal } from './CustomerAuthModal';
 import { NearbyStoresModal } from './NearbyStoresModal';
 import { INDIAN_CITIES } from '../../data/mockData';
+import { CustomerComplaintPanel } from './CustomerComplaintPanel';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -548,6 +549,8 @@ export const CustomerHome: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CustomerComplaintPanel />
 
       {/* Booking Sheet Modal */}
       {selectedServiceToBook && (
