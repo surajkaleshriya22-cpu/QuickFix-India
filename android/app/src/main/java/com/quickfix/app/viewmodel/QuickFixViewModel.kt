@@ -851,11 +851,21 @@ class QuickFixViewModel : ViewModel() {
                         if (status !in 200..299 || !json.optBoolean("success")) {
                             error(json.optString("error").ifBlank { "Safety report save नहीं हो सका (HTTP $status)." })
                         }
-                        when (json.optString("adminSmsStatus")) {
-                            "sent" -> "Safety report save हो गई और QuickFix Admin को SMS भेजा गया. यह emergency dispatch नहीं है; तत्काल खतरे में 112 call करें."
-                            "failed" -> "Safety report save हो गई, लेकिन Admin SMS नहीं पहुँचा. तत्काल खतरे में 112 call करें."
-                            else -> "Safety report save हो गई. Admin SMS अभी configure नहीं है; तत्काल खतरे में 112 call करें."
+                        val adminStatus = json.optString("adminSmsStatus", "not_configured")
+                        val contactStatus = json.optString("emergencyContactSmsStatus", "no_verified_contacts")
+                        val adminMessage = when (adminStatus) {
+                            "sent" -> "Admin SMS provider ने स्वीकार किया"
+                            "failed" -> "Admin SMS provider ने स्वीकार नहीं किया"
+                            else -> "Admin SMS configure नहीं है"
                         }
+                        val contactMessage = when (contactStatus) {
+                            "sent" -> "verified emergency contact SMS provider ने स्वीकार किया"
+                            "partial" -> "कुछ emergency contact SMS provider ने स्वीकार किए"
+                            "failed" -> "emergency contact SMS provider ने स्वीकार नहीं किया"
+                            "not_configured" -> "emergency contact SMS configure नहीं है"
+                            else -> "कोई verified emergency contact उपलब्ध नहीं है"
+                        }
+                        "Safety report QuickFix में दर्ज हुई। $adminMessage; $contactMessage। SMS acceptance delivery की guarantee नहीं है। पुलिस/एम्बुलेंस dispatch नहीं होता। तत्काल खतरे में 112 call करें."
                     } finally { connection.disconnect() }
                 }
             }.onSuccess { result -> onResult(true, result) }
