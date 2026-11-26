@@ -324,7 +324,7 @@ fun ServiceBookingScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            if (isBooking) "बुकिंग भेज रहे हैं..." else if (paymentMethod == "upi") { if (pendingBookingId != null) "UPI भुगतान दोबारा करें →" else "बुक करें और UPI से भुगतान करें →" } else "बुकिंग भेजें →",
+                            if (isBooking) "बुकिंग भेज रहे हैं..." else if (paymentMethod != "cash") { if (pendingBookingId != null) "Online भुगतान दोबारा करें →" else "बुक करें और Online भुगतान करें →" } else "बुकिंग भेजें →",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -659,8 +659,8 @@ fun ServiceBookingScreen(
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
-                    if (pendingBookingId != null && paymentMethod == "upi") {
-                        Text(if (isEnglish) "Booking saved. Retry UPI payment without creating another booking." else "बुकिंग सेव है। दोबारा UPI भुगतान करें—नई बुकिंग नहीं बनेगी।", fontSize = 11.sp, color = BrandBlue)
+                    if (pendingBookingId != null && paymentMethod in listOf("upi", "card", "netbanking")) {
+                        Text(if (isEnglish) "Booking saved. Retry online payment without creating another booking." else "बुकिंग सेव है। दोबारा online भुगतान करें—नई बुकिंग नहीं बनेगी।", fontSize = 11.sp, color = BrandBlue)
                     }
                 }
             }
