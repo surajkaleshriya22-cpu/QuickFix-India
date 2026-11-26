@@ -2,7 +2,7 @@ name: QuickFix India Vite Build
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feat/admin-partner-recharge-policy"]
   pull_request:
     branches: ["main"]
 
