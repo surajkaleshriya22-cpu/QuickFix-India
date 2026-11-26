@@ -20,6 +20,7 @@ import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } fr
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
+import { isPartnerRechargeEntitled } from './src/utils/partnerRechargeEntitlement';
 
 dotenv.config();
 
@@ -1650,40 +1651,6 @@ const DEFAULT_PARTNER_RECHARGE_POLICY = {
   effectiveAt: null as string | null,
   enabled: true,
   currency: 'INR'
-};
-
-const isPartnerRechargeEntitled = (
-  profile: Record<string, any>,
-  policy: Record<string, any> | undefined,
-  rechargeAccount: Record<string, any> | undefined,
-  nowMs = Date.now()
-): boolean => {
-  // Missing/invalid timestamps or policy values fail closed. Firestore Timestamp
-  // values are converted with toDate(); Date values are accepted for tests.
-  const timestampMs = (value: unknown): number | null => {
-    try {
-      const date = value instanceof Date ? value :
-        value && typeof (value as any).toDate === 'function' ? (value as any).toDate() : null;
-      const ms = date instanceof Date ? date.getTime() : NaN;
-      return Number.isFinite(ms) ? ms : null;
-    } catch {
-      return null;
-    }
-  };
-  // Never restrict job access until payment collection AND subscription enforcement
-  // have both been explicitly enabled by a separately reviewed server rollout.
-  // The current product intentionally keeps both flags false: no partner can be
-  // blocked for a recharge that they cannot yet pay for in-app.
-  if (policy?.paymentEnabled !== true || policy?.dutyGatingEnabled !== true) {
-    return true;
-  }
-  const freeTrialDays = Number(policy?.freeTrialDays);
-  const trialStartMs = timestampMs(profile.createdAt);
-  const activeUntilMs = timestampMs(rechargeAccount?.activeUntil);
-  const trialActive = Number.isInteger(freeTrialDays) && freeTrialDays >= 0 && freeTrialDays <= 365 &&
-    trialStartMs !== null && nowMs < trialStartMs + freeTrialDays * 86400000;
-  const paidRechargeActive = activeUntilMs !== null && activeUntilMs > nowMs;
-  return trialActive || paidRechargeActive;
 };
 
 // Partner pricing policy is server-owned. Client access is restricted to verified admins.
