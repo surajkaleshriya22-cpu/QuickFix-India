@@ -251,9 +251,6 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     kycDocType: 'PAN',
     kycDocNumber: '',
     walletBalance: 0,
-    securityDepositRequired: 2000,
-    securityDepositPaid: false,
-    withdrawableBalance: 0,
     bankAccount: { accountNumber: '', ifsc: '', upiId: '' },
     todayEarnings: 0,
     totalEarnings: 0,
@@ -489,7 +486,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
       setCurrentUser(partnerUser);
       setIsAuthenticated(true);
-      setCurrentTechnician(prev => ({ ...prev, id: firebaseUser.uid, name: partnerUser.displayName, phone: partnerUser.phoneNumber, email: partnerUser.email, trades: params.trades, experienceYears: params.experienceYears, city: params.city, isOnline: false, isVerified: false, approvalStatus: 'pending_audit', walletBalance: 0, securityDepositRequired: 2000, securityDepositPaid: false }));
+      setCurrentTechnician(prev => ({ ...prev, id: firebaseUser.uid, name: partnerUser.displayName, phone: partnerUser.phoneNumber, email: partnerUser.email, trades: params.trades, experienceYears: params.experienceYears, city: params.city, isOnline: false, isVerified: false, approvalStatus: 'pending_audit', walletBalance: 0 }));
       setIsTechnicianLoggedIn(true);
       setActiveRole('technician');
       return { success: true, message: result.message || 'Basic partner profile created. KYC approval is pending.' };
@@ -689,7 +686,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     _coords?: { lat: number; lng: number }
   ): { success: boolean; message?: string; requiresGeofence?: boolean; validation?: GeofenceValidationResult } => ({
     success: false,
-    message: 'Partner online status is disabled until trusted server-side identity, verification, wallet reserve and GPS checks are deployed.'
+    message: 'Partner online status is disabled until trusted server-side identity, verification and GPS checks are deployed.'
   });
 
   const validateAndSetTechnicianOnline = async (
