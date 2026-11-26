@@ -467,7 +467,15 @@ class QuickFixViewModel : ViewModel() {
             ServiceItem(id = "transport-mini-pickup", category = "transport", title = "Mini pickup / Tata Ace", hindiTitle = "मिनी पिकअप / टाटा ऐस", startingPrice = 0, rating = 4.8, warrantyDays = 7),
             ServiceItem(id = "transport-tempo", category = "transport", title = "Tempo / small truck", hindiTitle = "टेंपो / छोटा ट्रक", startingPrice = 0, rating = 4.8, warrantyDays = 7),
             ServiceItem(id = "transport-house-shifting", category = "transport", title = "Room / house shifting vehicle", hindiTitle = "कमरा / घर शिफ्टिंग वाहन", startingPrice = 0, rating = 4.8, warrantyDays = 7),
-            ServiceItem(id = "transport-large-truck", category = "transport", title = "Large truck / intercity goods", hindiTitle = "बड़ा ट्रक / शहरों के बीच सामान", startingPrice = 0, rating = 4.8, warrantyDays = 7)
+            ServiceItem(id = "transport-large-truck", category = "transport", title = "Large truck / intercity goods", hindiTitle = "बड़ा ट्रक / शहरों के बीच सामान", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "car-wash-full-service", category = "car_wash", title = "Complete car wash", hindiTitle = "कार की पूरी धुलाई", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-small-parcel", category = "transport", title = "Small parcel and document delivery", hindiTitle = "छोटा पार्सल और दस्तावेज डिलीवरी", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-furniture-appliance", category = "transport", title = "Single furniture or appliance transport", hindiTitle = "एक फर्नीचर या उपकरण पहुँचाना", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-auto-loader", category = "transport", title = "Auto / three-wheeler goods transport", hindiTitle = "ऑटो / तीन पहिया माल वाहन", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-pickup", category = "transport", title = "Pickup / Tata Ace goods transport", hindiTitle = "पिकअप / टाटा ऐस से सामान ढुलाई", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-mini-truck", category = "transport", title = "Mini truck and house shifting transport", hindiTitle = "मिनी ट्रक से घर का सामान शिफ्ट करना", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-full-truck", category = "transport", title = "Large truck and intercity goods transport", hindiTitle = "बड़े ट्रक से शहरों के बीच सामान ढुलाई", startingPrice = 0, rating = 4.8, warrantyDays = 7),
+            ServiceItem(id = "transport-office-shop-shifting", category = "transport", title = "Office and shop shifting transport", hindiTitle = "ऑफिस और दुकान का सामान शिफ्ट करना", startingPrice = 0, rating = 4.8, warrantyDays = 7)
         )
     )
     val services: StateFlow<List<ServiceItem>> = _services.asStateFlow()
