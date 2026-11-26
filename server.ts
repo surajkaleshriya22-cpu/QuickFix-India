@@ -1694,6 +1694,21 @@ app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, auth
     if (code === 'INVALID_BOOKING_STATE') return res.status(409).json({ success: false, error: 'This booking is not waiting to start.' });
     if (code === 'OTP_EXPIRED') return res.status(410).json({ success: false, error: 'The service-start code has expired.' });
     if (code === 'OTP_INVALID') return res.status(400).json({ success: false, error: 'The customer OTP is incorrect.' });
+    // A concurrent request may lose the Firestore transaction race after the
+    // winning request consumes the one-time OTP. Confirm the persisted state
+    // before returning an error so a consumed OTP is consistently reported
+    // as not found; never retry the state transition outside the transaction.
+    if (firebaseAdminApp) {
+      try {
+        const latestOtp = await getFirestore(firebaseAdminApp)
+          .collection('booking_start_otps').doc(bookingId).get();
+        if (!latestOtp.exists) {
+          return res.status(404).json({ success: false, error: 'Service-start code was not found.' });
+        }
+      } catch (stateCheckError) {
+        console.error('Could not confirm concurrent service-start state:', stateCheckError);
+      }
+    }
     console.error('Partner service-start verification failed:', error);
     return res.status(500).json({ success: false, error: 'The service could not be started securely.' });
   }
