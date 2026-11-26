@@ -277,7 +277,7 @@ fun ServiceBookingScreen(
                                                 put("order_id", order.orderId)
                                                 put("currency", order.currency)
                                                 put("amount", order.amountPaise)
-                                                put("method", JSONObject().put("upi", 1).put("card", 0).put("netbanking", 0).put("wallet", 0))
+                                                put("method", JSONObject().put("upi", if (paymentMethod == "upi") 1 else 0).put("card", if (paymentMethod == "card") 1 else 0).put("netbanking", if (paymentMethod == "netbanking") 1 else 0).put("wallet", 0))
                                                 put("theme", JSONObject().put("color", "#2563EB"))
                                                 put("prefill", JSONObject())
                                                 put("notes", JSONObject().put("bookingId", bookingId))
@@ -288,7 +288,7 @@ fun ServiceBookingScreen(
                                                 scope.launch {
                                                     try {
                                                         if (failure != null || paymentId.isNullOrBlank() || paidOrderId != order.orderId || signature.isNullOrBlank()) {
-                                                            bookingError = failure ?: "UPI payment response incomplete. Booking remains unpaid."
+                                                            bookingError = failure ?: "Online payment response incomplete. Booking remains unpaid."
                                                         } else {
                                                             verifyCustomerBookingPayment(bookingId, paidOrderId, paymentId, signature)
                                                             navController.navigate("live_tracking/$bookingId") {
@@ -640,19 +640,22 @@ fun ServiceBookingScreen(
                             Text(if (isEnglish) "Pay directly after the work is completed." else "काम पूरा होने के बाद सीधे भुगतान करें।", fontSize = 11.sp, color = TextSecondary)
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = paymentMethod == "upi",
-                            onClick = { if (pendingBookingId == null) paymentMethod = "upi" },
-                            enabled = pendingBookingId == null
-                        )
-                        Column {
-                            Text(if (isEnglish) "UPI / Online payment" else "UPI / ऑनलाइन भुगतान", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                            Text(if (isEnglish) "GPay, PhonePe, Paytm and BHIM via secure Razorpay checkout." else "सुरक्षित Razorpay से GPay, PhonePe, Paytm और BHIM।", fontSize = 11.sp, color = TextSecondary)
+                    listOf(
+                        "upi" to (if (isEnglish) "UPI (GPay, PhonePe, Paytm, BHIM)" else "UPI (GPay, PhonePe, Paytm, BHIM)"),
+                        "card" to (if (isEnglish) "Debit / Credit Card" else "डेबिट / क्रेडिट कार्ड"),
+                        "netbanking" to (if (isEnglish) "Net Banking" else "नेट बैंकिंग")
+                    ).forEach { (method, title) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = paymentMethod == method,
+                                onClick = { if (pendingBookingId == null) paymentMethod = method },
+                                enabled = pendingBookingId == null
+                            )
+                            Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     Text(
-                        if (isEnglish) "UPI is available only when an approved local rate card sets the booking amount. If no approved rate exists, no payment is collected and you can choose cash." else "UPI तभी चलेगा जब आपके क्षेत्र का approved rate card कीमत तय करे। Rate उपलब्ध न होने पर भुगतान नहीं कटेगा और आप Cash चुन सकते हैं।",
+                        if (isEnglish) "UPI, cards and Net Banking are available only when an approved local rate card confirms the booking amount. If no approved rate exists, no online payment is collected; choose cash or request an inspection quote." else "UPI, कार्ड और नेट बैंकिंग तभी उपलब्ध होंगे जब approved local rate card बुकिंग की कीमत तय करे। Rate उपलब्ध न होने पर online payment नहीं कटेगा; Cash चुनें या inspection quote लें।",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
