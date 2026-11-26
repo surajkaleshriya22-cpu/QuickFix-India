@@ -1073,6 +1073,11 @@ export const AdminDashboard: React.FC = () => {
                     <div><span className="text-slate-500 block">Approval / KYC</span><span className="text-white">{quickFixLookup.profile.approvalStatus} / {quickFixLookup.profile.kycStatus}</span></div>
                     {quickFixLookup.profile.walletBalance !== null && <div><span className="text-slate-500 block">Wallet balance</span><span className="text-white">₹{quickFixLookup.profile.walletBalance}</span></div>}
                   </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div><span className="text-slate-500 block">Identity verified</span><span className="text-white">{quickFixLookup.profile.isVerified ? 'Yes' : 'No'}</span></div>
+                    {quickFixLookup.profile.accountType === 'CHANNEL_PARTNER' && <div><span className="text-slate-500 block">Duty status</span><span className="text-white">{quickFixLookup.profile.isOnline ? 'Online' : 'Offline'}</span></div>}
+                    {quickFixLookup.profile.accountType === 'CHANNEL_PARTNER' && <div><span className="text-slate-500 block">Security reserve</span><span className="text-white">{quickFixLookup.profile.securityDepositPaid ? 'Paid' : 'Not paid'}</span></div>}
+                  </div>
                   <div className="text-[11px] text-slate-300"><span className="text-slate-500">Address:</span> {quickFixLookup.profile.address || 'Not provided'}</div>
                   {quickFixLookup.profile.trades?.length > 0 && <div className="text-[11px] text-slate-300"><span className="text-slate-500">Services:</span> {quickFixLookup.profile.trades.join(', ')}</div>}
                   <div className="border-t border-slate-700 pt-2">
