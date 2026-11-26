@@ -287,7 +287,9 @@ export const CustomerHome: React.FC = () => {
               ['painter','Painter','पेंटर'],
               ['gardener','Gardener','माली'],
               ['pest_control','Pest Control','कीट नियंत्रण'],
-              ['house_shifting','House Shifting','घर शिफ्टिंग']
+              ['house_shifting','House Shifting','घर शिफ्टिंग'],
+              ['car_wash','Car Washing','कार वॉश'],
+              ['transport','Transport & Delivery','सामान ढुलाई और डिलीवरी']
             ] as const).map(([id,label,hindi]) => (
               <button
                 key={id}
