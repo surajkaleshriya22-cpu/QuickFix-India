@@ -2337,6 +2337,114 @@ app.post('/api/support/tickets', authenticateFirebaseUser, async (req: Request, 
   }
 });
 
+
+const complaintCategories = new Set([
+  'non_payment', 'abuse_or_threat', 'harassment', 'unsafe_conduct',
+  'overcharging', 'poor_service', 'property_damage', 'false_booking', 'other'
+]);
+
+// Booking-linked complaints: participants only; case decisions remain server-owned.
+app.post('/api/complaints', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Complaint service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
+    const category = typeof req.body?.category === 'string' ? req.body.category.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !complaintCategories.has(category) || description.length < 10 || description.length > 3000) {
+      return res.status(400).json({ success: false, error: 'Booking, complaint type, or description is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const bookingSnap = await db.collection('bookings').doc(bookingId).get();
+    if (!bookingSnap.exists) return res.status(404).json({ success: false, error: 'Booking was not found.' });
+    const booking = bookingSnap.data()!;
+    const isCustomer = booking.customerUid === identity.uid;
+    const isPartner = booking.technicianUid === identity.uid;
+    if (!isCustomer && !isPartner) return res.status(403).json({ success: false, error: 'Only a participant in this booking can report it.' });
+    const caseRef = db.collection('complaints').doc();
+    await caseRef.create({
+      bookingId, actorUid: identity.uid, actorRole: isCustomer ? 'customer' : 'channel_partner',
+      accusedUid: (isCustomer ? booking.technicianUid : booking.customerUid) || null,
+      category, description, status: 'open', decision: null, adminNote: null,
+      createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+    });
+    return res.status(201).json({ success: true, complaintId: caseRef.id, status: 'open' });
+  } catch (error) {
+    console.error('Complaint submission failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint could not be saved securely.' });
+  }
+});
+
+app.get('/api/complaints/mine', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Complaint service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('complaints').where('actorUid', '==', uid).limit(50).get();
+    const complaints = snapshot.docs.map(doc => {
+      const item = doc.data();
+      return { id: doc.id, bookingId: String(item.bookingId || ''), category: String(item.category || ''),
+        status: String(item.status || 'open'), decision: item.decision || null, adminNote: item.adminNote || null,
+        createdAt: item.createdAt?.toDate?.()?.toISOString?.() || null };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, complaints });
+  } catch (error) {
+    console.error('Complaint history read failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint history could not be loaded.' });
+  }
+});
+
+app.get('/api/admin/complaints', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin complaint service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('complaints').limit(100).get();
+    const complaints = snapshot.docs.map(doc => {
+      const item = doc.data();
+      return { id: doc.id, bookingId: String(item.bookingId || ''), actorUid: String(item.actorUid || ''),
+        actorRole: String(item.actorRole || ''), accusedUid: item.accusedUid || null,
+        category: String(item.category || ''), description: String(item.description || ''),
+        status: String(item.status || 'open'), decision: item.decision || null, adminNote: item.adminNote || null,
+        createdAt: item.createdAt?.toDate?.()?.toISOString?.() || null };
+    }).sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, complaints });
+  } catch (error) {
+    console.error('Admin complaint list failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint cases could not be loaded.' });
+  }
+});
+
+app.post('/api/admin/complaints/:complaintId/review', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Admin complaint service is unavailable.' });
+    const complaintId = String(req.params.complaintId || '');
+    const status = req.body?.status;
+    const decision = typeof req.body?.decision === 'string' ? req.body.decision.trim() : '';
+    const adminNote = typeof req.body?.adminNote === 'string' ? req.body.adminNote.trim() : '';
+    if (!/^[A-Za-z0-9_-]{1,150}$/.test(complaintId) ||
+        !['under_review', 'resolved', 'dismissed'].includes(status) ||
+        !['no_action', 'warning_recommended', 'payment_follow_up', 'account_restriction_recommended', 'refund_review'].includes(decision) ||
+        adminNote.length < 5 || adminNote.length > 2000) {
+      return res.status(400).json({ success: false, error: 'Review status, decision, or review note is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const caseRef = db.collection('complaints').doc(complaintId);
+    const auditRef = db.collection('complaint_audit').doc();
+    const reviewerUid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const exists = await db.runTransaction(async transaction => {
+      const snap = await transaction.get(caseRef);
+      if (!snap.exists) return false;
+      transaction.update(caseRef, { status, decision, adminNote, reviewedBy: reviewerUid,
+        reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(auditRef, { complaintId, reviewerUid, status, decision, adminNote, createdAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+    if (!exists) return res.status(404).json({ success: false, error: 'Complaint case was not found.' });
+    return res.json({ success: true, complaintId, status, decision });
+  } catch (error) {
+    console.error('Complaint review failed:', error);
+    return res.status(500).json({ success: false, error: 'Complaint review could not be saved.' });
+  }
+});
+
 // Customer Care: search by the permanent QuickFix ID. Only server-authorized admins can access it.
 app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireCustomerCareAccess, async (req: Request, res: Response) => {
   try {
