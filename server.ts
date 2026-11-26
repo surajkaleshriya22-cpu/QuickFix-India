@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath, Timestamp, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
@@ -1753,10 +1753,32 @@ app.get('/api/partner/recharge-status', authenticateFirebaseUser, async (req: Re
     const paidUntilValue = rechargeAccount.activeUntil;
     const paidUntil = paidUntilValue && typeof paidUntilValue.toDate === 'function' ? paidUntilValue.toDate() : null;
     const paidRechargeActive = paidUntil !== null && paidUntil.getTime() > Date.now();
-    const createdAt = profile.createdAt;
-    const trialStart = createdAt && typeof createdAt.toDate === 'function' ? createdAt.toDate() : null;
+    let createdAt = profile.createdAt;
+    let trialStart = createdAt && typeof createdAt.toDate === 'function' ? createdAt.toDate() : null;
+
+    // Older partner profiles may predate the server-createdAt field. Recover the
+    // original Firebase Auth account creation time (server-owned metadata), never
+    // a client-supplied date or "now", then persist it once for consistent future reads.
     if (!trialStart) {
-      return res.json({ success: true, status: 'activation_date_unavailable', freeTrialDays: policy.freeTrialDays, currentRechargeAmount: policy.currentRechargeAmount, trialEndsAt: null, paymentEnabled: false });
+      try {
+        const authUser = await getAuth(firebaseAdminApp).getUser(identity.uid);
+        const authCreatedAt = new Date(authUser.metadata.creationTime);
+        if (Number.isFinite(authCreatedAt.getTime())) {
+          const recoveredTimestamp = Timestamp.fromDate(authCreatedAt);
+          await userSnapshot.ref.update({
+            createdAt: recoveredTimestamp,
+            createdAtRecoveredFrom: 'firebase_auth_creation_time',
+            createdAtRecoveredAt: FieldValue.serverTimestamp()
+          });
+          createdAt = recoveredTimestamp;
+          trialStart = authCreatedAt;
+        }
+      } catch (recoveryError) {
+        console.error('Partner activation date recovery failed:', recoveryError);
+      }
+    }
+    if (!trialStart) {
+      return res.json({ success: true, status: 'activation_date_unavailable', freeTrialDays: policy.freeTrialDays, currentRechargeAmount: policy.currentRechargeAmount, trialEndsAt: null, paymentEnabled: false, message: 'Your account activation date needs customer support verification.' });
     }
     const trialEndsAt = new Date(trialStart.getTime() + Number(policy.freeTrialDays) * 86400000);
     const isFreeTrial = Date.now() < trialEndsAt.getTime();
