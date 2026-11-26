@@ -726,6 +726,43 @@ app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: 
   }
 });
 
+// Customer quote preview for Android: only approved, effective local rate cards can produce a price.
+app.get('/api/bookings/quote', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure rate lookup is temporarily unavailable.' });
+    const read = (key: string) => typeof req.query[key] === 'string' ? String(req.query[key]).trim() : '';
+    const serviceId = read('serviceId'), state = read('state'), district = read('district');
+    const tehsil = read('tehsil'), city = read('city'), date = read('date');
+    const quantity = Number(read('quantity'));
+    if (!serviceId || serviceId.length > 120 || !state || state.length > 100 || !district || district.length > 100 ||
+        !tehsil || tehsil.length > 100 || city.length > 100 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || !isValidBookingDate(date)) {
+      return res.status(400).json({ success: false, error: 'Quote details are invalid.' });
+    }
+    const service = INITIAL_SERVICES.find(item => item.id === serviceId);
+    if (!service) return res.status(404).json({ success: false, error: 'Service is unavailable.' });
+    const billing = getBillingProfile(service);
+    const db = getFirestore(firebaseAdminApp);
+    const snapshot = await db.collection('rate_cards').where('approvalStatus', '==', 'approved').limit(500).get();
+    const cards = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as LocationRateCard))
+      .filter(card => card.state.trim().toLocaleLowerCase('en-IN') === state.toLocaleLowerCase('en-IN') &&
+        card.district.trim().toLocaleLowerCase('en-IN') === district.toLocaleLowerCase('en-IN') &&
+        card.serviceCategory === service.category && card.unit === billing.unit);
+    const card = resolveLocationRateCard(cards, { state, district, city, tehsil }, service.category, service.id, billing.unit, date);
+    if (!card) return res.json({ success: true, quoteAvailable: false, pricingStatus: 'inspection_quote_required',
+      serviceTitle: service.title, billingUnit: billing.unit, quantity,
+      message: 'No approved rate is available for this exact service and location. Obtain an itemised quote before work starts.' });
+    const quote = calculateRateQuote(card, quantity);
+    return res.json({ success: true, quoteAvailable: true, pricingStatus: 'priced_from_approved_rate_card',
+      serviceTitle: service.title, billingUnit: billing.unit, quantity, quote,
+      materialsIncluded: quote.materialsIncluded, rateSourceName: card.sourceName,
+      effectiveFrom: card.effectiveFrom, effectiveTo: card.effectiveTo || null });
+  } catch (error) {
+    console.error('Customer quote preview failed:', error);
+    return res.status(500).json({ success: false, error: 'A secure rate quote could not be calculated.' });
+  }
+});
+
 // Customer booking creation: server derives the service price and customer identity.
 // No client-supplied role, price, OTP, assignment, payment or wallet value is trusted.
 app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
@@ -845,6 +882,13 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     }
     const totalMinimum = lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0);
     const totalMaximum = lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0);
+    const priceConsent = req.body?.priceConsent;
+    if (priceConsent !== undefined && (!priceConsent || typeof priceConsent !== 'object' || priceConsent.accepted !== true ||
+        !Number.isFinite(priceConsent.quoteMinimum) || !Number.isFinite(priceConsent.quoteMaximum) ||
+        priceConsent.quoteMinimum < 0 || priceConsent.quoteMaximum < priceConsent.quoteMinimum ||
+        Math.abs(priceConsent.quoteMinimum - totalMinimum) > 0.01 || Math.abs(priceConsent.quoteMaximum - totalMaximum) > 0.01)) {
+      return res.status(409).json({ success: false, error: 'The displayed quote changed. Please review the latest price and accept it again.' });
+    }
     const primary = resolvedLines[0];
     const rateCardIds = [...new Set(lineItems.map(line => line.rateCardId).filter(Boolean))];
     const bookingRef = db.collection('bookings').doc();
@@ -874,6 +918,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
         quoteRange: { minimum: totalMinimum, maximum: totalMaximum, materialsIncluded: lineItems.every(line => line.materialsIncluded === true), lineItems }
       } : { rateCardIds, quoteRange: { minimum: totalMinimum, maximum: totalMaximum, lineItems } }),
       paymentMethod,
+      ...(priceConsent ? { priceConsent: { accepted: true, acceptedBy: identity.uid, acceptedAt: FieldValue.serverTimestamp(), quoteMinimum: totalMinimum, quoteMaximum: totalMaximum, pricingStatus: allLinesPriced ? 'priced_from_approved_rate_card' : 'inspection_quote_required', lineItems } } : {}),
       status: 'requested',
       startOtp: '',
       price: allLinesPriced ? totalMinimum : 0,
