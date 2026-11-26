@@ -32,11 +32,21 @@ export const BookingSosButton: React.FC<{ bookingId: string; reporterRole: 'cust
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || 'Safety report could not be saved. Please call 112 if you are in immediate danger.');
-      setStatus(result.adminSmsStatus === 'sent'
-        ? 'Safety report saved. QuickFix Admin SMS request was accepted by Twilio; this does not confirm handset delivery or emergency dispatch. If urgent, call 112 now.'
+      const adminSms = result.adminSmsStatus === 'sent'
+        ? 'Admin SMS request accepted by Twilio'
         : result.adminSmsStatus === 'failed'
-          ? 'Safety report saved, but QuickFix Admin SMS failed. Emergency services/contact alerts are not connected. If urgent, call 112 now.'
-          : 'Safety report saved. QuickFix Admin SMS is not configured. Emergency services/contact alerts are not connected. If urgent, call 112 now.');
+          ? 'Admin SMS was not accepted by Twilio'
+          : 'Admin SMS is not configured';
+      const contactSms = result.emergencyContactSmsStatus === 'sent'
+        ? 'verified emergency-contact SMS requests accepted by Twilio'
+        : result.emergencyContactSmsStatus === 'partial'
+          ? 'some verified emergency-contact SMS requests accepted by Twilio'
+          : result.emergencyContactSmsStatus === 'failed'
+            ? 'emergency-contact SMS requests were not accepted by Twilio'
+            : result.emergencyContactSmsStatus === 'not_configured'
+              ? 'emergency-contact SMS is not configured'
+              : 'no verified emergency contacts available';
+      setStatus(`Safety report saved. ${adminSms}; ${contactSms}. Provider acceptance does not guarantee handset delivery, and QuickFix does not dispatch police/ambulance. If urgent, call 112 now.`);
       setMessage('');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Safety report failed. If urgent, call 112 now.');
