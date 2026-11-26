@@ -115,13 +115,13 @@ fun AdminDashboardScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Back" else "वापस जाएँ", tint = Color.White)
                     }
                 },
                 actions = {
                     QuickFixLanguageSelector()
                     IconButton(onClick = { viewModel.triggerFirestoreSync() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
+                        Icon(Icons.Default.Refresh, contentDescription = if (isEnglish) "Sync" else "सिंक करें", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkNavy)
@@ -759,17 +759,17 @@ fun CommissionsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Admin Master Receiving Account & Gateway", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here.", fontSize = 12.sp, color = TextSecondary)
+                    Text(if (isEnglish) "Admin Receiving Account & Gateway" else "एडमिन बैंक खाता और पेमेंट गेटवे", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here." else "यहाँ केवल एडमिन खाते की जानकारी सेव होती है। अभी कोई पेमेंट गेटवे जुड़ा नहीं है और ग्राहक से पैसा लेना या बैंक ट्रांसफर करना संभव नहीं है।", fontSize = 12.sp, color = TextSecondary)
 
                     Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.accountNumberMasked.ifBlank { "Not configured" }} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
                     OutlinedButton(onClick = onLoadAdminBank, modifier = Modifier.fillMaxWidth()) {
-                        Text("Refresh saved bank details")
+                        Text(if (isEnglish) "Refresh saved bank details" else "सेव बैंक जानकारी दोबारा देखें")
                     }
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(onClick = { bankMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(bankNameInput.ifBlank { "Select Bank" }, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Select bank")
+                            Text(bankNameInput.ifBlank { if (isEnglish) "Select Bank" else "बैंक चुनें" }, modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = if (isEnglish) "Select bank" else "बैंक चुनें")
                         }
                         DropdownMenu(expanded = bankMenuExpanded, onDismissRequest = { bankMenuExpanded = false }) {
                             indianBanks.forEach { bank ->
@@ -780,17 +780,17 @@ fun CommissionsTab(
                             }
                         }
                     }
-                    Text("Account Type", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(if (isEnglish) "Account Type" else "खाते का प्रकार", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { bankAccountTypeInput = "savings" }, modifier = Modifier.weight(1f)) { Text(if (bankAccountTypeInput == "savings") "✓ Savings" else "Savings") }
-                        OutlinedButton(onClick = { bankAccountTypeInput = "current" }, modifier = Modifier.weight(1f)) { Text(if (bankAccountTypeInput == "current") "✓ Current" else "Current") }
+                        OutlinedButton(onClick = { bankAccountTypeInput = "savings" }, modifier = Modifier.weight(1f)) { Text(if (isEnglish) { if (bankAccountTypeInput == "savings") "✓ Savings" else "Savings" } else { if (bankAccountTypeInput == "savings") "✓ बचत खाता" else "बचत खाता" }) }
+                        OutlinedButton(onClick = { bankAccountTypeInput = "current" }, modifier = Modifier.weight(1f)) { Text(if (isEnglish) { if (bankAccountTypeInput == "current") "✓ Current" else "Current" } else { if (bankAccountTypeInput == "current") "✓ चालू खाता" else "चालू खाता" }) }
                     }
-                    OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text("Account holder name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text("New bank account number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = bankIfscInput, onValueChange = { bankIfscInput = it.uppercase().take(11) }, label = { Text("IFSC code") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    Text("Server encrypts bank details. Saving bank information does not transfer money or activate payouts.", fontSize = 11.sp, color = Color(0xFFB45309))
+                    OutlinedTextField(value = bankHolderInput, onValueChange = { bankHolderInput = it }, label = { Text(if (isEnglish) "Account holder name" else "खाताधारक का नाम") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = bankAccountInput, onValueChange = { bankAccountInput = it.filter(Char::isDigit).take(18) }, label = { Text(if (isEnglish) "New bank account number" else "नया बैंक खाता नंबर") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = bankIfscInput, onValueChange = { bankIfscInput = it.uppercase().take(11) }, label = { Text(if (isEnglish) "IFSC code" else "IFSC कोड") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Text(if (isEnglish) "The server encrypts bank details. Saving bank information does not transfer money or activate payouts." else "सर्वर बैंक जानकारी को सुरक्षित करता है। जानकारी सेव करने से पैसा ट्रांसफर या payout शुरू नहीं होता।", fontSize = 11.sp, color = Color(0xFFB45309))
                     Button(onClick = { onSaveAdminBank(bankNameInput, bankAccountTypeInput, bankHolderInput, bankAccountInput, bankIfscInput); bankAccountInput = "" }, colors = ButtonDefaults.buttonColors(containerColor = DeepBlue), modifier = Modifier.fillMaxWidth()) {
-                        Text("Save / Update Admin Bank Account", fontWeight = FontWeight.Bold)
+                        Text(if (isEnglish) "Save / Update Admin Bank Account" else "एडमिन बैंक खाता सेव / अपडेट करें", fontWeight = FontWeight.Bold)
                     }
                     if (bankSaveStatus.isNotBlank()) Text(bankSaveStatus, fontSize = 12.sp, color = TextSecondary)
                 }
@@ -806,8 +806,8 @@ fun CommissionsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Technician Payouts & Escrow", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text("Payout processing is disabled. QuickFix has no connected payment provider or verified server-side payout ledger, so this app cannot approve, hold, reverse, or disburse funds.", fontSize = 12.sp, color = Color(0xFFB45309))
+                    Text(if (isEnglish) "Channel Partner Payouts & Escrow" else "चैनल पार्टनर payout और एस्क्रो", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text(if (isEnglish) "Payout processing is disabled. QuickFix has no connected payment provider or verified server-side payout ledger, so this app cannot approve, hold, reverse, or disburse funds." else "अभी payout बंद है। QuickFix में verified server-side payout ledger और payment provider जुड़ने तक पैसा approve, रोकना, वापस करना या भेजना संभव नहीं है।", fontSize = 12.sp, color = Color(0xFFB45309))
                     Surface(
                         color = Color(0xFFFFFBEB),
                         shape = RoundedCornerShape(8.dp),
@@ -965,47 +965,13 @@ fun CommissionsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Commission Rate Architecture", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                    Text("Configurable commission cut retained by QuickFix platform on each completed booking.", fontSize = 12.sp, color = TextSecondary)
-
-                    OutlinedTextField(
-                        value = elecPct,
-                        onValueChange = { elecPct = it },
-                        label = { Text("Electrician Platform Cut (%)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(if (isEnglish) "Market-based service pricing" else "बाज़ार के अनुसार सेवा की कीमत", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Text(
+                        if (isEnglish) "QuickFix does not apply a per-booking commission cut. The customer sees the service price before booking; partners receive the listed service amount subject to the published platform subscription and payment terms."
+                        else "QuickFix हर booking पर commission नहीं काटता। ग्राहक को booking से पहले सेवा की कीमत दिखाई जाएगी। पार्टनर को दिखाई गई सेवा राशि मिलेगी; लागू subscription और payment नियम अलग से दिखाए जाएँगे।",
+                        fontSize = 12.sp,
+                        color = TextSecondary
                     )
-
-                    OutlinedTextField(
-                        value = plumbPct,
-                        onValueChange = { plumbPct = it },
-                        label = { Text("Plumber Platform Cut (%)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = fee,
-                        onValueChange = { fee = it },
-                        label = { Text("Customer Convenience Fee (₹)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            val e = elecPct.toIntOrNull() ?: 12
-                            val p = plumbPct.toIntOrNull() ?: 15
-                            val f = fee.toIntOrNull() ?: 29
-                            onSave(e, p, f)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save to Cloud Firestore", fontWeight = FontWeight.Bold)
-                    }
-
-                    Text("Saving is disabled until the trusted admin backend is configured. The button does not save rates.", color = Color(0xFFB45309), fontSize = 12.sp)
                 }
             }
         }
