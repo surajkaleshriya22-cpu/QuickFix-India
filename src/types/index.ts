@@ -223,7 +223,8 @@ export interface CommissionSettings {
   plumberCommissionPct: number;     // e.g. 15%
   acCommissionPct: number;          // e.g. 15%
   fridgeCommissionPct: number;      // e.g. 15%
-  minSecurityDeposit: number;       // ₹2,000 mandatory reserve
+  /** @deprecated Legacy setting retained only for reading old configuration. */
+  minSecurityDeposit?: number;
   platformConvenienceFee: number;   // e.g. ₹29
   gstPct: number;                   // 18%
   minPayoutThreshold: number;       // e.g. ₹500
