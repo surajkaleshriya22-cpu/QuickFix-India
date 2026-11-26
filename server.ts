@@ -22,6 +22,7 @@ import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } fr
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
 import { hasDistrictServiceArea, matchesPartnerServiceArea, serviceAreaKey } from './src/utils/serviceArea';
+import { getSosReporterRole, isActiveSosBookingStatus, isValidSosIncidentInput } from './src/utils/sosIncident';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -3091,10 +3092,7 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
     if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verified mobile number is required to submit a safety report.' });
     const bookingId = String(req.params.bookingId || '');
     const { requestId, incidentType, message } = req.body ?? {};
-    if (!/^[A-Za-z0-9_-]{8,100}$/.test(bookingId) ||
-        typeof requestId !== 'string' || !/^[A-Za-z0-9_-]{12,100}$/.test(requestId) ||
-        !['safety_concern', 'medical_emergency', 'harassment', 'other'].includes(incidentType) ||
-        (message !== undefined && (typeof message !== 'string' || message.trim().length > 500))) {
+    if (!isValidSosIncidentInput(bookingId, requestId, incidentType, message)) {
       return res.status(400).json({ success: false, error: 'Emergency report details are invalid.' });
     }
     const db = getFirestore(firebaseAdminApp);
@@ -3104,10 +3102,9 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       const bookingSnap = await transaction.get(bookingRef);
       if (!bookingSnap.exists) return { status: 'not_found' as const };
       const booking = bookingSnap.data()!;
-      if (!['assigned', 'technician_en_route', 'in_progress'].includes(String(booking.status || ''))) return { status: 'inactive' as const };
-      const isCustomer = booking.customerUid === identity.uid;
-      const isAssignedPartner = booking.technicianUid === identity.uid;
-      if (!isCustomer && !isAssignedPartner) return { status: 'forbidden' as const };
+      if (!isActiveSosBookingStatus(booking.status)) return { status: 'inactive' as const };
+      const reporterRole = getSosReporterRole(booking, identity.uid);
+      if (!reporterRole) return { status: 'forbidden' as const };
       const existing = await transaction.get(incidentRef);
       if (existing.exists) return { status: 'duplicate' as const, incidentId: incidentRef.id };
       transaction.create(incidentRef, {
@@ -3235,7 +3232,7 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       if (existing.exists) return { status: 'duplicate' as const, incidentId: incidentRef.id };
       transaction.create(incidentRef, {
         incidentId: incidentRef.id, bookingId, reporterUid: identity.uid,
-        reporterRole: isCustomer ? 'CUSTOMER' : 'CHANNEL_PARTNER', reporterPhoneVerified: true,
+        reporterRole, reporterPhoneVerified: true,
         incidentType, message: typeof message === 'string' ? message.trim().slice(0, 500) : '',
         status: 'received_pending_review', createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
       });
