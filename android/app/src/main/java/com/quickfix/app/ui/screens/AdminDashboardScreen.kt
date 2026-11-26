@@ -47,7 +47,7 @@ enum class AdminTab(val title: String) {
     CUSTOMERS("Customers"),
     TECHNICIANS("Technicians"),
     BOOKINGS("Bookings"),
-    COMMISSIONS("Commissions & Payouts"),
+    COMMISSIONS("Payments & Payouts"),
     REVIEWS("Reviews"),
     FIRESTORE("Firestore")
 }
@@ -77,7 +77,7 @@ fun AdminDashboardScreen(
     val totalPlumbers = technicians.filter { it.trades.contains("plumber") }.size
     val totalBookings = bookings.size
     val totalRevenueGmv = bookings.sumOf { it.totalAmount }
-    val totalCommissionCut = bookings.sumOf { it.adminCommission }
+    val totalCollectedAmount = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
 
     Scaffold(
         topBar = {
@@ -165,7 +165,7 @@ fun AdminDashboardScreen(
                     totalPlumbers = totalPlumbers,
                     totalBookings = totalBookings,
                     totalRevenueGmv = totalRevenueGmv,
-                    totalCommissionCut = totalCommissionCut,
+                    totalCollectedAmount = totalCollectedAmount,
                     firestoreStatus = firestoreStatus,
                     onNavigateToTab = { activeTab = it }
                 )
@@ -217,7 +217,7 @@ fun OverviewTab(
     totalPlumbers: Int,
     totalBookings: Int,
     totalRevenueGmv: Int,
-    totalCommissionCut: Int,
+    totalCollectedAmount: Int,
     firestoreStatus: String,
     onNavigateToTab: (AdminTab) -> Unit
 ) {
@@ -306,7 +306,7 @@ fun OverviewTab(
             modifier = Modifier.fillMaxWidth().clickable { onNavigateToTab(AdminTab.COMMISSIONS) }
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Booking totals (not collected revenue)", fontSize = 12.sp, color = TextSecondary)
+                Text(if (englishMode) "Total booking value" else "कुल बुकिंग राशि", fontSize = 12.sp, color = TextSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("₹$totalRevenueGmv", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
 
@@ -316,12 +316,12 @@ fun OverviewTab(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text("Platform Commission", fontSize = 11.sp, color = TextSecondary)
-                        Text("₹$totalCommissionCut", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                        Text(if (englishMode) "Payments collected" else "मिले हुए भुगतान", fontSize = 11.sp, color = TextSecondary)
+                        Text("₹$totalCollectedAmount", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Estimated remainder (not paid out)", fontSize = 11.sp, color = TextSecondary)
-                        Text("₹${totalRevenueGmv - totalCommissionCut}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(if (englishMode) "Awaiting payment (estimate)" else "भुगतान बाकी (अनुमान)", fontSize = 11.sp, color = TextSecondary)
+                        Text("₹${(totalRevenueGmv - totalCollectedAmount).coerceAtLeast(0)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                 }
             }
@@ -892,7 +892,7 @@ fun CommissionsTab(
                                     Text(b.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
                                     Text("Customer: ${b.customerName} • Payment status: ${b.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text("Commission: ₹${b.adminCommission}", fontSize = 11.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.SemiBold)
+                                        Text(if (isEnglish) "Service amount: ₹${b.totalAmount}" else "सेवा राशि: ₹${b.totalAmount}", fontSize = 11.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.SemiBold)
                                         Text("Tech Payout: ₹${b.technicianPayout}", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.SemiBold)
                                         Text("Total: ₹${b.totalAmount}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                                     }
@@ -937,7 +937,7 @@ fun CommissionsTab(
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("Today (03 Nov 2026)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
                                 Text("Total Inflow to Admin A/C: ₹${bookings.sumOf { it.totalAmount }} • Realized: ₹$totalReceived", fontSize = 12.sp, color = TextSecondary)
-                                Text("Admin Commission Retained: ₹$platformComm • Disbursed: ₹$techPayments", fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Medium)
+                                Text(if (isEnglish) "Partner payouts: ₹$techPayments" else "पार्टनर भुगतान: ₹$techPayments", fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Medium)
                             }
                         }
                     } else {
