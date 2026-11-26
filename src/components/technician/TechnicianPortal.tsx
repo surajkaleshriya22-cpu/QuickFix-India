@@ -1170,8 +1170,8 @@ export const TechnicianPortal: React.FC = () => {
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Wallet recharge</h3>
-                  <p className="text-[10px] text-slate-500">Recharge collection is currently disabled</p>
+                  <h3 className="font-bold text-slate-900 text-sm">Partner subscription</h3>
+                  <p className="text-[10px] text-slate-500">Subscription payment is not enabled yet</p>
                 </div>
               </div>
               <button
@@ -1182,53 +1182,10 @@ export const TechnicianPortal: React.FC = () => {
               </button>
             </div>
 
-            {/* Quick Presets */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
-                Select Amount (राशि चुनें)
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[500, 1000, 2000].map(amt => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setTopupAmount(amt)}
-                    className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold transition-all ${
-                      topupAmount === amt
-                        ? 'bg-blue-50 text-blue-700 border-blue-500 ring-1 ring-blue-400'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    +₹{amt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Amount Input */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-1 uppercase tracking-wider">
-                Or Custom Amount (₹)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 font-bold text-slate-400 text-xs">₹</span>
-                <input
-                  type="number"
-                  min="100"
-                  step="100"
-                  value={topupAmount}
-                  onChange={e => setTopupAmount(Math.max(100, Number(e.target.value)))}
-                  className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Security Reserve Explanation */}
-            <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>
-                No money is collected from this screen. Recharge will be enabled only after secure payment-provider and server-ledger integration.
-              </span>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+              <div className="text-xs font-bold text-emerald-900">Channel Partner subscription</div>
+              <p className="text-[11px] text-emerald-800">The launch policy provides 30 days free, followed by ₹500 for 30 days, unless QuickFix Admin changes the published policy.</p>
+              <p className="text-[11px] text-amber-800">Online collection is not enabled yet. This screen cannot accept money, activate duty, or add funds to your wallet. Do not transfer money manually.</p>
             </div>
 
             {topupFeedback && (
