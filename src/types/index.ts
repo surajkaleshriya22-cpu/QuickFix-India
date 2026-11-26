@@ -139,10 +139,13 @@ export interface Technician {
   qualificationInstitute?: string;
   approvalStatus?: 'approved' | 'pending_audit' | 'rejected';
   rejectionReason?: string;
-  walletBalance: number; // Current wallet balance (minimum ₹2000 required for duty)
-  securityDepositRequired: number; // Mandatory ₹2,000 security reserve
-  securityDepositPaid: boolean;
-  withdrawableBalance: number; // walletBalance - 2000 (only balance above ₹2000 can be withdrawn)
+  walletBalance: number; // Legacy profile display value; not a duty gate or payout ledger.
+  /** @deprecated Legacy compatibility only; no reserve is required. */
+  securityDepositRequired?: number;
+  /** @deprecated Legacy compatibility only; never gates duty. */
+  securityDepositPaid?: boolean;
+  /** @deprecated Legacy compatibility only; payouts use the verified server ledger. */
+  withdrawableBalance?: number;
   lifetimeCashCollected?: number;
   lifetimeCommissionPaid?: number;
   bankAccount: {
