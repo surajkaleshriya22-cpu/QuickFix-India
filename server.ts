@@ -1234,6 +1234,31 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
   }
 });
 
+app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking history is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const db = getFirestore(firebaseAdminApp);
+    const [byUid, byLegacyId] = await Promise.all([
+      db.collection('bookings').where('technicianUid', '==', uid).limit(100).get(),
+      db.collection('bookings').where('technicianId', '==', uid).limit(100).get()
+    ]);
+    const unique = new Map<string, any>();
+    [...byUid.docs, ...byLegacyId.docs].forEach(doc => unique.set(doc.id, doc));
+    const bookings = [...unique.values()].map(doc => {
+      const item = doc.data();
+      const createdAt = item.createdAt?.toDate?.()?.toISOString?.() || String(item.createdAt || '');
+      return { id: doc.id, serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
+        category: String(item.category || ''), scheduledDate: String(item.scheduledDate || ''),
+        scheduledTimeSlot: String(item.scheduledTimeSlot || ''), status: String(item.status || 'unknown'), createdAt };
+    }).sort((a,b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Partner booking history failed:', error);
+    return res.status(500).json({ success: false, error: 'Partner bookings could not be loaded securely.' });
+  }
+});
+
 app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) {
