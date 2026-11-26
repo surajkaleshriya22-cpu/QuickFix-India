@@ -171,7 +171,7 @@ fun ServiceBookingScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Back" else "वापस जाएँ", tint = Color.White)
                     }
                 },
                 actions = { QuickFixLanguageSelector() },
@@ -416,13 +416,13 @@ fun ServiceBookingScreen(
                                 .height(220.dp)
                         )
                         Text(
-                            "नक्शे पर पिन आपकी अनुमति से मिली GPS लोकेशन दिखाता है। पता और पिन जाँच लें।",
+                            if (isEnglish) "The map pin shows the GPS location shared with your permission. Please check the address and pin." else "नक्शे पर पिन आपकी अनुमति से मिली GPS लोकेशन दिखाता है। पता और पिन जाँच लें।",
                             fontSize = 10.sp,
                             color = TextSecondary
                         )
                     } else {
                         Text(
-                            "GPS चुनने के बाद यहाँ नक्शे पर आपका पिन दिखाई देगा।",
+                            if (isEnglish) "Your pin will appear on the map after you select GPS location." else "GPS चुनने के बाद यहाँ नक्शे पर आपका पिन दिखाई देगा।",
                             fontSize = 11.sp,
                             color = TextSecondary
                         )
@@ -457,7 +457,7 @@ fun ServiceBookingScreen(
                         Text(if (isEnglish) "Service date: $scheduledDate" else "काम की तारीख: $scheduledDate")
                     }
                     Text(
-                        if (isValidBookingDate) "आज या आगे की तारीख चुनें" else "कृपया सही तारीख चुनें",
+                        if (isValidBookingDate) if (isEnglish) "Choose today or a future date" else "आज या आगे की तारीख चुनें" else if (isEnglish) "Please choose a valid date" else "कृपया सही तारीख चुनें",
                         color = if (isValidBookingDate) TextSecondary else Color(0xFFDC2626),
                         fontSize = 11.sp
                     )
@@ -612,7 +612,7 @@ fun ServiceBookingScreen(
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
                     Icon(
                         Icons.Default.Security,
-                        contentDescription = "Escrow",
+                        contentDescription = if (isEnglish) "Payment protection" else "भुगतान सुरक्षा",
                         tint = BrandBlue,
                         modifier = Modifier.size(20.dp)
                     )
