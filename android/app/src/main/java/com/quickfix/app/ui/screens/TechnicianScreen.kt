@@ -82,6 +82,7 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    var sosStatus by remember { mutableStateOf("") }
     val isEnglish = LocalQuickFixLanguage.current.value == "en"
     var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
     var tradesLoadMessage by remember { mutableStateOf("आपकी सेवाएँ लोड हो रही हैं...") }
@@ -651,6 +652,18 @@ fun TechnicianScreen(
                         Text(booking.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text("${if (isEnglish) "Customer" else "ग्राहक"}: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
                         Text("${if (isEnglish) "Location" else "पता"}: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.status in listOf("assigned", "technician_en_route", "in_progress")) {
+                            Divider(color = Color(0xFFFDA4AF))
+                            Text(if (isEnglish) "SOS / Channel Partner Safety" else "SOS / चैनल पार्टनर सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239), fontSize = 12.sp)
+                            Text(if (isEnglish) "The report is saved in QuickFix only. Emergency team/contact alerts are not connected." else "रिपोर्ट केवल QuickFix में सेव होगी। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 10.sp, color = Color(0xFF881337))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                Button(onClick = { viewModel.submitBookingSafetyReport(booking.id) { _, message -> sosStatus = message } },
+                                    modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))) { Text("SOS Report") }
+                                OutlinedButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:112"))) },
+                                    modifier = Modifier.weight(1f)) { Text("Call 112") }
+                            }
+                            if (sosStatus.isNotBlank()) Text(sosStatus, fontSize = 10.sp, color = TextSecondary)
+                        }
                         Text(if (isEnglish) "Partner payout details are unavailable until server-side settlement is enabled." else "सर्वर से सुरक्षित भुगतान शुरू होने तक पार्टनर payout की जानकारी उपलब्ध नहीं है।", fontSize = 11.sp, color = TextSecondary)
 
                         // OTP Verification when assigned
