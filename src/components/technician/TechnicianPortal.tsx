@@ -331,7 +331,7 @@ export const TechnicianPortal: React.FC = () => {
   };
 
   if (['technician', 'CHANNEL_PARTNER', 'TECHNICIAN'].includes(String(currentUser?.role || '')) &&
-      currentUser?.approvalStatus === 'basic_profile_approved' && !isTechnicianLoggedIn) {
+      String(currentUser?.approvalStatus || '') === 'basic_profile_approved' && !isTechnicianLoggedIn) {
     return (
       <div className="flex-1 bg-slate-50 p-5"><div className="max-w-sm mx-auto bg-white rounded-2xl border border-blue-200 p-5 space-y-4">
         <h2 className="text-lg font-bold text-slate-900">Channel Partner KYC</h2>
