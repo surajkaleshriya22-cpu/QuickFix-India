@@ -393,7 +393,8 @@ export const TechnicianPortal: React.FC = () => {
                     ['bike_taxi','QuickFix Bike Taxi Captain'],['kaamkaaj_partner','Kaam-Kaaj Partner (घर के सभी रोजमर्रा के काम)'],
                     ['house_cleaning','House Cleaning'],['cook','Cook / खाना बनाना'],['laundry','Laundry / कपड़े धोना-प्रेस'],['maid','Maid / घरेलू सहायता'],
                     ['carpenter','Carpenter'],['painter','Painter'],['gardener','Gardener'],
-                    ['pest_control','Pest Control'],['house_shifting','House Shifting']
+                    ['pest_control','Pest Control'],['house_shifting','House Shifting'],
+                    ['car_wash','Car Washing / कार वॉश'],['transport','Transport & Delivery / सामान ढुलाई']
                   ] as const).map(([id,label]) => (
                     <button
                       key={id}
