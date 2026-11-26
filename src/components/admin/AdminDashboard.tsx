@@ -165,8 +165,8 @@ export const AdminDashboard: React.FC = () => {
   // Interactive Commission Form
   const [elecRate, setElecRate] = useState(commissionSettings.electricianCommissionPct);
   const [plumbRate, setPlumbRate] = useState(commissionSettings.plumberCommissionPct);
-  const [acRate, setAcRate] = useState(commissionSettings.acCommissionPct || 15);
-  const [fridgeRate, setFridgeRate] = useState(commissionSettings.fridgeCommissionPct || 15);
+  const [acRate, setAcRate] = useState(commissionSettings.acCommissionPct || 0);
+  const [fridgeRate, setFridgeRate] = useState(commissionSettings.fridgeCommissionPct || 0);
   const [convFee, setConvFee] = useState(commissionSettings.platformConvenienceFee);
   const [minPayout, setMinPayout] = useState(commissionSettings.minPayoutThreshold || 500);
   const [saveMessage, setSaveMessage] = useState('');
@@ -2303,13 +2303,13 @@ export const AdminDashboard: React.FC = () => {
                       <span>Admin Master Account & Payment Gateway Routing</span>
                     </h4>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      All customer payments land in the Admin Master account first. Technicians receive net earnings only upon Admin verification and release.
+                      The receiving account details can be configured here, but customer payment collection, escrow custody and partner payouts are not active until gateway credentials, verified webhooks and server-side ledger processing are deployed and tested.
                     </p>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Admin Escrow Active</span>
+                  <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-xs font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>Gateway / Escrow Not Active</span>
                   </span>
                 </div>
 
@@ -2326,7 +2326,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Master Platform UPI</div>
                     <div className="text-base font-bold text-indigo-400 font-mono">{adminPaymentConfig.merchantVpa}</div>
-                    <p className="text-[11px] text-slate-500">All customer UPI QR codes & payment links route here directly.</p>
+                    <p className="text-[11px] text-amber-300">Configured merchant VPA only; payment routing is not verified or active.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
@@ -2340,7 +2340,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Gateway & Escrow Mode</div>
                     <div className="text-sm font-bold text-emerald-400">{adminPaymentConfig.gatewayProvider}</div>
                     <div className="text-[11px] text-slate-400">Merchant ID: {adminPaymentConfig.merchantId}</div>
-                    <div className="text-[10px] text-indigo-300 font-semibold">Strict Manual Admin Approval: ON</div>
+                    <div className="text-[10px] text-amber-300 font-semibold">Payout release: Disabled pending verified integration</div>
                   </div>
                 </div>
 
