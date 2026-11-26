@@ -214,6 +214,7 @@ fun ServiceBookingScreen(
                                 isBooking = true
                                 bookingError = null
                                 scope.launch {
+                                    var waitingForPayment = false
                                     try {
                                         val bookingId = pendingBookingId ?: viewModel.createBooking(
                                             serviceId = service.id,
@@ -271,14 +272,17 @@ fun ServiceBookingScreen(
                                                     }
                                                 }
                                             }
+                                            waitingForPayment = true
                                             checkout.open(activity, options)
                                             return@launch
                                         }
                                     } catch (error: Exception) {
+                                        waitingForPayment = false
+                                        CustomerBookingPaymentResult.callback = null
                                         bookingError = error.localizedMessage
                                             ?: "Booking could not be saved. Please sign in and try again."
                                     } finally {
-                                        isBooking = false
+                                        if (!waitingForPayment) isBooking = false
                                     }
                                 }
                             }
