@@ -1663,10 +1663,10 @@ const partnerOtpStartLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, 
 
 // Assigned partner verifies the customer-shared OTP; the transition is atomic and one-time.
 app.post('/api/partners/bookings/:bookingId/start', partnerOtpStartLimiter, authenticateFirebaseUser, async (req: Request, res: Response) => {
+  const bookingId = String(req.params.bookingId || '');
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
-    const bookingId = String(req.params.bookingId || '');
     const code = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
     if (!/^[A-Za-z0-9_-]{1,150}$/.test(bookingId) || !isValidStartOtp(code)) return res.status(400).json({ success: false, error: 'Enter a valid booking ID and the 6-digit customer OTP.' });
     const db = getFirestore(firebaseAdminApp);
