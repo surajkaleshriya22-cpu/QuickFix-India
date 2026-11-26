@@ -2854,6 +2854,56 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
   }
 });
 
+// Admin-only SOS incident inbox; omit reporter phone, address and free-text report from list responses.
+app.get('/api/admin/safety-incidents', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('safety_incidents').orderBy('createdAt', 'desc').limit(100).get();
+    const incidents = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const createdAt = data.createdAt?.toDate?.();
+      return { incidentId: doc.id, bookingId: String(data.bookingId || ''), reporterRole: String(data.reporterRole || 'UNKNOWN'),
+        incidentType: String(data.incidentType || 'other'), status: String(data.status || 'received_pending_review'),
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : null };
+    });
+    return res.json({ success: true, incidents });
+  } catch (error) {
+    console.error('Admin safety incident list failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident list could not be loaded.' });
+  }
+});
+app.patch('/api/admin/safety-incidents/:incidentId', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const incidentId = String(req.params.incidentId || '');
+    const { status, note } = req.body ?? {};
+    const allowed = ['acknowledged', 'under_review', 'resolved', 'closed'];
+    if (!/^[A-Za-z0-9_-]{8,180}$/.test(incidentId) || typeof status !== 'string' || !allowed.includes(status) ||
+        (note !== undefined && (typeof note !== 'string' || note.trim().length > 500))) {
+      return res.status(400).json({ success: false, error: 'Safety incident update is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const incidentRef = db.collection('safety_incidents').doc(incidentId);
+    const auditRef = db.collection('safety_incident_audit').doc();
+    const updated = await db.runTransaction(async transaction => {
+      const incident = await transaction.get(incidentRef);
+      if (!incident.exists) return false;
+      const before = String(incident.data()?.status || 'received_pending_review');
+      transaction.update(incidentRef, { status, adminNote: typeof note === 'string' ? note.trim() : '',
+        reviewedBy: identity.uid, reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(auditRef, { incidentId, adminUid: identity.uid, action: 'status_changed', previousStatus: before,
+        newStatus: status, note: typeof note === 'string' ? note.trim() : '', createdAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+    if (!updated) return res.status(404).json({ success: false, error: 'Safety incident not found.' });
+    return res.json({ success: true, incidentId, status });
+  } catch (error) {
+    console.error('Admin safety incident update failed:', error);
+    return res.status(500).json({ success: false, error: 'Safety incident could not be updated.' });
+  }
+});
+
 // Start Express and attach Vite middleware in dev or static in prod
 async function startServer() {
   const distPath = path.resolve(__dirname, 'dist');
