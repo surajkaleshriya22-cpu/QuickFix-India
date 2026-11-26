@@ -264,13 +264,13 @@ export const TechnicianPortal: React.FC = () => {
     finally { setJobActionLoading(false); }
   };
 
-  const withdrawableAmount = currentTechnician.withdrawableBalance ?? Math.max(0, (currentTechnician.walletBalance ?? 0) - 2000);
+  const withdrawableAmount = 0; // Payouts stay disabled until a verified server-side wallet ledger is implemented.
 
   const handleWithdrawPayout = () => {
     setPayoutError('');
     setPayoutSuccess('');
     if (withdrawableAmount <= 0) {
-      setPayoutError('Withdrawal Blocked: Base ₹2,000 security reserve cannot be withdrawn. Only earnings above ₹2,000 can be withdrawn.');
+      setPayoutError('Payouts are temporarily unavailable until the verified server-side wallet ledger and payment provider are connected.');
       setTimeout(() => setPayoutError(''), 6000);
       return;
     }
@@ -601,11 +601,9 @@ export const TechnicianPortal: React.FC = () => {
                 ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
                 : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
                 ? 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 cursor-pointer'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 cursor-pointer'
                 : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
             }`}
-            title={!currentTechnician.isVerified ? 'Qualification approval required' : (currentTechnician.walletBalance ?? 0) < 2000 ? 'Minimum ₹2,000 security reserve required' : undefined}
+            title={!currentTechnician.isVerified ? 'Qualification approval required' : undefined}
           >
             <Power className="w-3.5 h-3.5" />
             <span>
@@ -613,8 +611,6 @@ export const TechnicianPortal: React.FC = () => {
                 ? 'ONLINE'
                 : !currentTechnician.isVerified || currentTechnician.approvalStatus === 'pending_audit'
                 ? 'AUDIT PENDING'
-                : (currentTechnician.walletBalance ?? 0) < 2000
-                ? 'RESERVE DEFICIT'
                 : 'OFFLINE'}
             </span>
           </button>
@@ -680,34 +676,6 @@ export const TechnicianPortal: React.FC = () => {
               <strong className="font-extrabold block">QuickFix Safety & Policy Rule</strong>
               <p>{qualificationAlertMsg}</p>
             </div>
-          </div>
-        )}
-
-        {/* Security Reserve Deficit Alert Banner */}
-        {(currentTechnician.walletBalance ?? 0) < 2000 && (
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-3.5 shadow-xs space-y-2 text-rose-950">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-rose-600" />
-                <span>Security Reserve Deficit (Balance: ₹{currentTechnician.walletBalance ?? 0})</span>
-              </span>
-              <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
-                Need ₹{2000 - (currentTechnician.walletBalance ?? 0)}
-              </span>
-            </div>
-            <p className="text-xs text-rose-900 leading-relaxed">
-              QuickFix India safety policy requires service partners to maintain a mandatory <strong className="font-bold">₹2,000 security reserve</strong>. You cannot activate duty or accept new bookings until this reserve is topped up.
-            </p>
-            <button
-              onClick={() => {
-                setTopupAmount(2000 - (currentTechnician.walletBalance ?? 0));
-                setShowTopupModal(true);
-              }}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Top-Up ₹{2000 - (currentTechnician.walletBalance ?? 0)} to Restore Duty</span>
-            </button>
           </div>
         )}
 
@@ -788,7 +756,7 @@ export const TechnicianPortal: React.FC = () => {
         <PartnerRechargeCard />
         <PartnerUpiQrCard />
 
-        {/* ================= COMPREHENSIVE WALLET & SECURITY RESERVE CARD ================= */}
+        {/* ================= PARTNER WALLET CARD ================= */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-4 shadow-md border border-slate-800 space-y-3.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -796,24 +764,12 @@ export const TechnicianPortal: React.FC = () => {
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-bold text-white block">Partner Wallet & Reserve</span>
+                <span className="text-xs font-bold text-white block">Partner Wallet</span>
                 <span className="text-[10px] text-amber-300">Ledger / payment gateway not connected</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {(currentTechnician.walletBalance ?? 0) >= 2000 ? (
-                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                  <span>Profile balance ≥ ₹2,000 (unverified ledger)</span>
-                </span>
-              ) : (
-                <span className="bg-rose-950 text-rose-400 border border-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-rose-400" />
-                  <span>Reserve not confirmed</span>
-                </span>
-              )}
-            </div>
+            <span className="text-[10px] text-amber-300">Ledger / payment gateway not connected</span>
           </div>
 
           {/* Wallet Balances Grid */}
@@ -824,18 +780,6 @@ export const TechnicianPortal: React.FC = () => {
               <div className="text-lg font-extrabold font-mono text-white mt-0.5">
                 ₹{currentTechnician.walletBalance ?? 0}
               </div>
-            </div>
-
-            {/* Non-withdrawable Security Reserve */}
-            <div>
-              <span className="text-[10px] text-amber-300 uppercase font-semibold flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5 text-amber-400" />
-                <span>Base Reserve</span>
-              </span>
-              <div className="text-lg font-extrabold font-mono text-amber-300 mt-0.5">
-                ₹2,000
-              </div>
-              <span className="text-[9px] text-slate-500 block leading-tight">Locked (Non-withdrawable)</span>
             </div>
 
             {/* Net Withdrawable Earnings */}
@@ -855,7 +799,7 @@ export const TechnicianPortal: React.FC = () => {
               <span className="font-bold text-white font-mono">₹{currentTechnician.lifetimeCashCollected ?? 0}</span>
             </div>
             <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
-              <span className="text-[10px] text-slate-400 block">Cash Commission Debited</span>
+              <span className="text-[10px] text-slate-400 block">Legacy commission records (historical)</span>
               <span className="font-bold text-rose-400 font-mono">-₹{currentTechnician.lifetimeCommissionPaid ?? 0}</span>
             </div>
           </div>
@@ -1293,7 +1237,7 @@ export const TechnicianPortal: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Top-Up Partner Wallet</h3>
-                  <p className="text-[10px] text-slate-500">Maintain ₹2,000 reserve to activate duty</p>
+                  <p className="text-[10px] text-slate-500">Wallet top-up is unavailable until secure payment integration is enabled.</p>
                 </div>
               </div>
               <button
@@ -1349,7 +1293,7 @@ export const TechnicianPortal: React.FC = () => {
             <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Reserve Guarantee:</strong> The base ₹2,000 security reserve is locked and cannot be withdrawn. It guarantees automated platform commission deductions when customers pay cash.
+                <strong>Wallet safety:</strong> No reserve is required. Wallet top-up and payout remain disabled until the verified server-side ledger and payment provider are connected.
               </span>
             </div>
 
