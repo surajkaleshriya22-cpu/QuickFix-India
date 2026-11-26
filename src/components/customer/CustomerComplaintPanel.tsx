@@ -55,7 +55,7 @@ export const CustomerComplaintPanel: React.FC = () => {
     }
     setBookingsLoading(true);
     try {
-      const isPartner = currentUser?.role === 'technician';
+      const isPartner = ['technician', 'TECHNICIAN', 'CHANNEL_PARTNER'].includes(String(currentUser?.role || ''));
       const endpoint = isPartner ? '/api/partners/bookings/mine' : '/api/customer/bookings';
       const token = await user.getIdToken();
       const response = await fetch(endpoint, { headers: { Authorization: 'Bearer ' + token } });
