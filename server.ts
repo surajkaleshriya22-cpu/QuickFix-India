@@ -2937,6 +2937,78 @@ async function runFirestoreStartupProbe() {
 }
 
 // Two-sided SOS intake: record authenticated incident reports; no emergency dispatch is implied.
+// Channel Partner emergency contact: private to the authenticated partner.
+// Saving/removing a contact never sends an alert; SOS dispatch remains a separate integration.
+const getPartnerSafetyProfile = async (uid: string) => {
+  if (!firebaseAdminApp) return null;
+  const snap = await getFirestore(firebaseAdminApp).collection('users').doc(uid).get();
+  if (!snap.exists) return null;
+  const profile = snap.data() || {};
+  const roles = [profile.role, ...(Array.isArray(profile.roles) ? profile.roles : [])]
+    .filter((value): value is string => typeof value === 'string')
+    .map(value => value.toUpperCase());
+  return roles.some(role => ['CHANNEL_PARTNER', 'TECHNICIAN'].includes(role)) ? { snap, profile } : null;
+};
+
+app.get('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const partner = await getPartnerSafetyProfile(uid);
+    if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const contact = partner.profile.emergencyContact;
+    return res.json({ success: true, contact: contact && contact.consentConfirmed === true
+      ? { name: String(contact.name || ''), phone: String(contact.phone || ''), consentConfirmed: true } : null });
+  } catch (error) {
+    console.error('Partner emergency contact read failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be loaded.' });
+  }
+});
+
+app.put('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone.replace(/[\\s()-]/g, '') : '';
+    if (name.length < 2 || name.length > 100 || !/^\\+?[1-9]\\d{9,14}$/.test(phone) || req.body?.consentConfirmed !== true) {
+      return res.status(400).json({ success: false, error: 'Enter a valid contact name and phone, and confirm consent.' });
+    }
+    const partner = await getPartnerSafetyProfile(uid);
+    if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const db = getFirestore(firebaseAdminApp);
+    await db.collection('users').doc(uid).update({
+      emergencyContact: { name, phone, consentConfirmed: true, updatedAt: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    await db.collection('partner_job_audit_logs').add({
+      action: 'partner_emergency_contact_saved', partnerUid: uid, createdAt: FieldValue.serverTimestamp()
+    });
+    return res.json({ success: true, saved: true, message: 'Emergency contact saved. No SMS or call is sent by saving it.' });
+  } catch (error) {
+    console.error('Partner emergency contact update failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be saved.' });
+  }
+});
+
+app.delete('/api/partners/safety/emergency-contact', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Partner safety service is unavailable.' });
+    const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
+    const partner = await getPartnerSafetyProfile(uid);
+    if (!partner) return res.status(403).json({ success: false, error: 'Registered Channel Partner profile required.' });
+    const db = getFirestore(firebaseAdminApp);
+    await db.collection('users').doc(uid).update({ emergencyContact: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+    await db.collection('partner_job_audit_logs').add({
+      action: 'partner_emergency_contact_removed', partnerUid: uid, createdAt: FieldValue.serverTimestamp()
+    });
+    return res.json({ success: true, removed: true });
+  } catch (error) {
+    console.error('Partner emergency contact removal failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be removed.' });
+  }
+});
+
 app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure emergency reporting is temporarily unavailable.' });
