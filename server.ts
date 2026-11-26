@@ -1153,7 +1153,6 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
       if (!canActivatePartnerDuty(profile)) {
         if (profile.isVerified !== true || profile.approvalStatus !== 'approved' || profile.kycStatus === 'rejected') throw new Error('PARTNER_APPROVAL_REQUIRED');
         if (profile.subscriptionStatus === 'expired') throw new Error('PARTNER_SUBSCRIPTION_EXPIRED');
-        if (profile.securityDepositPaid !== true || typeof profile.walletBalance !== 'number' || profile.walletBalance < 2000) throw new Error('PARTNER_RESERVE_REQUIRED');
         throw new Error('PARTNER_DUTY_NOT_ELIGIBLE');
       }
       const dispatchRadiusKm = [1, 3, 5, 10, 15].includes(profile.dispatchRadiusKm) ? profile.dispatchRadiusKm : 5;
@@ -1182,7 +1181,6 @@ app.post('/api/partners/duty-status', authenticateFirebaseUser, async (req: Requ
       PARTNER_SERVICE_PROFILE_REQUIRED: { status: 403, message: 'Approved city and service trades are required before going online.' },
       PARTNER_APPROVAL_REQUIRED: { status: 403, message: 'Admin KYC and trade approval are required before going online.' },
       PARTNER_SUBSCRIPTION_EXPIRED: { status: 403, message: 'Your partner subscription has expired. Recharge before going online.' },
-      PARTNER_RESERVE_REQUIRED: { status: 403, message: 'A verified wallet reserve of at least ₹2,000 is required before going online.' },
       PARTNER_DUTY_NOT_ELIGIBLE: { status: 403, message: 'This partner profile is not currently eligible for duty.' }
     };
     if (known[code]) return res.status(known[code].status).json({ success: false, error: known[code].message });
