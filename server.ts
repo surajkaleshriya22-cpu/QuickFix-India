@@ -185,6 +185,7 @@ const notifyEligiblePartnersOfBooking = async (
     const tokenGroups = await Promise.all(eligible.map(async partner => {
       const snapshot = await partner.ref.collection('notificationTokens').limit(10).get();
       return snapshot.docs.map(document => ({
+        uid: partner.id,
         token: String(document.data().token || ''),
         ref: document.ref
       })).filter(item => item.token.length >= 80 && item.token.length <= 4096);
@@ -215,14 +216,21 @@ const notifyEligiblePartnersOfBooking = async (
         }
       });
       sent += result.successCount;
-      const staleRefs = result.responses.flatMap((response, index) => {
+      const staleEntries = result.responses.flatMap((response, index) => {
         const code = response.error?.code || '';
         return !response.success &&
           (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token'))
-          ? [chunk[index].ref] : [];
+          ? [chunk[index]] : [];
       });
-      if (staleRefs.length) {
-        await Promise.all(staleRefs.map(ref => ref.delete().catch(() => undefined)));
+      if (staleEntries.length) {
+        await Promise.all(staleEntries.map(async entry => {
+          await entry.ref.delete().catch(() => undefined);
+          const ownerRef = db.collection('fcm_token_owners').doc(notificationTokenId(entry.token));
+          await db.runTransaction(async transaction => {
+            const owner = await transaction.get(ownerRef);
+            if (owner.exists && owner.data()?.uid === entry.uid) transaction.delete(ownerRef);
+          }).catch(() => undefined);
+        }));
       }
     }
     return {
@@ -250,11 +258,18 @@ app.post('/api/partners/notifications/token', authenticateFirebaseUser, async (r
     if (!profile.exists || !hasChannelPartnerRole(profile.data())) {
       return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
     }
-    await db.collection('users').doc(identity.uid).collection('notificationTokens').doc(notificationTokenId(token)).set({
-      token,
-      platform: 'android',
-      updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
+    const tokenId = notificationTokenId(token);
+    const tokenRef = db.collection('users').doc(identity.uid).collection('notificationTokens').doc(tokenId);
+    const ownerRef = db.collection('fcm_token_owners').doc(tokenId);
+    await db.runTransaction(async transaction => {
+      const owner = await transaction.get(ownerRef);
+      const previousUid = owner.exists ? String(owner.data()?.uid || '') : '';
+      if (previousUid && previousUid !== identity.uid) {
+        transaction.delete(db.collection('users').doc(previousUid).collection('notificationTokens').doc(tokenId));
+      }
+      transaction.set(tokenRef, { token, platform: 'android', updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      transaction.set(ownerRef, { uid: identity.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    });
     return res.json({ success: true, registered: true });
   } catch (error) {
     console.error('Partner notification token registration failed:', error);
