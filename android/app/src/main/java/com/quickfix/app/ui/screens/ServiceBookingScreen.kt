@@ -234,6 +234,8 @@ fun ServiceBookingScreen(
                                 bookingError = if (isEnglish) "Please enter a quantity greater than 0." else "कृपया मात्रा 0 से अधिक लिखें।"
                             } else if (customerQuote == null || !priceConsentAccepted) {
                                 bookingError = if (isEnglish) "Please review the price/quote and confirm before booking." else "बुकिंग से पहले रेट/कोटेशन देखकर मंजूरी दें।"
+                            } else if (customerLatitude == null || customerLongitude == null) {
+                                bookingError = if (isEnglish) "Please share your current GPS location so QuickFix can find an eligible nearby Channel Partner." else "नज़दीकी सही Channel Partner खोजने के लिए कृपया अपनी वर्तमान GPS लोकेशन साझा करें।"
                             } else if (address.isBlank()) {
                                 bookingError = if (isEnglish) "Please enter the complete address." else "कृपया पूरा पता लिखें।"
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
