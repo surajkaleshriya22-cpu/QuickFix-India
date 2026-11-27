@@ -649,11 +649,11 @@ fun CommissionsTab(
 
     // Rehydrate editable bank metadata whenever the server-backed account is loaded.
     // The full account number is intentionally never fetched back to the client.
-    LaunchedEffect(adminConfig.receivingBankName, adminConfig.accountHolderName, adminConfig.ifscCode, adminConfig.accountNumberMasked) {
+    LaunchedEffect(adminConfig.receivingBankName, adminConfig.accountHolderName, adminConfig.ifscCode, adminConfig.accountNumberMasked, adminConfig.bankAccountType) {
         if (adminConfig.receivingBankName.isNotBlank()) bankNameInput = adminConfig.receivingBankName
         if (adminConfig.accountHolderName.isNotBlank()) bankHolderInput = adminConfig.accountHolderName
         if (adminConfig.ifscCode.isNotBlank()) bankIfscInput = adminConfig.ifscCode
-        if (adminConfig.accountNumberMasked.isNotBlank()) bankAccountTypeInput = bankAccountTypeInput.ifBlank { "savings" }
+        if (adminConfig.bankAccountType.isNotBlank()) bankAccountTypeInput = adminConfig.bankAccountType
     }
 
     val totalReceived = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
@@ -772,7 +772,7 @@ fun CommissionsTab(
                     Text(if (isEnglish) "Admin Receiving Account & Gateway" else "एडमिन बैंक खाता और पेमेंट गेटवे", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                     Text(if (isEnglish) "This screen stores admin reference details only. No payment gateway is connected and no customer collection or bank transfer is processed here." else "यहाँ केवल एडमिन खाते की जानकारी सेव होती है। अभी कोई पेमेंट गेटवे जुड़ा नहीं है और ग्राहक से पैसा लेना या बैंक ट्रांसफर करना संभव नहीं है।", fontSize = 12.sp, color = TextSecondary)
 
-                    Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.accountNumberMasked.ifBlank { "Not configured" }} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
+                    Text("Saved bank account: ${adminConfig.receivingBankName.ifBlank { "Not configured" }} • ${adminConfig.bankAccountType.replaceFirstChar { it.uppercase() }} • ${adminConfig.accountNumberMasked.ifBlank { "Not configured" }} • ${adminConfig.accountHolderName.ifBlank { "Holder not loaded" }} • IFSC ${adminConfig.ifscCode.ifBlank { "—" }}", fontSize = 12.sp, color = TextPrimary)
                     OutlinedButton(onClick = onLoadAdminBank, modifier = Modifier.fillMaxWidth()) {
                         Text(if (isEnglish) "Refresh saved bank details" else "सेव बैंक जानकारी दोबारा देखें")
                     }
