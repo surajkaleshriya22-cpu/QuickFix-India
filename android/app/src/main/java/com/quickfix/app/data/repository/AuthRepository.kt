@@ -223,7 +223,7 @@ class AuthRepository(
         return User(
             uid = snapshot.id,
             quickFixId = if (role == UserRole.CHANNEL_PARTNER || role == UserRole.TECHNICIAN)
-                data["partnerQuickFixId"] as? String ?: ""
+                data["partnerQuickFixId"] as? String ?: data["quickFixId"] as? String ?: ""
             else data["customerQuickFixId"] as? String ?: data["quickFixId"] as? String ?: "",
             phoneNumber = data["phoneNumber"] as? String ?: "",
             displayName = data["displayName"] as? String ?: "",
