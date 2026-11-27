@@ -41,7 +41,6 @@ import { PartnerKycPanel } from './PartnerKycPanel';
 import { PartnerRechargeCard } from './PartnerRechargeCard';
 import { PartnerUpiQrCard } from './PartnerUpiQrCard';
 import { BookingSosButton } from '../shared/BookingSosButton';
-import { PartnerEmergencyContactPanel } from './PartnerEmergencyContactPanel';
 import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
 
 // 1-Hour SLA Countdown Component
@@ -1169,8 +1168,6 @@ export const TechnicianPortal: React.FC = () => {
           </div>
         </div>
       )}
-
-      <PartnerEmergencyContactPanel />
 
       <CustomerComplaintPanel />
 
