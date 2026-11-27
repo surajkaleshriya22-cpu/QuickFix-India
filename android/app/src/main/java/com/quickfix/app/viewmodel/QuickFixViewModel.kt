@@ -30,7 +30,8 @@ data class CustomerBookingQuote(
     val minimum: Double = 0.0,
     val maximum: Double = 0.0,
     val materialsIncluded: Boolean = false,
-    val rateSourceName: String = ""
+    val rateSourceName: String = "",
+    val appliedAdjustmentPercent: Double = 0.0
 )
 
 
@@ -535,7 +536,8 @@ class QuickFixViewModel : ViewModel() {
             minimum = quote?.optDouble("totalMinimum", 0.0) ?: 0.0,
             maximum = quote?.optDouble("totalMaximum", 0.0) ?: 0.0,
             materialsIncluded = json.optBoolean("materialsIncluded"),
-            rateSourceName = json.optString("rateSourceName", "")
+            rateSourceName = json.optString("rateSourceName", ""),
+            appliedAdjustmentPercent = quote?.optDouble("appliedAdjustmentPercent", 0.0) ?: 0.0
         )
     }
 
