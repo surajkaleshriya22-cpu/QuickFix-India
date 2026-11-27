@@ -201,8 +201,19 @@ export const TechnicianPortal: React.FC = () => {
     }
   };
 
+  // Keep new customer requests visible while the Channel Partner portal is open.
+  // Pause background polling to avoid unnecessary mobile data and battery use.
   useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadAvailableJobs();
+    };
     void loadAvailableJobs();
+    const timer = window.setInterval(refreshWhenVisible, 15_000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [currentUser?.uid, isTechnicianLoggedIn]);
 
   const handleAcceptJob = async (bookingId: string) => {
