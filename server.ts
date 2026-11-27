@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canActivatePartnerDuty, canPartnerReceiveBookingCategories, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { validatePartnerRechargePolicy } from './src/utils/partnerRechargePolicy';
+import { isConflictingPaidPayment } from './src/utils/paymentVerificationPolicy';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
@@ -1311,10 +1312,8 @@ app.post('/api/payments/razorpay/verify', authenticateFirebaseUser, async (req: 
     await db.runTransaction(async tx=>{
       const fresh=await tx.get(ref);
       if (!fresh.exists || fresh.data()?.customerUid!==uid || fresh.data()?.paymentOrderId!==orderId) throw new Error('BOOKING_CHANGED');
-      if (fresh.data()?.paymentStatus==='paid') {
-        if (fresh.data()?.paymentId !== paymentId) throw new Error('BOOKING_PAYMENT_CONFLICT');
-        return;
-      }
+      if (isConflictingPaidPayment(fresh.data()?.paymentStatus, fresh.data()?.paymentId, paymentId)) throw new Error('BOOKING_PAYMENT_CONFLICT');
+      if (fresh.data()?.paymentStatus==='paid') return;
       tx.update(ref,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
     });
     return res.json({success:true,paymentStatus:'paid'});
@@ -1362,7 +1361,7 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
           tx.update(rechargeRef,{status:'paid',paymentId,verifiedAt:FieldValue.serverTimestamp(),verifiedBy:'razorpay_webhook'});
           tx.update(partnerRef,{subscriptionStatus:'active',subscriptionExpiresAt:expiry,subscriptionUpdatedAt:FieldValue.serverTimestamp()});
           tx.create(db.collection('partner_recharge_ledger').doc(rechargeRef.id),{partnerUid:r.partnerUid,rechargeId:rechargeRef.id,orderId,paymentId,amountPaise:r.amountPaise,currency:'INR',durationDays:r.durationDays,status:'paid',source:'webhook',createdAt:FieldValue.serverTimestamp()});
-        } else if (r.paymentId && r.paymentId!==paymentId) {
+        } else if (isConflictingPaidPayment(r.status, r.paymentId, paymentId)) {
           throw new Error('RECHARGE_PAYMENT_CONFLICT');
         }
         tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp(),kind:'partner_recharge'});
@@ -1378,7 +1377,7 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
       if (!bSnap.exists) throw new Error('BOOKING_NOT_FOUND');
       const b=bSnap.data()!;
       if (b.paymentOrderId!==orderId || b.paymentOrderAmount!==amount || b.paymentOrderCurrency!=='INR') throw new Error('AMOUNT_MISMATCH');
-      if (b.paymentStatus==='paid' && b.paymentId!==paymentId) throw new Error('BOOKING_PAYMENT_CONFLICT');
+      if (isConflictingPaidPayment(b.paymentStatus, b.paymentId, paymentId)) throw new Error('BOOKING_PAYMENT_CONFLICT');
       if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
       tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp(),kind:'booking'});
     });
