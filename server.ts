@@ -3095,10 +3095,9 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     const salt = String(randomInt(100000000, 999999999));
     const otpHash = hashEmergencyContactOtp(authToken, identity.uid, phone, salt, otp);
     const sendAllowed = await db.runTransaction(async transaction => {
-      const [contactSnap, challengeSnap, contactsSnap, phoneLimitSnap, accountLimitSnap] = await Promise.all([
-        transaction.get(contactRef), transaction.get(challengeRef),
-        transaction.get(userRef.collection('emergency_contacts')), transaction.get(phoneLimitRef),
-        transaction.get(accountLimitRef)
+      const [contactSnap, contactsSnap, phoneLimitSnap, accountLimitSnap] = await Promise.all([
+        transaction.get(contactRef), transaction.get(userRef.collection('emergency_contacts')),
+        transaction.get(phoneLimitRef), transaction.get(accountLimitRef)
       ]);
       if (contactSnap.exists && contactSnap.data()?.verified === true && contactSnap.data()?.consent === true) return 'already_verified' as const;
       const phoneLimit = phoneLimitSnap.data();
