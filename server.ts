@@ -18,7 +18,7 @@ import path from 'path';
 import { randomInt, randomUUID, timingSafeEqual, createCipheriv, createDecipheriv, randomBytes, createHmac, createHash } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
-import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { canActivatePartnerDuty, canPartnerReceiveBookingCategories, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
 import { validatePartnerRechargePolicy } from './src/utils/partnerRechargePolicy';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
@@ -177,7 +177,9 @@ const notifyEligiblePartnersOfBooking = async (
         ? booking.serviceArea as Record<string, unknown> : null;
       const city = typeof profile.city === 'string' ? profile.city.trim() : '';
       return isPartnerEligibleForDispatch(profile) &&
-        canPartnerReceiveBookingCategory(trades, booking.category) &&
+        canPartnerReceiveBookingCategories(trades, Array.isArray(booking.lineItems) && booking.lineItems.length
+          ? booking.lineItems.map((line: any) => line?.category)
+          : [booking.category]) &&
         matchesPartnerServiceArea(partnerArea, bookingArea, city, booking.city) &&
         isWithinPartnerDispatchRadius(profile, booking);
     });
@@ -1596,7 +1598,9 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const bookings = snapshot.docs
       .filter((document) => {
         const booking = document.data();
-        if (!canPartnerReceiveBookingCategory(trades, booking.category)) return false;
+        if (!canPartnerReceiveBookingCategories(trades, Array.isArray(booking.lineItems) && booking.lineItems.length
+          ? booking.lineItems.map((line: any) => line?.category)
+          : [booking.category])) return false;
         if (!isWithinPartnerDispatchRadius(profile, booking)) return false;
         const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
           ? booking.serviceArea as Record<string, unknown>
