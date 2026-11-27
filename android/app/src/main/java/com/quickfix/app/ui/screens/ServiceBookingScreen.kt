@@ -453,6 +453,19 @@ fun ServiceBookingScreen(
                             fontSize = 10.sp,
                             color = TextSecondary
                         )
+                        OutlinedButton(
+                            onClick = {
+                                val mapUri = android.net.Uri.parse(
+                                    "https://www.google.com/maps/search/?api=1&query=$lat,$lon"
+                                )
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, mapUri))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Map, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (isEnglish) "Check this pin in Google Maps" else "इस लोकेशन को Google Maps में जाँचें")
+                        }
                     } else {
                         Text(
                             if (isEnglish) "Your pin will appear on the map after you select GPS location." else "GPS चुनने के बाद यहाँ नक्शे पर आपका पिन दिखाई देगा।",
