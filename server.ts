@@ -26,6 +26,7 @@ import { hasDistrictServiceArea, matchesPartnerServiceArea, serviceAreaKey } fro
 import { getSosReporterRole, isActiveSosBookingStatus, isValidSosIncidentInput } from './src/utils/sosIncident';
 import { EMERGENCY_CONTACT_LIMIT, EMERGENCY_CONTACT_OTP_MAX_ATTEMPTS, EMERGENCY_CONTACT_OTP_PER_ACCOUNT_PER_HOUR, EMERGENCY_CONTACT_OTP_PER_PHONE_PER_HOUR, EMERGENCY_CONTACT_OTP_RESEND_MS, EMERGENCY_CONTACT_OTP_TTL_MS, emergencyContactDocId, hashEmergencyContactOtp, isValidEmergencyPhone, maskEmergencyPhone, normalizeEmergencyPhone, verifyEmergencyContactOtpHash } from './src/utils/emergencyContacts';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
+import { normalizeQuickFixId } from './src/utils/quickFixId';
 
 dotenv.config();
 
@@ -339,10 +340,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
-      const storedPartnerId = typeof existingData?.partnerQuickFixId === 'string'
-        ? existingData.partnerQuickFixId.trim().toUpperCase()
-        : '';
-      let issuedQuickFixId = /^QFP-\\d{8}$/.test(storedPartnerId) ? storedPartnerId : '';
+      let issuedQuickFixId = normalizeQuickFixId(existingData?.partnerQuickFixId, 'PARTNER') || '';
       let quickFixIdRef: any = null;
       let quickFixIdIndexExists = false;
       if (issuedQuickFixId) {
