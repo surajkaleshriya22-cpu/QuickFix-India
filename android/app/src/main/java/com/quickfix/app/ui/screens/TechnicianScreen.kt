@@ -15,6 +15,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,6 +90,7 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    val targetBookingRequester = remember { BringIntoViewRequester() }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { /* The partner can still see jobs in the in-app feed if permission is denied. */ }
@@ -258,6 +261,13 @@ fun TechnicianScreen(
 
     LaunchedEffect(initialBookingId) {
         if (!initialBookingId.isNullOrBlank()) viewModel.refreshPartnerJobs()
+    }
+    LaunchedEffect(initialBookingId, partnerJobs, bookings) {
+        if (!initialBookingId.isNullOrBlank() &&
+            (partnerJobs.any { it.id == initialBookingId } || bookings.any { it.id == initialBookingId })) {
+            delay(450)
+            targetBookingRequester.bringIntoView()
+        }
     }
 
     Scaffold(
@@ -595,7 +605,11 @@ fun TechnicianScreen(
                     Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
                     partnerJobs.filter { it.status == "requested" }.sortedByDescending { it.id == initialBookingId }.forEach { job ->
                         Divider(color = Color(0xFFE2E8F0))
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Column(
+                            modifier = if (job.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier,
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            if (job.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
@@ -648,9 +662,10 @@ fun TechnicianScreen(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = (if (job.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier).fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (job.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Text(job.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
                         Text(job.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
@@ -666,9 +681,10 @@ fun TechnicianScreen(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = (if (booking.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier).fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (booking.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(booking.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
                             Surface(
