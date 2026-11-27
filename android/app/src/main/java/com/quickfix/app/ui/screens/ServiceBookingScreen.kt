@@ -603,6 +603,10 @@ fun ServiceBookingScreen(
                             val q = customerQuote!!
                             Text("${q.serviceTitle} · ${q.quantity} ${q.billingUnit}", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                             Text("₹${String.format(Locale.US, "%.2f", q.minimum)} – ₹${String.format(Locale.US, "%.2f", q.maximum)}", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            if (q.appliedAdjustmentPercent < 0) Text(
+                                if (isEnglish) "Admin-approved rate decrease: ${kotlin.math.abs(q.appliedAdjustmentPercent)}%" else "एडमिन द्वारा रेट में ${kotlin.math.abs(q.appliedAdjustmentPercent)}% कमी",
+                                color = Color(0xFF15803D), fontWeight = FontWeight.SemiBold, fontSize = 11.sp
+                            )
                             Text(if (isEnglish) { if (q.materialsIncluded) "Materials are included as stated by the approved rate card." else "Materials are not included; approve any additional material cost first." } else { if (q.materialsIncluded) "मंजूर रेट कार्ड के अनुसार सामग्री शामिल है।" else "सामग्री शामिल नहीं है; अतिरिक्त सामग्री का रेट पहले मंजूर करें।" }, color = TextSecondary, fontSize = 11.sp)
                             if (q.rateSourceName.isNotBlank()) Text("${if (isEnglish) "Rate source" else "रेट स्रोत"}: ${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
                         }
