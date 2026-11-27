@@ -1328,9 +1328,14 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
   if (!firebaseAdminApp) return res.status(503).json({success:false,error:'Payment ledger unavailable.'});
   try {
     const event=req.body?.event, p=req.body?.payload?.payment?.entity, o=req.body?.payload?.order?.entity;
-    if (!['payment.captured','order.paid'].includes(event)) return res.json({success:true,ignored:true});
-    const orderId=p?.order_id || o?.id, paymentId=p?.id || o?.payments?.[0]?.id, amount=p?.amount ?? o?.amount_paid, currency=p?.currency || o?.currency || 'INR';
-    if (typeof orderId!=='string' || typeof paymentId!=='string' || !Number.isInteger(amount) || currency!=='INR') return res.status(400).json({success:false,error:'Incomplete payment event.'});
+    // Only payment.captured carries the captured payment entity needed for exact verification.
+    // order.paid is deliberately ignored because its payload may not identify a specific payment.
+    if (event !== 'payment.captured') return res.json({success:true,ignored:true});
+    const orderId=p?.order_id, paymentId=p?.id, amount=p?.amount, currency=p?.currency;
+    if (p?.status !== 'captured' || typeof orderId!=='string' || typeof paymentId!=='string' ||
+        !Number.isSafeInteger(amount) || amount <= 0 || currency!=='INR') {
+      return res.status(400).json({success:false,error:'Incomplete or uncaptured payment event.'});
+    }
     const db=getFirestore(firebaseAdminApp), eventRef=db.collection('razorpay_webhook_events').doc(eventId);
     const rechargeMatches=await db.collection('partner_recharge_payments').where('orderId','==',orderId).limit(1).get();
     if (!rechargeMatches.empty) {
