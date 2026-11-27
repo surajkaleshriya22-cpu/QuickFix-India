@@ -229,11 +229,33 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
       if (data) {
         const roles = Array.isArray(data.roles) ? data.roles : [data.role];
         if (!roles.includes('CUSTOMER') || data.phoneNumber !== identity.phone_number) throw new Error('CUSTOMER_PROFILE_CONFLICT');
-        if (typeof data.customerQuickFixId === 'string' && data.customerQuickFixId) {
-          issuedId = data.customerQuickFixId;
-          return;
-        }
       }
+
+      const storedId = typeof data?.customerQuickFixId === 'string'
+        ? data.customerQuickFixId.trim().toUpperCase()
+        : '';
+      const hasValidStoredId = /^QFC-\\d{8}$/.test(storedId);
+      if (hasValidStoredId) {
+        const storedIndexRef = db.collection('quickfix_id_index').doc(storedId);
+        const storedIndex = await transaction.get(storedIndexRef);
+        if (storedIndex.exists && storedIndex.data()?.uid !== identity.uid) {
+          throw new Error('CUSTOMER_ID_INDEX_CONFLICT');
+        }
+        issuedId = storedId;
+        if (!storedIndex.exists) {
+          transaction.create(storedIndexRef, {
+            uid: identity.uid,
+            accountType: 'CUSTOMER',
+            createdAt: FieldValue.serverTimestamp(),
+            repairedAt: FieldValue.serverTimestamp()
+          });
+        }
+        if (data?.customerQuickFixId !== storedId || data?.quickFixId !== storedId) {
+          transaction.update(userRef, { customerQuickFixId: storedId, quickFixId: storedId, updatedAt: FieldValue.serverTimestamp() });
+        }
+        return;
+      }
+
       let candidate = '';
       let idRef: any = null;
       for (let attempt = 0; attempt < 8; attempt++) {
@@ -261,6 +283,7 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
     return res.status(200).json({ success: true, quickFixId: issuedId });
   } catch (error) {
     if (error instanceof Error && error.message === 'CUSTOMER_PROFILE_CONFLICT') return res.status(409).json({ success: false, error: 'This account is not eligible for Customer registration.' });
+    if (error instanceof Error && error.message === 'CUSTOMER_ID_INDEX_CONFLICT') return res.status(409).json({ success: false, error: 'This QuickFix ID is already linked to another account. Please contact support.' });
     console.error('Secure customer registration failed:', error);
     return res.status(500).json({ success: false, error: 'Customer ID could not be issued securely. Please retry.' });
   }
