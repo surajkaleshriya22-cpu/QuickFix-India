@@ -647,6 +647,15 @@ fun CommissionsTab(
 
     LaunchedEffect(Unit) { onLoadAdminBank() }
 
+    // Rehydrate editable bank metadata whenever the server-backed account is loaded.
+    // The full account number is intentionally never fetched back to the client.
+    LaunchedEffect(adminConfig.receivingBankName, adminConfig.accountHolderName, adminConfig.ifscCode, adminConfig.accountNumberMasked) {
+        if (adminConfig.receivingBankName.isNotBlank()) bankNameInput = adminConfig.receivingBankName
+        if (adminConfig.accountHolderName.isNotBlank()) bankHolderInput = adminConfig.accountHolderName
+        if (adminConfig.ifscCode.isNotBlank()) bankIfscInput = adminConfig.ifscCode
+        if (adminConfig.accountNumberMasked.isNotBlank()) bankAccountTypeInput = bankAccountTypeInput.ifBlank { "savings" }
+    }
+
     val totalReceived = bookings.filter { it.paymentStatus == "paid" }.sumOf { it.totalAmount }
     val pendingAmount = bookings.filter { it.paymentStatus != "paid" }.sumOf { it.totalAmount }
     val techPayments = bookings.filter { it.status == "completed" || it.id == "QF-84920" }.sumOf { it.technicianPayout }
