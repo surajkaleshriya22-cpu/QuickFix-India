@@ -97,6 +97,7 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      QUICKFIX_INTEGRATION_TEST: 'true',
       PORT: '3439',
       GCLOUD_PROJECT: projectId,
       FIREBASE_CONFIG: JSON.stringify({ projectId }),
