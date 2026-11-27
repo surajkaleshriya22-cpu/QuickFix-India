@@ -142,7 +142,10 @@ fun QuickFixNavHost(
                 return@LaunchedEffect
             }
         }
-        if (navController.currentDestination?.route != destination) {
+        val currentRoute = navController.currentDestination?.route
+        val isPartnerRole = authenticated.user.role == com.quickfix.app.data.model.UserRole.CHANNEL_PARTNER || authenticated.user.role == com.quickfix.app.data.model.UserRole.TECHNICIAN
+        val alreadyOnPartnerPortal = isPartnerRole && currentRoute?.startsWith("technician_portal") == true
+        if (currentRoute != destination && !alreadyOnPartnerPortal) {
             navController.navigate(destination) {
                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 launchSingleTop = true
