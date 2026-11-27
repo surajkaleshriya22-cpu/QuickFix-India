@@ -339,10 +339,18 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
-      let issuedQuickFixId = typeof existingData?.partnerQuickFixId === 'string' ? existingData.partnerQuickFixId : '';
-      issuedPartnerQuickFixId = issuedQuickFixId;
+      const storedPartnerId = typeof existingData?.partnerQuickFixId === 'string'
+        ? existingData.partnerQuickFixId.trim().toUpperCase()
+        : '';
+      let issuedQuickFixId = /^QFP-\\d{8}$/.test(storedPartnerId) ? storedPartnerId : '';
       let quickFixIdRef: any = null;
-      if (!issuedQuickFixId) {
+      if (issuedQuickFixId) {
+        quickFixIdRef = db.collection('quickfix_id_index').doc(issuedQuickFixId);
+        const existingIndex = await transaction.get(quickFixIdRef);
+        if (existingIndex.exists && existingIndex.data()?.uid !== identity.uid) {
+          throw new Error('PARTNER_ID_INDEX_CONFLICT');
+        }
+      } else {
         for (let attempt = 0; attempt < 8; attempt++) {
           const candidate = createQuickFixId('PARTNER');
           const candidateRef = db.collection('quickfix_id_index').doc(candidate);
@@ -369,6 +377,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         role: 'CHANNEL_PARTNER',
         roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
         partnerQuickFixId: issuedQuickFixId,
+        quickFixId: issuedQuickFixId,
         subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
         subscriptionTrialDaysGranted: trialDays,
         ...(existingData?.subscriptionTrialStartedAt ? {} : { subscriptionTrialStartedAt: FieldValue.serverTimestamp() }),
@@ -398,7 +407,12 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       };
       if (existing.exists) transaction.update(userRef, partnerFields);
       else transaction.create(userRef, partnerFields);
-      if (quickFixIdRef) transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
+      if (quickFixIdRef) {
+        const indexSnapshot = await transaction.get(quickFixIdRef);
+        if (!indexSnapshot.exists) {
+          transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
+        }
+      }
     });
 
     return res.status(201).json({
