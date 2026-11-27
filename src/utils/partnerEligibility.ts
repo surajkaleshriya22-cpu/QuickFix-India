@@ -81,3 +81,13 @@ export function canPartnerReceiveBookingCategory(trades: unknown, bookingCategor
   if (typeof bookingCategory !== 'string' || !bookingCategory.trim()) return false;
   return getPartnerServiceCategories(trades).has(bookingCategory.trim());
 }
+
+
+/** A multi-service booking is dispatchable only to a partner qualified for every line item. */
+export function canPartnerReceiveBookingCategories(trades: unknown, bookingCategories: unknown): boolean {
+  if (!Array.isArray(bookingCategories) || bookingCategories.length === 0) return false;
+  const required = [...new Set(bookingCategories)];
+  if (required.some(category => typeof category !== 'string' || !category.trim())) return false;
+  const supported = getPartnerServiceCategories(trades);
+  return required.every(category => supported.has((category as string).trim()));
+}
