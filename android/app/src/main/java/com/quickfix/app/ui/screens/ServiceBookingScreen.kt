@@ -694,7 +694,7 @@ fun ServiceBookingScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "भुगतान अभी नहीं",
+                                    "भुगतान का तरीका आपके चयन के अनुसार",
                                     color = Color.White,
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold,
@@ -703,7 +703,7 @@ fun ServiceBookingScreen(
                             }
                         }
                         Text(
-                            "पहले आपकी सेवा की बुकिंग भेजी जाएगी। अभी कोई भुगतान नहीं लिया जाएगा। भुगतान की सुविधा सत्यापित पेमेंट सेवा जुड़ने के बाद शुरू होगी।",
+                            if (isEnglish) "Cash is paid after service completion. If you choose UPI, card or Net Banking, QuickFix creates a server-side Razorpay order and marks the booking paid only after server verification." else "Cash चुनने पर सेवा पूरी होने के बाद भुगतान करें। UPI, कार्ड या नेट बैंकिंग चुनने पर QuickFix सर्वर Razorpay ऑर्डर बनाता है और सर्वर से पुष्टि होने के बाद ही बुकिंग को Paid करता है।",
                             fontSize = 11.sp,
                             color = Color(0xFF1E40AF),
                             lineHeight = 15.sp
