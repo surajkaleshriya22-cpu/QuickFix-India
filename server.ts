@@ -278,6 +278,35 @@ app.post('/api/partners/notifications/token', authenticateFirebaseUser, async (r
 });
 
 
+// Remove a device token before sign-out so a shared phone does not keep receiving
+// another account's partner job alerts.
+app.delete('/api/partners/notifications/token', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Notification registration is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (token.length < 80 || token.length > 4096) {
+      return res.status(400).json({ success: false, error: 'Device notification token is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const tokenId = notificationTokenId(token);
+    const ownerRef = db.collection('fcm_token_owners').doc(tokenId);
+    const tokenRef = db.collection('users').doc(identity.uid).collection('notificationTokens').doc(tokenId);
+    const removed = await db.runTransaction(async transaction => {
+      const owner = await transaction.get(ownerRef);
+      const ownerUid = owner.exists ? String(owner.data()?.uid || '') : '';
+      if (ownerUid && ownerUid !== identity.uid) return false;
+      transaction.delete(tokenRef);
+      if (ownerUid === identity.uid) transaction.delete(ownerRef);
+      return true;
+    });
+    return res.json({ success: true, removed });
+  } catch (error) {
+    console.error('Partner notification token removal failed:', error);
+    return res.status(500).json({ success: false, error: 'Device notifications could not be disabled.' });
+  }
+});
+
 // Customer rate quote lookup. Prices are resolved only from approved, effective
 // Firestore rate cards; the client cannot submit or override a price.
 app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: Response) => {
