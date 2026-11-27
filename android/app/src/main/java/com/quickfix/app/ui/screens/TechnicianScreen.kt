@@ -286,6 +286,7 @@ fun TechnicianScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             PartnerRechargeCard()
+            EmergencyContactsSection(isEnglish = isEnglish)
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
