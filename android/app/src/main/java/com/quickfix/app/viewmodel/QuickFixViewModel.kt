@@ -283,7 +283,8 @@ class QuickFixViewModel : ViewModel() {
                                 receivingBankName = bank,
                                 accountNumberMasked = if (last4.isNotBlank()) "••••••••$last4" else "Configured",
                                 ifscCode = ifsc,
-                                accountHolderName = holder
+                                accountHolderName = holder,
+                                bankAccountType = result.optString("accountType").ifBlank { "savings" }
                             )
                             "Saved admin bank loaded •••• $last4"
                         }
@@ -334,7 +335,8 @@ class QuickFixViewModel : ViewModel() {
                     receivingBankName = bankName.trim(),
                     accountNumberMasked = if (savedLast4.isNotBlank()) "••••••••$savedLast4" else "Configured",
                     ifscCode = cleanIfsc,
-                    accountHolderName = accountHolderName.trim()
+                    accountHolderName = accountHolderName.trim(),
+                    bankAccountType = accountType
                 )
                 _firestoreSyncStatus.value = result
             }
