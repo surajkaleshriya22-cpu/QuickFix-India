@@ -42,6 +42,7 @@ import { PartnerRechargeCard } from './PartnerRechargeCard';
 import { PartnerUpiQrCard } from './PartnerUpiQrCard';
 import { BookingSosButton } from '../shared/BookingSosButton';
 import { CustomerComplaintPanel } from '../customer/CustomerComplaintPanel';
+import { PartnerIdentityCard } from './PartnerIdentityCard';
 
 // 1-Hour SLA Countdown Component
 const SlaCountdownBadge: React.FC<{ deadline?: string; acceptedAt?: string; createdAt?: string }> = ({
@@ -618,6 +619,13 @@ export const TechnicianPortal: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Downloadable partner identity card */}
+      {currentUser && isTechnicianLoggedIn && (
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
+          <PartnerIdentityCard user={currentUser} technician={currentTechnician} language={language} />
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
