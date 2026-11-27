@@ -920,7 +920,8 @@ app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: 
     if (!cfg) return res.status(503).json({ success: false, error: 'Razorpay is not configured.' });
     const uid = (req as AuthenticatedRequest).firebaseUser!.uid;
     const { rechargeId, orderId, paymentId, signature } = req.body ?? {};
-    if (![rechargeId, orderId, paymentId, signature].every(v => typeof v === 'string' && v.length > 0 && v.length <= 200)) return res.status(400).json({ success: false, error: 'Invalid payment verification details.' });
+    if (![rechargeId, orderId, paymentId, signature].every(v => typeof v === 'string' && v.length > 0 && v.length <= 200) ||
+        !/^[A-Za-z0-9_-]{1,150}$/.test(rechargeId)) return res.status(400).json({ success: false, error: 'Invalid payment verification details.' });
     if (!validHmac(cfg.keySecret, orderId + '|' + paymentId, signature)) return res.status(400).json({ success: false, error: 'Invalid payment signature.' });
     const db = getFirestore(firebaseAdminApp), rechargeRef = db.collection('partner_recharge_payments').doc(rechargeId);
     const snap = await rechargeRef.get(), record = snap.data();
@@ -931,7 +932,10 @@ app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: 
     await db.runTransaction(async tx => {
       const [fresh, profile] = await Promise.all([tx.get(rechargeRef), tx.get(db.collection('users').doc(uid))]);
       if (!fresh.exists || fresh.data()?.partnerUid !== uid || fresh.data()?.orderId !== orderId) throw new Error('RECHARGE_CHANGED');
-      if (fresh.data()?.status === 'paid') return;
+      if (fresh.data()?.status === 'paid') {
+        if (fresh.data()?.paymentId !== paymentId) throw new Error('RECHARGE_PAYMENT_CONFLICT');
+        return;
+      }
       if (!profile.exists) throw new Error('PARTNER_MISSING');
       const now = Date.now(), currentExpiry = profile.data()?.subscriptionExpiresAt?.toMillis?.() || 0;
       const start = Math.max(now, currentExpiry);
@@ -942,6 +946,9 @@ app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: 
     });
     return res.json({ success: true, paymentStatus: 'paid' });
   } catch (error) {
+    if (error instanceof Error && error.message === 'RECHARGE_PAYMENT_CONFLICT') {
+      return res.status(409).json({ success: false, error: 'This recharge is already linked to a different verified payment.' });
+    }
     console.error('Partner recharge verification failed:', error);
     return res.status(500).json({ success: false, error: 'Recharge could not be activated safely.' });
   }
