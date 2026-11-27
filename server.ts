@@ -737,7 +737,7 @@ app.get('/api/bookings/quote', authenticateFirebaseUser, async (req: Request, re
     const tehsil = read('tehsil'), city = read('city'), date = read('date');
     const quantity = Number(read('quantity'));
     if (!serviceId || serviceId.length > 120 || !state || state.length > 100 || !district || district.length > 100 ||
-        !tehsil || tehsil.length > 100 || city.length > 100 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        !tehsil || tehsil.length > 100 || city.length > 100 || 
         !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000 || !isValidBookingDate(date)) {
       return res.status(400).json({ success: false, error: 'Quote details are invalid.' });
     }
