@@ -1,6 +1,9 @@
 package com.quickfix.app.ui.screens
 
 import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -8,6 +11,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
+import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -82,6 +87,23 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* The partner can still see jobs in the in-app feed if permission is denied. */ }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        val signedInUser = FirebaseAuth.getInstance().currentUser
+        if (signedInUser != null) {
+            runCatching { FirebaseMessaging.getInstance().token.await() }
+                .onSuccess { token -> QuickFixNotificationTokenRegistrar.register(token) }
+                .onFailure { error -> android.util.Log.w("QuickFixFCM", "Could not retrieve Android notification token", error) }
+        }
+    }
     var sosStatus by remember { mutableStateOf("") }
     val isEnglish = LocalQuickFixLanguage.current.value == "en"
     var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
