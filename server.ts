@@ -1670,7 +1670,6 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
             minimum: Number(booking.quoteRange.minimum || 0),
             maximum: Number(booking.quoteRange.maximum || 0)
           } : null,
-          paymentStatus: String(booking.paymentStatus || 'pending'),
           escrowStatus: String(booking.escrowStatus || 'not_funded')
         };
       });
