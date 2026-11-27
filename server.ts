@@ -6,7 +6,7 @@ import { cert, getApps, initializeApp, applicationDefault, type App } from 'fire
 import { getAuth } from 'firebase-admin/auth';
 import { extractBearerToken } from './src/lib/serverAuth.ts';
 import { areBothLocationConsentsEnabled, getBookingLocationParticipantRole, isLiveLocationBookingStatus } from './src/utils/liveLocation';
-import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot, type DocumentReference } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
@@ -341,7 +341,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
       let issuedQuickFixId = normalizeQuickFixId(existingData?.partnerQuickFixId, 'PARTNER') || '';
-      let quickFixIdRef: any = null;
+      let quickFixIdRef: DocumentReference | null = null;
       let quickFixIdIndexExists = false;
       if (issuedQuickFixId) {
         quickFixIdRef = db.collection('quickfix_id_index').doc(issuedQuickFixId);
