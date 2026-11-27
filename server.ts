@@ -163,7 +163,7 @@ const notifyEligiblePartnersOfBooking = async (
       db.collection('users').where('role', 'in', ['CHANNEL_PARTNER', 'TECHNICIAN']).limit(500).get(),
       db.collection('users').where('roles', 'array-contains', 'CHANNEL_PARTNER').limit(500).get()
     ]);
-    const profiles = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    const profiles = new Map<string, QueryDocumentSnapshot>();
     [...primaryRoleProfiles.docs, ...multiRoleProfiles.docs].forEach(document => profiles.set(document.id, document));
     const eligible = [...profiles.values()].filter(document => {
       const profile = document.data();
@@ -242,7 +242,7 @@ app.post('/api/partners/notifications/token', authenticateFirebaseUser, async (r
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Notification registration is unavailable.' });
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
-    if (token.length < 80 || token.length > 4096 || /[\\u0000-\\u001f\\u007f]/.test(token)) {
+    if (token.length < 80 || token.length > 4096 || /[\x00-\x1F\x7F]/.test(token)) {
       return res.status(400).json({ success: false, error: 'Device notification token is invalid.' });
     }
     const db = getFirestore(firebaseAdminApp);
