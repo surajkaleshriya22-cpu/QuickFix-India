@@ -123,7 +123,7 @@ fun QuickFixNavHost(
 
     // Session restoration is asynchronous. Redirect after Firebase profile loading finishes;
     // otherwise the initial customer browsing route can remain visible for a signed-in partner.
-    LaunchedEffect(authState) {
+    LaunchedEffect(authState, notificationBookingId) {
         val authenticated = authState as? AuthState.Authenticated ?: return@LaunchedEffect
         val destination = when (authenticated.user.role) {
             com.quickfix.app.data.model.UserRole.CUSTOMER -> "customer_home"
