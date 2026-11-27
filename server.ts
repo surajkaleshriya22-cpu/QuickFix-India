@@ -1883,6 +1883,46 @@ app.post('/api/partners/location', authenticateFirebaseUser, async (req: Request
 });
 
 // Return only the authenticated customer's own bookings; private OTPs are fetched separately.
+// Canonical admin booking feed: the same Firestore booking document used by Customer and Channel Partner.
+app.get('/api/admin/bookings', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('bookings')
+      .orderBy('createdAt', 'desc').limit(100).get();
+    const iso = (value: any) => value && typeof value.toDate === 'function'
+      ? value.toDate().toISOString()
+      : typeof value === 'string' ? value : '';
+    const bookings = snapshot.docs.map(document => {
+      const b = document.data();
+      const serviceArea = b.serviceArea && typeof b.serviceArea === 'object' ? b.serviceArea : {};
+      const quoteRange = b.quoteRange && typeof b.quoteRange === 'object' ? b.quoteRange : null;
+      return {
+        id: document.id, serviceId: String(b.serviceId || ''),
+        serviceTitle: String(b.serviceTitle || b.serviceName || 'QuickFix Service'),
+        category: String(b.category || ''), customerUid: String(b.customerUid || ''),
+        customerName: String(b.customerName || ''), customerPhone: String(b.customerPhone || ''),
+        customerAddress: String(b.customerAddress || b.address || ''), city: String(b.city || ''),
+        pincode: String(b.pincode || ''), state: String(serviceArea.state || ''),
+        district: String(serviceArea.district || ''), tehsil: String(serviceArea.tehsil || ''),
+        scheduledDate: String(b.scheduledDate || ''), scheduledTimeSlot: String(b.scheduledTimeSlot || ''),
+        notes: String(b.notes || ''), status: String(b.status || 'requested'),
+        technicianId: String(b.technicianUid || b.technicianId || ''),
+        technicianName: String(b.technicianName || ''), technicianPhone: String(b.technicianPhone || ''),
+        lineItems: Array.isArray(b.lineItems) ? b.lineItems : [],
+        quoteRange: quoteRange ? { minimum: Number(quoteRange.minimum || 0), maximum: Number(quoteRange.maximum || 0) } : null,
+        pricingStatus: String(b.pricingStatus || ''), price: Number(b.price || 0),
+        totalAmount: Number(b.totalAmount || 0), paymentMethod: String(b.paymentMethod || ''),
+        paymentStatus: String(b.paymentStatus || 'pending'), createdAt: iso(b.createdAt),
+        updatedAt: iso(b.updatedAt), acceptedAt: iso(b.acceptedAt), serviceDeadline: iso(b.serviceDeadline)
+      };
+    });
+    return res.json({ success: true, bookings });
+  } catch (error) {
+    console.error('Admin canonical booking feed failed:', error);
+    return res.status(500).json({ success: false, error: 'Admin bookings could not be loaded securely.' });
+  }
+});
+
 app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure booking service is temporarily unavailable.' });
@@ -1900,6 +1940,21 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         id: doc.id,
         serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
         category: String(booking.category || ''),
+        customerUid: String(booking.customerUid || ''),
+        customerName: String(booking.customerName || ''),
+        customerPhone: String(booking.customerPhone || ''),
+        city: String(booking.city || ''),
+        pincode: String(booking.pincode || ''),
+        serviceArea: booking.serviceArea && typeof booking.serviceArea === 'object' ? booking.serviceArea : {},
+        lineItems: Array.isArray(booking.lineItems) ? booking.lineItems : [],
+        quoteRange: booking.quoteRange && typeof booking.quoteRange === 'object' ? booking.quoteRange : null,
+        pricingStatus: String(booking.pricingStatus || ''),
+        price: Number(booking.price || 0),
+        totalAmount: Number(booking.totalAmount || 0),
+        paymentMethod: String(booking.paymentMethod || ''),
+        paymentStatus: String(booking.paymentStatus || 'pending'),
+        technicianId: String(booking.technicianUid || booking.technicianId || ''),
+        updatedAt: booking.updatedAt && typeof booking.updatedAt.toDate === 'function' ? booking.updatedAt.toDate().toISOString() : String(booking.updatedAt || ''),
         customerAddress: String(booking.customerAddress || booking.address || ''),
         scheduledDate: String(booking.scheduledDate || ''),
         scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
