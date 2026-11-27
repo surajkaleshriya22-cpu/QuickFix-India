@@ -107,6 +107,7 @@ const apiRateLimit = rateLimit({
   limit: 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  skip: () => process.env.QUICKFIX_INTEGRATION_TEST === 'true',
   message: { success: false, error: 'Too many requests. Please try again in one minute.' },
 });
 
