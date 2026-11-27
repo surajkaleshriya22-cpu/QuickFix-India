@@ -289,6 +289,65 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
 
+  // Admin reads the canonical server-side booking collection; never rely on local/demo booking state.
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') return;
+    let cancelled = false;
+    const loadAdminBookings = async () => {
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || firebaseUser.uid !== currentUser.uid) return;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/admin/bookings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success || !Array.isArray(result.bookings)) {
+          throw new Error(result.error || 'Admin booking feed could not be loaded.');
+        }
+        if (cancelled) return;
+        const mapped = result.bookings.map((item: any) => ({
+          id: String(item.id || ''),
+          serviceId: String(item.serviceId || ''),
+          serviceTitle: String(item.serviceTitle || 'QuickFix Service'),
+          category: item.category || 'other',
+          customerName: String(item.customerName || ''),
+          customerPhone: String(item.customerPhone || ''),
+          customerAddress: String(item.customerAddress || ''),
+          city: String(item.city || ''),
+          pincode: String(item.pincode || ''),
+          scheduledDate: String(item.scheduledDate || ''),
+          scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
+          notes: String(item.notes || ''),
+          lineItems: Array.isArray(item.lineItems) ? item.lineItems : [],
+          quoteRange: item.quoteRange || undefined,
+          status: item.status || 'requested',
+          technicianId: item.technicianId || undefined,
+          technicianName: item.technicianName || undefined,
+          technicianPhone: item.technicianPhone || undefined,
+          startOtp: '',
+          price: Number(item.price || 0),
+          visitingCharges: 0,
+          discount: 0,
+          taxes: 0,
+          totalAmount: Number(item.totalAmount || 0),
+          commissionRate: 0,
+          adminCommission: 0,
+          technicianPayout: 0,
+          paymentMethod: item.paymentMethod || 'cash',
+          paymentStatus: item.paymentStatus || 'pending',
+          createdAt: String(item.createdAt || '')
+        })) as Booking[];
+        setBookings(mapped);
+      } catch (error) {
+        console.error('Canonical admin booking sync failed:', error);
+      }
+    };
+    void loadAdminBookings();
+    return () => { cancelled = true; };
+  }, [currentUser]);
+
+
   // Sync customer details when currentUser changes
   useEffect(() => {
     if (currentUser && currentUser.role === 'customer') {
