@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { cert, getApps, initializeApp, applicationDefault, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getMessaging } from 'firebase-admin/messaging';
 import { extractBearerToken } from './src/lib/serverAuth.ts';
 import { areBothLocationConsentsEnabled, getBookingLocationParticipantRole, isLiveLocationBookingStatus } from './src/utils/liveLocation';
 import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot, type DocumentReference } from 'firebase-admin/firestore';
@@ -14,7 +15,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
-import { randomInt, randomUUID, timingSafeEqual, createCipheriv, createDecipheriv, randomBytes, createHmac } from 'node:crypto';
+import { randomInt, randomUUID, timingSafeEqual, createCipheriv, createDecipheriv, randomBytes, createHmac, createHash } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
@@ -106,6 +107,7 @@ const apiRateLimit = rateLimit({
   limit: 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  skip: () => process.env.QUICKFIX_INTEGRATION_TEST === 'true',
   message: { success: false, error: 'Too many requests. Please try again in one minute.' },
 });
 
@@ -144,6 +146,167 @@ const createQuickFixId = (kind: 'CUSTOMER' | 'PARTNER') => 'QF' + (kind === 'CUS
 // Apply the API rate limit before registering any API route, including booking creation.
 app.use('/api', apiRateLimit);
 
+const notificationTokenId = (token: string) => createHash('sha256').update(token).digest('hex');
+
+type PartnerBookingPushResult = {
+  status: 'sent' | 'no_eligible_partners' | 'no_registered_devices' | 'failed';
+  eligiblePartners: number;
+  devices: number;
+};
+
+const notifyEligiblePartnersOfBooking = async (
+  db: Firestore,
+  booking: Record<string, any>
+): Promise<PartnerBookingPushResult> => {
+  try {
+    if (!firebaseAdminApp) return { status: 'failed', eligiblePartners: 0, devices: 0 };
+    const [primaryRoleProfiles, multiRoleProfiles] = await Promise.all([
+      db.collection('users').where('role', 'in', ['CHANNEL_PARTNER', 'TECHNICIAN']).limit(500).get(),
+      db.collection('users').where('roles', 'array-contains', 'CHANNEL_PARTNER').limit(500).get()
+    ]);
+    const profiles = new Map<string, QueryDocumentSnapshot>();
+    [...primaryRoleProfiles.docs, ...multiRoleProfiles.docs].forEach(document => profiles.set(document.id, document));
+    const eligible = [...profiles.values()].filter(document => {
+      const profile = document.data();
+      const trades = Array.isArray(profile.trades)
+        ? profile.trades.filter((trade: unknown): trade is string => typeof trade === 'string')
+        : [];
+      const partnerArea = profile.serviceArea && typeof profile.serviceArea === 'object'
+        ? profile.serviceArea as Record<string, unknown> : null;
+      const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
+        ? booking.serviceArea as Record<string, unknown> : null;
+      const city = typeof profile.city === 'string' ? profile.city.trim() : '';
+      return isPartnerEligibleForDispatch(profile) &&
+        canPartnerReceiveBookingCategory(trades, booking.category) &&
+        matchesPartnerServiceArea(partnerArea, bookingArea, city, booking.city) &&
+        isWithinPartnerDispatchRadius(profile, booking);
+    });
+    if (eligible.length === 0) return { status: 'no_eligible_partners', eligiblePartners: 0, devices: 0 };
+
+    const tokenGroups = await Promise.all(eligible.map(async partner => {
+      const snapshot = await partner.ref.collection('notificationTokens').limit(10).get();
+      return snapshot.docs.map(document => ({
+        uid: partner.id,
+        token: String(document.data().token || ''),
+        ref: document.ref
+      })).filter(item => item.token.length >= 80 && item.token.length <= 4096);
+    }));
+    const tokenEntries = tokenGroups.flat();
+    if (tokenEntries.length === 0) {
+      return { status: 'no_registered_devices', eligiblePartners: eligible.length, devices: 0 };
+    }
+
+    let sent = 0;
+    for (let offset = 0; offset < tokenEntries.length; offset += 500) {
+      const chunk = tokenEntries.slice(offset, offset + 500);
+      const result = await getMessaging(firebaseAdminApp).sendEachForMulticast({
+        tokens: chunk.map(item => item.token),
+        notification: {
+          title: 'New QuickFix service request',
+          body: String(booking.serviceTitle || 'A nearby service request') + ' · ' +
+            String(booking.serviceArea?.district || booking.city || 'Your service area')
+        },
+        data: {
+          type: 'NEW_BOOKING',
+          bookingId: String(booking.id || ''),
+          category: String(booking.category || '')
+        },
+        android: {
+          priority: 'high',
+          notification: { channelId: 'quickfix_job_alerts' }
+        }
+      });
+      sent += result.successCount;
+      const staleEntries = result.responses.flatMap((response, index) => {
+        const code = response.error?.code || '';
+        return !response.success &&
+          (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token'))
+          ? [chunk[index]] : [];
+      });
+      if (staleEntries.length) {
+        await Promise.all(staleEntries.map(async entry => {
+          await entry.ref.delete().catch(() => undefined);
+          const ownerRef = db.collection('fcm_token_owners').doc(notificationTokenId(entry.token));
+          await db.runTransaction(async transaction => {
+            const owner = await transaction.get(ownerRef);
+            if (owner.exists && owner.data()?.uid === entry.uid) transaction.delete(ownerRef);
+          }).catch(() => undefined);
+        }));
+      }
+    }
+    return {
+      status: sent > 0 ? 'sent' : 'failed',
+      eligiblePartners: eligible.length,
+      devices: tokenEntries.length
+    };
+  } catch (error) {
+    console.error('QuickFix partner booking push notification failed:', error instanceof Error ? error.name : 'unknown error');
+    return { status: 'failed', eligiblePartners: 0, devices: 0 };
+  }
+};
+
+// Register an Android FCM token only for a signed-in Channel Partner.
+app.post('/api/partners/notifications/token', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Notification registration is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (token.length < 80 || token.length > 4096 || /[\x00-\x1F\x7F]/.test(token)) {
+      return res.status(400).json({ success: false, error: 'Device notification token is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const profile = await db.collection('users').doc(identity.uid).get();
+    if (!profile.exists || !hasChannelPartnerRole(profile.data())) {
+      return res.status(403).json({ success: false, error: 'A registered Channel Partner account is required.' });
+    }
+    const tokenId = notificationTokenId(token);
+    const tokenRef = db.collection('users').doc(identity.uid).collection('notificationTokens').doc(tokenId);
+    const ownerRef = db.collection('fcm_token_owners').doc(tokenId);
+    await db.runTransaction(async transaction => {
+      const owner = await transaction.get(ownerRef);
+      const previousUid = owner.exists ? String(owner.data()?.uid || '') : '';
+      if (previousUid && previousUid !== identity.uid) {
+        transaction.delete(db.collection('users').doc(previousUid).collection('notificationTokens').doc(tokenId));
+      }
+      transaction.set(tokenRef, { token, platform: 'android', updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      transaction.set(ownerRef, { uid: identity.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    });
+    return res.json({ success: true, registered: true });
+  } catch (error) {
+    console.error('Partner notification token registration failed:', error);
+    return res.status(500).json({ success: false, error: 'Device notifications could not be enabled.' });
+  }
+});
+
+
+// Remove a device token before sign-out so a shared phone does not keep receiving
+// another account's partner job alerts.
+app.delete('/api/partners/notifications/token', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Notification registration is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (token.length < 80 || token.length > 4096) {
+      return res.status(400).json({ success: false, error: 'Device notification token is invalid.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const tokenId = notificationTokenId(token);
+    const ownerRef = db.collection('fcm_token_owners').doc(tokenId);
+    const tokenRef = db.collection('users').doc(identity.uid).collection('notificationTokens').doc(tokenId);
+    const removed = await db.runTransaction(async transaction => {
+      const owner = await transaction.get(ownerRef);
+      const ownerUid = owner.exists ? String(owner.data()?.uid || '') : '';
+      if (ownerUid && ownerUid !== identity.uid) return false;
+      transaction.delete(tokenRef);
+      if (ownerUid === identity.uid) transaction.delete(ownerRef);
+      return true;
+    });
+    return res.json({ success: true, removed });
+  } catch (error) {
+    console.error('Partner notification token removal failed:', error);
+    return res.status(500).json({ success: false, error: 'Device notifications could not be disabled.' });
+  }
+});
 
 // Customer rate quote lookup. Prices are resolved only from approved, effective
 // Firestore rate cards; the client cannot submit or override a price.
@@ -990,7 +1153,26 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       escrowStatus: 'not_funded',
       createdAt: FieldValue.serverTimestamp()
     });
-    return res.status(201).json({ success: true, bookingId: bookingRef.id, pricingStatus: allLinesPriced ? 'priced' : 'inspection_quote_required', quoteRange: { minimum: totalMinimum, maximum: totalMaximum }, lineItems });
+    const partnerNotification = await notifyEligiblePartnersOfBooking(db, {
+      id: bookingRef.id,
+      serviceTitle: primary.service.title,
+      category: primary.service.category,
+      city: String(profile.city || '').slice(0, 100),
+      serviceArea: { state: serviceArea.state.trim(), district: serviceArea.district.trim(), tehsil: serviceArea.tehsil.trim() },
+      customerLocation
+    });
+    return res.status(201).json({
+      success: true,
+      bookingId: bookingRef.id,
+      pricingStatus: allLinesPriced ? 'priced' : 'inspection_quote_required',
+      quoteRange: { minimum: totalMinimum, maximum: totalMaximum },
+      lineItems,
+      partnerNotification: {
+        status: partnerNotification.status,
+        eligiblePartners: partnerNotification.eligiblePartners,
+        devices: partnerNotification.devices
+      }
+    });
   } catch (error) {
     if (error instanceof Error && error.message === 'INVALID_BOOKING_SERVICE') return res.status(400).json({ success: false, error: 'One or more selected services are unavailable.' });
     console.error('Secure booking creation failed:', error);

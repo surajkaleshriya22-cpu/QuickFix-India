@@ -1,6 +1,9 @@
 package com.quickfix.app
 
 import android.os.Bundle
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -59,6 +62,16 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "quickfix_job_alerts",
+                "QuickFix service requests",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts for new nearby customer service requests"
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
         setContent {
             val languageState = remember {
                 mutableStateOf(getSharedPreferences("quickfix_preferences", MODE_PRIVATE).getString("app_language", "hi") ?: "hi")

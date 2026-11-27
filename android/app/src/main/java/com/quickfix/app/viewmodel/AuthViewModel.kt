@@ -9,6 +9,7 @@ import com.quickfix.app.data.model.AuthState
 import com.quickfix.app.data.model.User
 import com.quickfix.app.data.model.UserRole
 import com.quickfix.app.data.repository.AuthRepository
+import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -248,7 +249,9 @@ class AuthViewModel(
     }
 
     fun logout() {
-        repository.signOut()
-        _authState.value = AuthState.Idle
+        QuickFixNotificationTokenRegistrar.unregisterAndThen {
+            repository.signOut()
+            _authState.value = AuthState.Idle
+        }
     }
 }
