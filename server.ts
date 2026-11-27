@@ -344,12 +344,14 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         : '';
       let issuedQuickFixId = /^QFP-\\d{8}$/.test(storedPartnerId) ? storedPartnerId : '';
       let quickFixIdRef: any = null;
+      let quickFixIdIndexExists = false;
       if (issuedQuickFixId) {
         quickFixIdRef = db.collection('quickfix_id_index').doc(issuedQuickFixId);
         const existingIndex = await transaction.get(quickFixIdRef);
         if (existingIndex.exists && existingIndex.data()?.uid !== identity.uid) {
           throw new Error('PARTNER_ID_INDEX_CONFLICT');
         }
+        quickFixIdIndexExists = existingIndex.exists;
       } else {
         for (let attempt = 0; attempt < 8; attempt++) {
           const candidate = createQuickFixId('PARTNER');
@@ -407,11 +409,8 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       };
       if (existing.exists) transaction.update(userRef, partnerFields);
       else transaction.create(userRef, partnerFields);
-      if (quickFixIdRef) {
-        const indexSnapshot = await transaction.get(quickFixIdRef);
-        if (!indexSnapshot.exists) {
-          transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
-        }
+      if (quickFixIdRef && !quickFixIdIndexExists) {
+        transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
       }
     });
 
