@@ -14,7 +14,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,11 +77,12 @@ private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TechnicianScreen(
     navController: NavController,
-    viewModel: QuickFixViewModel
+    viewModel: QuickFixViewModel,
+    initialBookingId: String? = null
 ) {
     val bookings by viewModel.bookings.collectAsState()
     val partnerJobs by viewModel.partnerJobs.collectAsState()
@@ -87,6 +91,7 @@ fun TechnicianScreen(
     val firestoreStatus by viewModel.firestoreSyncStatus.collectAsState()
     val savedDispatchRadius by viewModel.partnerDispatchRadiusKm.collectAsState()
     val context = LocalContext.current
+    val targetBookingRequester = remember { BringIntoViewRequester() }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { /* The partner can still see jobs in the in-app feed if permission is denied. */ }
@@ -253,7 +258,18 @@ fun TechnicianScreen(
         }
     }
 
-    val myBookings = bookings
+    val myBookings = bookings.sortedByDescending { it.id == initialBookingId }
+
+    LaunchedEffect(initialBookingId) {
+        if (!initialBookingId.isNullOrBlank()) viewModel.refreshPartnerJobs()
+    }
+    LaunchedEffect(initialBookingId, partnerJobs, bookings) {
+        if (!initialBookingId.isNullOrBlank() &&
+            (partnerJobs.any { it.id == initialBookingId } || bookings.any { it.id == initialBookingId })) {
+            delay(450)
+            targetBookingRequester.bringIntoView()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -308,6 +324,22 @@ fun TechnicianScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             PartnerRechargeCard()
+            if (!initialBookingId.isNullOrBlank()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF60A5FA)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(if (isEnglish) "Opened from booking notification" else "बुकिंग नोटिफिकेशन से खोला गया", fontWeight = FontWeight.Bold, color = BrandBlue)
+                        Text(if (isEnglish) "Target booking: $initialBookingId" else "लक्षित बुकिंग: $initialBookingId", fontSize = 12.sp, color = TextPrimary)
+                        Text(if (isEnglish) "The matching booking is moved to the top of its list. If it is no longer available, refresh the job feed." else "संबंधित बुकिंग अपनी सूची में सबसे ऊपर दिखाई जाएगी। यदि उपलब्ध न हो, तो जॉब सूची रिफ्रेश करें।", fontSize = 11.sp, color = TextSecondary)
+                        OutlinedButton(onClick = { viewModel.refreshPartnerJobs() }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (isEnglish) "Refresh target booking" else "लक्षित बुकिंग रिफ्रेश करें")
+                        }
+                    }
+                }
+            }
             EmergencyContactsSection(isEnglish = isEnglish)
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -572,9 +604,13 @@ fun TechnicianScreen(
                         TextButton(onClick = { viewModel.refreshPartnerJobs() }) { Text(if (isEnglish) "Refresh" else "रिफ्रेश करें") }
                     }
                     Text(partnerJobsStatus, fontSize = 11.sp, color = TextSecondary)
-                    partnerJobs.filter { it.status == "requested" }.forEach { job ->
+                    partnerJobs.filter { it.status == "requested" }.sortedByDescending { it.id == initialBookingId }.forEach { job ->
                         Divider(color = Color(0xFFE2E8F0))
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Column(
+                            modifier = if (job.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier,
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            if (job.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
@@ -617,7 +653,7 @@ fun TechnicianScreen(
             }
 
             // The server feed returns assignedBookings separately from new requests.
-            val serverAssignedJobs = partnerJobs.filter { it.status != "requested" }
+            val serverAssignedJobs = partnerJobs.filter { it.status != "requested" }.sortedByDescending { it.id == initialBookingId }
             Text(if (isEnglish) "Assigned Customer Bookings" else "आपको मिले ग्राहक के काम", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
             if (serverAssignedJobs.isEmpty() && myBookings.isEmpty()) {
                 Text(if (isEnglish) "No bookings have been assigned to you yet." else "अभी कोई booking आपको नहीं मिली है।", fontSize = 12.sp, color = TextSecondary)
@@ -627,9 +663,10 @@ fun TechnicianScreen(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = (if (job.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier).fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (job.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Text(job.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
                         Text(job.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
@@ -645,9 +682,10 @@ fun TechnicianScreen(
                     colors = CardDefaults.cardColors(containerColor = CardBg),
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = (if (booking.id == initialBookingId) Modifier.bringIntoViewRequester(targetBookingRequester) else Modifier).fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (booking.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(booking.id, fontWeight = FontWeight.Bold, color = BrandBlue, fontSize = 12.sp)
                             Surface(
