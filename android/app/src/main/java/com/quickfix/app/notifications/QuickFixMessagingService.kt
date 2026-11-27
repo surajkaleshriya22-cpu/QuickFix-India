@@ -21,12 +21,17 @@ class QuickFixMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(message)
         ensureNotificationChannel()
         val bookingId = message.data["bookingId"].orEmpty()
+        if (!bookingId.matches(Regex("[A-Za-z0-9_-]{1,150}"))) {
+            android.util.Log.w("QuickFixFCM", "Ignoring notification with missing or invalid bookingId")
+            return
+        }
         val title = message.notification?.title ?: "New QuickFix service request"
         val body = message.notification?.body ?: "A nearby customer needs a service. Open QuickFix to review."
 
         val intent = Intent(this, MainActivity::class.java).apply {
             action = "com.quickfix.app.OPEN_JOB_FEED"
             putExtra("bookingId", bookingId)
+            data = android.net.Uri.parse("quickfix://booking/$bookingId")
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
