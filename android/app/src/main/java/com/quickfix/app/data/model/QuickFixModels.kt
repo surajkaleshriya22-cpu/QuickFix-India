@@ -58,6 +58,7 @@ data class AdminMasterPaymentConfig(
     val accountNumberMasked: String = "",
     val ifscCode: String = "",
     val accountHolderName: String = "",
+    val bankAccountType: String = "savings",
     val gatewayProvider: String = "Not connected",
     val requireAdminPayoutApproval: Boolean = true,
     val escrowHoldUntilOtpVerified: Boolean = true,
