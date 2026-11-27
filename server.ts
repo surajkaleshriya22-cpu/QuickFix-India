@@ -826,13 +826,11 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
     const identity = (req as AuthenticatedRequest).firebaseUser!;
     const { serviceId, scheduledDate, scheduledTimeSlot, address, notes, paymentMethod, serviceArea, quantity, customerLocation } = req.body ?? {};
     const requestedLines = Array.isArray(req.body?.lineItems) ? req.body.lineItems : [{ serviceId, quantity }];
-    const validCustomerLocation = customerLocation === undefined || (
-      customerLocation !== null && typeof customerLocation === 'object' && !Array.isArray(customerLocation) &&
+    const validCustomerLocation = customerLocation !== null && typeof customerLocation === 'object' && !Array.isArray(customerLocation) &&
       typeof customerLocation.latitude === 'number' && Number.isFinite(customerLocation.latitude) &&
       customerLocation.latitude >= -90 && customerLocation.latitude <= 90 &&
       typeof customerLocation.longitude === 'number' && Number.isFinite(customerLocation.longitude) &&
-      customerLocation.longitude >= -180 && customerLocation.longitude <= 180
-    );
+      customerLocation.longitude >= -180 && customerLocation.longitude <= 180;
     const validServiceArea = serviceArea !== null && typeof serviceArea === 'object' && !Array.isArray(serviceArea) &&
       ['state', 'district', 'tehsil'].every((key) => typeof serviceArea[key] === 'string' && serviceArea[key].trim().length > 0 && serviceArea[key].trim().length <= 100) &&
       ['stateCode', 'districtCode', 'tehsilCode'].every((key) => serviceArea[key] === undefined || (typeof serviceArea[key] === 'string' && serviceArea[key].trim().length <= 30)) &&
