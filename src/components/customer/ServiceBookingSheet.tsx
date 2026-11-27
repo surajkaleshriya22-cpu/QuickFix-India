@@ -649,6 +649,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                   <div key={line.serviceId} className="flex items-start justify-between gap-3 border-t border-slate-200 pt-2 text-xs">
                     <div><strong>{line.title}</strong><div className="text-[10px] text-slate-500">Qty {line.quantity} · {line.unit}</div>
                       {line.priced && <div className="text-[10px] text-slate-500">Rate ₹{line.unitRateMinimum}–₹{line.unitRateMaximum}/{line.unit}{line.baseFee > 0 ? ` · Base fee ₹${line.baseFee}` : ''}{line.minimumCharge > 0 ? ` · Minimum charge ₹${line.minimumCharge}` : ''}</div>}
+                      {line.priced && line.appliedAdjustmentPercent < 0 && <div className="text-[10px] font-semibold text-emerald-700">Admin rate decrease: {Math.abs(line.appliedAdjustmentPercent)}%</div>}
                       {line.priced && <div className="text-[10px] text-slate-500">Materials: {line.materialsIncluded ? 'included' : 'not included; extra only with your approval'} · Source: {line.source}</div>}
                       {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
                     </div>
