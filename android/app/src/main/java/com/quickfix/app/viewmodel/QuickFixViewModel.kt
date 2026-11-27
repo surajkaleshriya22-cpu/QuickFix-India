@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.quickfix.app.data.model.AdminMasterPaymentConfig
 import com.quickfix.app.data.model.Booking
+import com.quickfix.app.data.model.BookingLineItem
 import com.quickfix.app.data.model.CommissionSettings
 import com.quickfix.app.data.model.PayoutRecord
 import com.quickfix.app.data.model.ServiceItem
