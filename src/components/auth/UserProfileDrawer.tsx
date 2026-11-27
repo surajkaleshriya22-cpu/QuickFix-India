@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, User, Phone, Mail, MapPin, Shield, LogOut, Check, Plus, Edit2, ShieldCheck, Wrench, Zap } from 'lucide-react';
 import { useQuickFix } from '../../context/QuickFixContext';
 import { auth } from '../../lib/firebase';
+import { EmergencyContactsSection } from './EmergencyContactsSection';
 
 interface UserProfileDrawerProps {
   onClose: () => void;
@@ -142,6 +143,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ onClose, o
               <span className="text-emerald-700 font-semibold">{language === 'hi' ? 'Firebase से सत्यापित' : 'Firebase Authenticated'}</span>
             </div>
           </div>
+
+          {isAuthenticated && currentUser?.role !== 'admin' && <EmergencyContactsSection language={language} />}
 
           {/* {language === 'hi' ? 'सहेजे गए पते' : 'Saved Addresses'} Section (for Customer) */}
           <div className="space-y-2">
