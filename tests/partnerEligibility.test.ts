@@ -147,3 +147,14 @@ test('dispatches Car Washing and Transport partners only to their matching servi
   assert.equal(canPartnerReceiveBookingCategory(['transport'], 'transport'), true);
   assert.equal(canPartnerReceiveBookingCategory(['car_wash'], 'transport'), false);
 });
+
+
+test('multi-service booking requires a partner qualified for every distinct service category', async () => {
+  const { canPartnerReceiveBookingCategories } = await import('../src/utils/partnerEligibility');
+  assert.equal(canPartnerReceiveBookingCategories(['electrician', 'plumber'], ['electrician', 'plumber']), true);
+  assert.equal(canPartnerReceiveBookingCategories(['electrician'], ['electrician', 'plumber']), false);
+  assert.equal(canPartnerReceiveBookingCategories(['technician'], ['ac_repair', 'fridge_repair']), true);
+  assert.equal(canPartnerReceiveBookingCategories(['electrician'], ['electrician', 'electrician']), true);
+  assert.equal(canPartnerReceiveBookingCategories(['electrician'], []), false);
+  assert.equal(canPartnerReceiveBookingCategories(['electrician'], ['electrician', null]), false);
+});
