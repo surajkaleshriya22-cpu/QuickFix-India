@@ -1697,7 +1697,9 @@ app.post('/api/partners/bookings/:bookingId/accept', authenticateFirebaseUser, a
       const bookingArea = booking.serviceArea && typeof booking.serviceArea === 'object'
         ? booking.serviceArea as Record<string, unknown> : null;
       if (!matchesPartnerServiceArea(partnerArea, bookingArea, city, booking.city) ||
-          !canPartnerReceiveBookingCategory(trades, booking.category)) {
+          !canPartnerReceiveBookingCategories(trades, Array.isArray(booking.lineItems) && booking.lineItems.length
+            ? booking.lineItems.map((line: any) => line?.category)
+            : [booking.category])) {
         throw new Error('BOOKING_OUTSIDE_PARTNER_SCOPE');
       }
       if (!isWithinPartnerDispatchRadius(partner, booking)) {
