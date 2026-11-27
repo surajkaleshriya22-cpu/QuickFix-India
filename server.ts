@@ -3136,7 +3136,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     if (sendAllowed === 'max_contacts') return res.status(409).json({ success: false, error: 'You can save up to 3 emergency contacts.' });
     try {
       const form = new URLSearchParams({ To: phone, From: fromNumber,
-        Body: 'QuickFix emergency contact verification code: ' + otp + '. Valid for 5 minutes. Do not share this code.' });
+        Body: 'QuickFix: Someone wants to add this number as an emergency contact. If you agree, share this one-time code only with that person: ' + otp + '. Valid for 5 minutes. If you do not agree, ignore this message.' });
       const providerResponse = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
         method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
           'Content-Type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(8000)
