@@ -4,5 +4,5 @@ export const normalizeQuickFixId = (value: unknown, kind: QuickFixAccountKind): 
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toUpperCase();
   const prefix = kind === 'CUSTOMER' ? 'QFC' : 'QFP';
-  return new RegExp('^' + prefix + '-\\\\d{8}$').test(normalized) ? normalized : null;
+  return new RegExp('^' + prefix + '-\\d{8}$').test(normalized) ? normalized : null;
 };
