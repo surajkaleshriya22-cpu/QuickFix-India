@@ -3086,22 +3086,25 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     const db = getFirestore(firebaseAdminApp);
     const userRef = db.collection('users').doc(identity.uid);
     const contactRef = userRef.collection('emergency_contacts').doc(emergencyContactDocId(identity.uid, phone));
-    const challengeRef = db.collection('emergency_contact_otp').doc(emergencyContactDocId(identity.uid, phone));
+    const contactKey = emergencyContactDocId(identity.uid, phone);
+    const challengeRef = db.collection('emergency_contact_otp').doc(contactKey);
+    const phoneLimitRef = db.collection('emergency_contact_otp_phone_limits').doc(contactKey);
     const accountLimitRef = db.collection('emergency_contact_otp_limits').doc(identity.uid);
     const now = Date.now();
     const otp = String(randomInt(0, 1000000)).padStart(6, '0');
     const salt = String(randomInt(100000000, 999999999));
     const otpHash = hashEmergencyContactOtp(authToken, identity.uid, phone, salt, otp);
     const sendAllowed = await db.runTransaction(async transaction => {
-      const [contactSnap, challengeSnap, contactsSnap, accountLimitSnap] = await Promise.all([
+      const [contactSnap, challengeSnap, contactsSnap, phoneLimitSnap, accountLimitSnap] = await Promise.all([
         transaction.get(contactRef), transaction.get(challengeRef),
-        transaction.get(userRef.collection('emergency_contacts')), transaction.get(accountLimitRef)
+        transaction.get(userRef.collection('emergency_contacts')), transaction.get(phoneLimitRef),
+        transaction.get(accountLimitRef)
       ]);
       if (contactSnap.exists && contactSnap.data()?.verified === true && contactSnap.data()?.consent === true) return 'already_verified' as const;
-      const challenge = challengeSnap.data();
-      const lastSentAt = Number(challenge?.lastSentAtMs || 0);
-      const sentInWindow = Number(challenge?.sentInWindow || 0);
-      const windowStart = Number(challenge?.windowStartMs || 0);
+      const phoneLimit = phoneLimitSnap.data();
+      const lastSentAt = Number(phoneLimit?.lastSentAtMs || 0);
+      const sentInWindow = Number(phoneLimit?.sentCount || 0);
+      const windowStart = Number(phoneLimit?.windowStartMs || 0);
       if (now - lastSentAt < EMERGENCY_CONTACT_OTP_RESEND_MS) return 'cooldown' as const;
       if (now - windowStart < 3600000 && sentInWindow >= EMERGENCY_CONTACT_OTP_PER_PHONE_PER_HOUR) return 'phone_limit' as const;
       const accountLimit = accountLimitSnap.data();
@@ -3115,6 +3118,11 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
         createdAt: contactSnap.exists ? (contactSnap.data()?.createdAt || FieldValue.serverTimestamp()) : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       }, { merge: true });
+      transaction.set(phoneLimitRef, {
+        windowStartMs: now - windowStart >= 3600000 ? now : windowStart,
+        sentCount: now - windowStart >= 3600000 ? 1 : sentInWindow + 1,
+        lastSentAtMs: now, updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
       transaction.set(accountLimitRef, {
         windowStartMs: now - accountWindowStart >= 3600000 ? now : accountWindowStart,
         sentCount: now - accountWindowStart >= 3600000 ? 1 : accountSent + 1,
@@ -3122,9 +3130,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
       }, { merge: true });
       transaction.set(challengeRef, {
         uid: identity.uid, otpHash, salt, attempts: 0, sendStatus: 'pending',
-        expiresAtMs: now + EMERGENCY_CONTACT_OTP_TTL_MS, lastSentAtMs: now,
-        windowStartMs: now - windowStart >= 3600000 ? now : windowStart,
-        sentInWindow: now - windowStart >= 3600000 ? 1 : sentInWindow + 1,
+        expiresAtMs: now + EMERGENCY_CONTACT_OTP_TTL_MS,
         createdAt: FieldValue.serverTimestamp()
       });
       return 'send' as const;
