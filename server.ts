@@ -424,6 +424,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     if (error instanceof Error && error.message === 'PROFILE_ALREADY_EXISTS') {
       return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
     }
+    if (error instanceof Error && error.message === 'PARTNER_ID_INDEX_CONFLICT') {
+      return res.status(409).json({ success: false, error: 'This Partner QuickFix ID is already linked to another account. Please contact support.' });
+    }
     console.error('Secure partner registration failed:', error);
     return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
   }
