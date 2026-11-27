@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -76,7 +77,7 @@ private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TechnicianScreen(
     navController: NavController,
