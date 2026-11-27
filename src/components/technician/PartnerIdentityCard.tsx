@@ -45,7 +45,7 @@ export const PartnerIdentityCard: React.FC<PartnerIdentityCardProps> = ({ user, 
             <div className="text-[17px] font-black tracking-[0.12em] leading-none">QUICKFIX INDIA</div>
             <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-blue-100">Channel Partner Identity Card</div>
           </div>
-          <div className="rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[8px] font-bold tracking-wider">OFFICIAL ID</div>
+          <div className="rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[8px] font-bold tracking-wider">PARTNER ID</div>
         </div>
 
         <div className="flex gap-3 p-3.5">
@@ -65,7 +65,7 @@ export const PartnerIdentityCard: React.FC<PartnerIdentityCardProps> = ({ user, 
             <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Designation</div>
             <div className="line-clamp-2 text-[10px] font-bold leading-snug text-slate-800">{formatDesignation(technician.trades)}</div>
             <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Address</div>
-            <div className="line-clamp-2 text-[9px] leading-snug text-slate-700">{[user.address, user.city, user.pincode].filter(Boolean).join(', ') || technician.city || 'Address not provided'}</div>
+            <div className="line-clamp-2 text-[9px] leading-snug text-slate-700">{technician.city || user.city || 'Service area not provided'}</div>
           </div>
         </div>
 
