@@ -234,7 +234,7 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
       const storedId = typeof data?.customerQuickFixId === 'string'
         ? data.customerQuickFixId.trim().toUpperCase()
         : '';
-      const hasValidStoredId = /^QFC-\\d{8}$/.test(storedId);
+      const hasValidStoredId = /^QFC-\d{8}$/.test(storedId);
       if (hasValidStoredId) {
         const storedIndexRef = db.collection('quickfix_id_index').doc(storedId);
         const storedIndex = await transaction.get(storedIndexRef);
