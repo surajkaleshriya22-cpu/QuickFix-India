@@ -49,7 +49,8 @@ data class PartnerJobLineItem(
     val unitRateMinimum: Double = 0.0,
     val unitRateMaximum: Double = 0.0,
     val lineTotalMinimum: Double,
-    val lineTotalMaximum: Double
+    val lineTotalMaximum: Double,
+    val appliedAdjustmentPercent: Double = 0.0
 )
 
 data class PartnerJob(
@@ -812,7 +813,8 @@ class QuickFixViewModel : ViewModel() {
                                             unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
                                             unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
-                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0),
+                                            appliedAdjustmentPercent = row.optDouble("appliedAdjustmentPercent", 0.0)
                                         )
                                     }
                                 }
@@ -841,7 +843,8 @@ class QuickFixViewModel : ViewModel() {
                                             unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
                                             unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
-                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0),
+                                            appliedAdjustmentPercent = row.optDouble("appliedAdjustmentPercent", 0.0)
                                         )
                                     }
                                 }
