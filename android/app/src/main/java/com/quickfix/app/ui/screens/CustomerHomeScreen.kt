@@ -523,7 +523,17 @@ fun CustomerHomeScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(if (isEnglish) "Price after inspection" else "कीमत काम देखकर बताएँगे", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = TextSecondary)
+                            Text(
+                                if (isEnglish) "From ₹${service.startingPrice}" else "₹${service.startingPrice} से शुरू",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = BrandBlue
+                            )
+                            Text(
+                                if (isEnglish) "Parts/material extra if needed" else "पार्ट्स/सामग्री अलग हो सकती है",
+                                fontSize = 9.sp,
+                                color = TextSecondary
+                            )
                             Button(
                                 onClick = { navController.navigate("service_booking/${service.id}") },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
