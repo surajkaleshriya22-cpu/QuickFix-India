@@ -46,10 +46,14 @@ class QuickFixMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .build()
 
-        NotificationManagerCompat.from(this).notify(
-            bookingId.hashCode().let { if (it == 0) 1 else it },
-            notification
-        )
+        try {
+            NotificationManagerCompat.from(this).notify(
+                bookingId.hashCode().let { if (it == 0) 1 else it },
+                notification
+            )
+        } catch (_: SecurityException) {
+            // Notification permission may have been denied; the in-app job feed remains available.
+        }
     }
 
     private fun ensureNotificationChannel() {
