@@ -202,8 +202,12 @@ export const TechnicianPortal: React.FC = () => {
         return [...combined.values()];
       });
       setAssignedBookings(result.assignedBookings as Booking[]);
-      setJobsNextCursor(typeof result.nextCursor === 'string' ? result.nextCursor : null);
-      setJobsHasMore(result.hasMore === true && typeof result.nextCursor === 'string');
+      // A background refresh updates the first page without discarding pages
+      // the partner has already loaded. Explicit page loads advance the cursor.
+      if (cursor || !append) {
+        setJobsNextCursor(typeof result.nextCursor === 'string' ? result.nextCursor : null);
+        setJobsHasMore(result.hasMore === true && typeof result.nextCursor === 'string');
+      }
     } catch (error) {
       setJobsError(error instanceof Error ? error.message : 'Available jobs could not be loaded. Please retry.');
       if (!append) {
@@ -221,7 +225,7 @@ export const TechnicianPortal: React.FC = () => {
   // Pause background polling to avoid unnecessary mobile data and battery use.
   useEffect(() => {
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') void loadAvailableJobs();
+      if (document.visibilityState === 'visible') void loadAvailableJobs(undefined, true);
     };
     void loadAvailableJobs();
     const timer = window.setInterval(refreshWhenVisible, 15_000);
