@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
+import { canActivatePartnerDuty, canPartnerReceiveBookingCategories, canPartnerReceiveBookingCategory, getPartnerServiceCategories, isPartnerEligibleForDispatch } from '../src/utils/partnerEligibility';
 
 const eligible = {
   role: 'CHANNEL_PARTNER',
@@ -149,8 +149,7 @@ test('dispatches Car Washing and Transport partners only to their matching servi
 });
 
 
-test('multi-service booking requires a partner qualified for every distinct service category', async () => {
-  const { canPartnerReceiveBookingCategories } = await import('../src/utils/partnerEligibility');
+test('multi-service booking requires a partner qualified for every distinct service category', () => {
   assert.equal(canPartnerReceiveBookingCategories(['electrician', 'plumber'], ['electrician', 'plumber']), true);
   assert.equal(canPartnerReceiveBookingCategories(['electrician'], ['electrician', 'plumber']), false);
   assert.equal(canPartnerReceiveBookingCategories(['technician'], ['ac_repair', 'fridge_repair']), true);
