@@ -487,6 +487,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                   onAddressSelect={(addr) => {
                     setCustomAddress(addr);
                     setSelectedAddress(addr);
+                    setCustomerLocation(null);
+                    setLocationStatus('Service address changed. Please capture GPS again so the partner is matched to the correct place.');
                   }}
                 />
                 <span className="text-[10px] text-slate-400 block px-1">
