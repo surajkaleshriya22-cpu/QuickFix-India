@@ -133,6 +133,10 @@ fun ProfileScreen(
                 }
             }
 
+            if (user.role != UserRole.ADMIN) {
+                EmergencyContactsSection(isEnglish = isEnglish)
+            }
+
             // Logout Action
             Button(
                 onClick = {
