@@ -327,7 +327,17 @@ class QuickFixViewModel : ViewModel() {
                         "Bank account securely updated •••• " + result.optString("accountLast4")
                     } finally { connection.disconnect() }
                 }
-            }.onSuccess { _firestoreSyncStatus.value = it }
+            }.onSuccess {
+                val result = it
+                val savedLast4 = result.substringAfterLast("•••• ").trim()
+                _adminPaymentConfig.value = _adminPaymentConfig.value.copy(
+                    receivingBankName = bankName.trim(),
+                    accountNumberMasked = if (savedLast4.isNotBlank()) "••••••••$savedLast4" else "Configured",
+                    ifscCode = cleanIfsc,
+                    accountHolderName = accountHolderName.trim()
+                )
+                _firestoreSyncStatus.value = result
+            }
                 .onFailure { _firestoreSyncStatus.value = it.message ?: "Bank details save failed." }
         }
     }
