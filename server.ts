@@ -415,7 +415,7 @@ app.get('/api/partners/profile', authenticateFirebaseUser, async (req: Request, 
       const storedId = typeof freshData.partnerQuickFixId === 'string'
         ? freshData.partnerQuickFixId.trim().toUpperCase()
         : '';
-      const hasValidStoredId = /^QFP-\\d{8}$/.test(storedId);
+      const hasValidStoredId = /^QFP-\d{8}$/.test(storedId);
 
       if (hasValidStoredId) {
         const storedIndexRef = db.collection('quickfix_id_index').doc(storedId);
