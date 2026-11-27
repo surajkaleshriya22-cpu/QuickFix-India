@@ -23,6 +23,7 @@ import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
 import { hasDistrictServiceArea, matchesPartnerServiceArea, serviceAreaKey } from './src/utils/serviceArea';
 import { getSosReporterRole, isActiveSosBookingStatus, isValidSosIncidentInput } from './src/utils/sosIncident';
+import { EMERGENCY_CONTACT_LIMIT, EMERGENCY_CONTACT_OTP_MAX_ATTEMPTS, EMERGENCY_CONTACT_OTP_PER_ACCOUNT_PER_HOUR, EMERGENCY_CONTACT_OTP_PER_PHONE_PER_HOUR, EMERGENCY_CONTACT_OTP_RESEND_MS, EMERGENCY_CONTACT_OTP_TTL_MS, emergencyContactDocId, hashEmergencyContactOtp, isValidEmergencyPhone, maskEmergencyPhone, normalizeEmergencyPhone, verifyEmergencyContactOtpHash } from './src/utils/emergencyContacts';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
 
 dotenv.config();
@@ -3044,6 +3045,187 @@ app.delete('/api/partners/safety/emergency-contact', authenticateFirebaseUser, a
   }
 });
 
+
+// Emergency contacts are private to the signed-in account. Client Firestore rules
+// deny access; all reads, writes, OTP challenges and deletion are server-owned.
+app.get('/api/me/emergency-contacts', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users').doc(identity.uid)
+      .collection('emergency_contacts').orderBy('createdAt', 'desc').limit(EMERGENCY_CONTACT_LIMIT).get();
+    return res.json({ success: true, contacts: snapshot.docs.map(doc => {
+      const data = doc.data();
+      return { contactId: doc.id, maskedPhone: String(data.maskedPhone || '******'),
+        relationship: String(data.relationship || 'Other'), verified: data.verified === true,
+        consent: data.consent === true };
+    }) });
+  } catch (error) {
+    console.error('Emergency contact list failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contacts could not be loaded.' });
+  }
+});
+
+app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before adding an emergency contact.' });
+    const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
+    const relationship = typeof req.body?.relationship === 'string' ? req.body.relationship.trim() : '';
+    if (!isValidEmergencyPhone(phone) || phone === identity.phone_number ||
+        !['Family', 'Friend', 'Other'].includes(relationship) || req.body?.consent !== true) {
+      return res.status(400).json({ success: false, error: 'Enter a valid different mobile number, relationship, and confirm consent.' });
+    }
+    const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim() || '';
+    const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
+    const fromNumber = process.env.TWILIO_FROM_NUMBER?.trim() || '';
+    if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) || !authToken || !isValidEmergencyPhone(fromNumber)) {
+      return res.status(503).json({ success: false, error: 'SMS verification is not configured yet. Contact QuickFix support.' });
+    }
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    const contactRef = userRef.collection('emergency_contacts').doc(emergencyContactDocId(identity.uid, phone));
+    const challengeRef = db.collection('emergency_contact_otp').doc(emergencyContactDocId(identity.uid, phone));
+    const accountLimitRef = db.collection('emergency_contact_otp_limits').doc(identity.uid);
+    const now = Date.now();
+    const otp = String(randomInt(0, 1000000)).padStart(6, '0');
+    const salt = String(randomInt(100000000, 999999999));
+    const otpHash = hashEmergencyContactOtp(authToken, identity.uid, phone, salt, otp);
+    const sendAllowed = await db.runTransaction(async transaction => {
+      const [contactSnap, challengeSnap, contactsSnap, accountLimitSnap] = await Promise.all([
+        transaction.get(contactRef), transaction.get(challengeRef),
+        transaction.get(userRef.collection('emergency_contacts')), transaction.get(accountLimitRef)
+      ]);
+      if (contactSnap.exists && contactSnap.data()?.verified === true && contactSnap.data()?.consent === true) return 'already_verified' as const;
+      const challenge = challengeSnap.data();
+      const lastSentAt = Number(challenge?.lastSentAtMs || 0);
+      const sentInWindow = Number(challenge?.sentInWindow || 0);
+      const windowStart = Number(challenge?.windowStartMs || 0);
+      if (now - lastSentAt < EMERGENCY_CONTACT_OTP_RESEND_MS) return 'cooldown' as const;
+      if (now - windowStart < 3600000 && sentInWindow >= EMERGENCY_CONTACT_OTP_PER_PHONE_PER_HOUR) return 'phone_limit' as const;
+      const accountLimit = accountLimitSnap.data();
+      const accountWindowStart = Number(accountLimit?.windowStartMs || 0);
+      const accountSent = Number(accountLimit?.sentCount || 0);
+      if (now - accountWindowStart < 3600000 && accountSent >= EMERGENCY_CONTACT_OTP_PER_ACCOUNT_PER_HOUR) return 'account_limit' as const;
+      if (contactsSnap.size >= EMERGENCY_CONTACT_LIMIT && !contactSnap.exists) return 'max_contacts' as const;
+      transaction.set(contactRef, {
+        phoneNumber: phone, maskedPhone: maskEmergencyPhone(phone), relationship,
+        consent: true, consentAt: FieldValue.serverTimestamp(), verified: false,
+        createdAt: contactSnap.exists ? (contactSnap.data()?.createdAt || FieldValue.serverTimestamp()) : FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      transaction.set(accountLimitRef, {
+        windowStartMs: now - accountWindowStart >= 3600000 ? now : accountWindowStart,
+        sentCount: now - accountWindowStart >= 3600000 ? 1 : accountSent + 1,
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      transaction.set(challengeRef, {
+        uid: identity.uid, otpHash, salt, attempts: 0, sendStatus: 'pending',
+        expiresAtMs: now + EMERGENCY_CONTACT_OTP_TTL_MS, lastSentAtMs: now,
+        windowStartMs: now - windowStart >= 3600000 ? now : windowStart,
+        sentInWindow: now - windowStart >= 3600000 ? 1 : sentInWindow + 1,
+        createdAt: FieldValue.serverTimestamp()
+      });
+      return 'send' as const;
+    });
+    if (sendAllowed === 'already_verified') return res.status(409).json({ success: false, error: 'This emergency contact is already verified.' });
+    if (sendAllowed === 'cooldown') return res.status(429).json({ success: false, error: 'Wait 60 seconds before requesting another OTP.' });
+    if (sendAllowed === 'phone_limit') return res.status(429).json({ success: false, error: 'Maximum 3 OTP messages per contact per hour reached.' });
+    if (sendAllowed === 'account_limit') return res.status(429).json({ success: false, error: 'Maximum 5 emergency-contact OTP messages per account per hour reached.' });
+    if (sendAllowed === 'max_contacts') return res.status(409).json({ success: false, error: 'You can save up to 3 emergency contacts.' });
+    try {
+      const form = new URLSearchParams({ To: phone, From: fromNumber,
+        Body: 'QuickFix emergency contact verification code: ' + otp + '. Valid for 5 minutes. Do not share this code.' });
+      const providerResponse = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
+        method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(8000)
+      });
+      if (!providerResponse.ok) {
+        const providerError = await providerResponse.json().catch(() => ({})) as { code?: number };
+        console.error('Emergency contact OTP SMS rejected:', providerError.code ?? providerResponse.status);
+        await challengeRef.set({ sendStatus: 'failed' }, { merge: true });
+        return res.status(502).json({ success: false, error: 'OTP SMS could not be sent. Check SMS provider configuration.' });
+      }
+      await challengeRef.set({ sendStatus: 'sent' }, { merge: true });
+      return res.status(202).json({ success: true, message: 'OTP sent. It expires in 5 minutes.' });
+    } catch (error) {
+      console.error('Emergency contact OTP send failed:', error instanceof Error ? error.name : 'unknown error');
+      await challengeRef.set({ sendStatus: 'failed' }, { merge: true });
+      return res.status(502).json({ success: false, error: 'OTP SMS could not be sent. Please try again later.' });
+    }
+  } catch (error) {
+    console.error('Emergency contact OTP request failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact verification could not be started.' });
+  }
+});
+
+app.post('/api/me/emergency-contacts/verify', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    if (!identity.phone_number) return res.status(403).json({ success: false, error: 'Verify your own mobile number before verifying an emergency contact.' });
+    const otpPepper = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
+    if (!otpPepper) return res.status(503).json({ success: false, error: 'OTP verification is temporarily unavailable.' });
+    const phone = normalizeEmergencyPhone(req.body?.phoneNumber);
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+    if (!isValidEmergencyPhone(phone) || !/^\d{6}$/.test(code)) return res.status(400).json({ success: false, error: 'Enter the same mobile number and 6-digit OTP.' });
+    const db = getFirestore(firebaseAdminApp);
+    const contactRef = db.collection('users').doc(identity.uid).collection('emergency_contacts').doc(emergencyContactDocId(identity.uid, phone));
+    const challengeRef = db.collection('emergency_contact_otp').doc(emergencyContactDocId(identity.uid, phone));
+    const result = await db.runTransaction(async transaction => {
+      const [challengeSnap, contactSnap] = await Promise.all([transaction.get(challengeRef), transaction.get(contactRef)]);
+      if (!challengeSnap.exists || !contactSnap.exists) return 'missing' as const;
+      const challenge = challengeSnap.data()!;
+      if (challenge.sendStatus !== 'sent') return 'send_failed' as const;
+      if (Number(challenge.expiresAtMs || 0) <= Date.now()) { transaction.delete(challengeRef); return 'expired' as const; }
+      const attempts = Number(challenge.attempts || 0);
+      if (attempts >= EMERGENCY_CONTACT_OTP_MAX_ATTEMPTS) { transaction.delete(challengeRef); return 'locked' as const; }
+      const candidate = hashEmergencyContactOtp(otpPepper, identity.uid, phone, String(challenge.salt || ''), code);
+      if (!verifyEmergencyContactOtpHash(candidate, challenge.otpHash)) {
+        transaction.update(challengeRef, { attempts: attempts + 1 });
+        return 'invalid' as const;
+      }
+      transaction.update(contactRef, { verified: true, verifiedAt: FieldValue.serverTimestamp(),
+        consent: true, updatedAt: FieldValue.serverTimestamp() });
+      transaction.delete(challengeRef);
+      return 'verified' as const;
+    });
+    if (result === 'missing') return res.status(404).json({ success: false, error: 'OTP request not found. Request a new code.' });
+    if (result === 'send_failed') return res.status(409).json({ success: false, error: 'OTP was not sent. Request a new code.' });
+    if (result === 'expired') return res.status(410).json({ success: false, error: 'OTP expired. Request a new code.' });
+    if (result === 'locked') return res.status(429).json({ success: false, error: 'Too many incorrect OTP attempts. Request a new code.' });
+    if (result === 'invalid') return res.status(400).json({ success: false, error: 'Incorrect OTP. Check the code and try again.' });
+    return res.json({ success: true, message: 'Emergency contact verified and saved.' });
+  } catch (error) {
+    console.error('Emergency contact OTP verification failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be verified.' });
+  }
+});
+
+app.delete('/api/me/emergency-contacts/:contactId', authenticateFirebaseUser, async (req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure account service is unavailable.' });
+    const identity = (req as AuthenticatedRequest).firebaseUser!;
+    const contactId = String(req.params.contactId || '');
+    if (!/^[a-f0-9]{64}$/.test(contactId)) return res.status(400).json({ success: false, error: 'Emergency contact reference is invalid.' });
+    const db = getFirestore(firebaseAdminApp);
+    const contactRef = db.collection('users').doc(identity.uid).collection('emergency_contacts').doc(contactId);
+    await db.runTransaction(async transaction => {
+      const contactSnap = await transaction.get(contactRef);
+      if (!contactSnap.exists) return;
+      const contactPhone = String(contactSnap.data()?.phoneNumber || '');
+      transaction.delete(contactRef);
+      if (isValidEmergencyPhone(contactPhone)) transaction.delete(db.collection('emergency_contact_otp').doc(emergencyContactDocId(identity.uid, contactPhone)));
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Emergency contact deletion failed:', error);
+    return res.status(500).json({ success: false, error: 'Emergency contact could not be removed.' });
+  }
+});
+
+
 type AdminSafetySmsResult = { status: 'not_configured' | 'sent' | 'failed' };
 
 const dispatchAdminSafetySms = async (incident: {
@@ -3085,6 +3267,54 @@ const dispatchAdminSafetySms = async (incident: {
   }
 };
 
+
+type EmergencyContactSmsResult = {
+  status: 'not_configured' | 'no_verified_contacts' | 'sent' | 'partial' | 'failed';
+  sent: number;
+  failed: number;
+};
+
+const dispatchEmergencyContactSms = async (uid: string, incident: {
+  incidentId: string; incidentType: string;
+}): Promise<EmergencyContactSmsResult> => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim() || '';
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
+  const fromNumber = process.env.TWILIO_FROM_NUMBER?.trim() || '';
+  if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) || !authToken || !isValidEmergencyPhone(fromNumber)) {
+    return { status: 'not_configured', sent: 0, failed: 0 };
+  }
+  try {
+    const contacts = await getFirestore(firebaseAdminApp!).collection('users').doc(uid)
+      .collection('emergency_contacts').where('verified', '==', true).where('consent', '==', true)
+      .limit(EMERGENCY_CONTACT_LIMIT).get();
+    if (contacts.empty) return { status: 'no_verified_contacts', sent: 0, failed: 0 };
+    const results = await Promise.all(contacts.docs.map(async doc => {
+      const phone = String(doc.data().phoneNumber || '');
+      if (!isValidEmergencyPhone(phone)) return false;
+      const form = new URLSearchParams({ To: phone, From: fromNumber,
+        Body: 'QuickFix safety alert: A person who listed you as an emergency contact has raised an SOS during an active service booking. Reference: ' +
+          incident.incidentId + '. Incident type: ' + incident.incidentType +
+          '. Please contact them if you can. If anyone is in immediate danger, call India emergency number 112. This SMS is not emergency-service dispatch.' });
+      try {
+        const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
+          method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
+            'Content-Type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(10000)
+        });
+        return response.ok;
+      } catch (error) {
+        console.error('Emergency contact SOS SMS request failed:', error instanceof Error ? error.name : 'unknown error');
+        return false;
+      }
+    }));
+    const sent = results.filter(Boolean).length;
+    const failed = results.length - sent;
+    return { status: sent === results.length ? 'sent' : sent > 0 ? 'partial' : 'failed', sent, failed };
+  } catch (error) {
+    console.error('Emergency contact SOS lookup failed:', error instanceof Error ? error.name : 'unknown error');
+    return { status: 'failed', sent: 0, failed: 1 };
+  }
+};
+
 app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure emergency reporting is temporarily unavailable.' });
@@ -3122,28 +3352,43 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
     if (result.status === 'forbidden') return res.status(403).json({ success: false, error: 'Only the customer or assigned Channel Partner can report an incident for this booking.' });
     if (result.status === 'inactive') return res.status(409).json({ success: false, error: 'Emergency reporting is available only during an active assigned booking.' });
     let adminSmsStatus: AdminSafetySmsResult['status'] = 'not_configured';
+    let emergencyContactSmsStatus: EmergencyContactSmsResult['status'] = 'no_verified_contacts';
+    let emergencyContactSmsSent = 0;
+    let emergencyContactSmsFailed = 0;
     if (result.status === 'created') {
-      const sms = await dispatchAdminSafetySms({
-        incidentId: result.incidentId,
-        bookingId,
-        reporterRole: result.reporterRole,
-        incidentType
+      const [adminSms, contactSms] = await Promise.all([
+        dispatchAdminSafetySms({ incidentId: result.incidentId, bookingId, reporterRole: result.reporterRole, incidentType }),
+        dispatchEmergencyContactSms(identity.uid, { incidentId: result.incidentId, incidentType })
+      ]);
+      adminSmsStatus = adminSms.status;
+      emergencyContactSmsStatus = contactSms.status;
+      emergencyContactSmsSent = contactSms.sent;
+      emergencyContactSmsFailed = contactSms.failed;
+      await incidentRef.update({
+        adminSmsStatus, adminSmsAttemptedAt: FieldValue.serverTimestamp(),
+        emergencyContactSmsStatus, emergencyContactSmsSent, emergencyContactSmsFailed,
+        emergencyContactSmsAttemptedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
       });
-      adminSmsStatus = sms.status;
-      await incidentRef.update({ adminSmsStatus, adminSmsAttemptedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     } else {
       const existing = await incidentRef.get();
-      const savedStatus = existing.data()?.adminSmsStatus;
-      if (savedStatus === 'sent' || savedStatus === 'failed' || savedStatus === 'not_configured') adminSmsStatus = savedStatus;
+      const data = existing.data() || {};
+      const savedAdminStatus = data.adminSmsStatus;
+      if (savedAdminStatus === 'sent' || savedAdminStatus === 'failed' || savedAdminStatus === 'not_configured') adminSmsStatus = savedAdminStatus;
+      const savedContactStatus = data.emergencyContactSmsStatus;
+      if (savedContactStatus === 'sent' || savedContactStatus === 'partial' || savedContactStatus === 'failed' ||
+          savedContactStatus === 'no_verified_contacts' || savedContactStatus === 'not_configured') emergencyContactSmsStatus = savedContactStatus;
+      emergencyContactSmsSent = Number(data.emergencyContactSmsSent || 0);
+      emergencyContactSmsFailed = Number(data.emergencyContactSmsFailed || 0);
     }
     return res.status(result.status === 'created' ? 202 : 200).json({
       success: true, incidentId: result.incidentId, duplicate: result.status === 'duplicate',
       status: 'received_pending_review', emergencyDispatchConfigured: false, adminSmsStatus,
-      message: adminSmsStatus === 'sent'
-        ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है। QuickFix Admin को SMS request provider ने स्वीकार की है; handset delivery या emergency dispatch की पुष्टि नहीं है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
-        : adminSmsStatus === 'failed'
-          ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है, लेकिन QuickFix Admin SMS नहीं भेजा जा सका। तत्काल खतरे में 112 पर सीधे कॉल करें।'
-          : 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Admin SMS अभी configure नहीं है। Emergency services को सूचना नहीं भेजी गई है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
+      emergencyContactSmsStatus, emergencyContactSmsSent, emergencyContactSmsFailed,
+      message: emergencyContactSmsSent > 0
+        ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है। Admin और verified emergency contacts को SMS provider ने request स्वीकार की है; handset delivery की guarantee नहीं है। यह police/ambulance dispatch नहीं है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
+        : 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Admin SMS: ' + adminSmsStatus +
+          '; emergency contact SMS: ' + emergencyContactSmsStatus +
+          '. Emergency services को सूचना नहीं भेजी गई है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
     });
   } catch (error) {
     console.error('Secure SOS incident intake failed:', error);
