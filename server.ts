@@ -1311,11 +1311,18 @@ app.post('/api/payments/razorpay/verify', authenticateFirebaseUser, async (req: 
     await db.runTransaction(async tx=>{
       const fresh=await tx.get(ref);
       if (!fresh.exists || fresh.data()?.customerUid!==uid || fresh.data()?.paymentOrderId!==orderId) throw new Error('BOOKING_CHANGED');
-      if (fresh.data()?.paymentStatus==='paid') return;
+      if (fresh.data()?.paymentStatus==='paid') {
+        if (fresh.data()?.paymentId !== paymentId) throw new Error('BOOKING_PAYMENT_CONFLICT');
+        return;
+      }
       tx.update(ref,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
     });
     return res.json({success:true,paymentStatus:'paid'});
-  } catch(e) { console.error('Razorpay verification failed:',e); return res.status(500).json({success:false,error:'Payment verification could not be completed safely.'}); }
+  } catch(e) {
+    if (e instanceof Error && e.message==='BOOKING_PAYMENT_CONFLICT') return res.status(409).json({success:false,error:'This booking is already linked to a different verified payment.'});
+    console.error('Razorpay verification failed:',e);
+    return res.status(500).json({success:false,error:'Payment verification could not be completed safely.'});
+  }
 });
 
 app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
@@ -1371,11 +1378,16 @@ app.post('/api/webhooks/razorpay', async (req: Request, res: Response) => {
       if (!bSnap.exists) throw new Error('BOOKING_NOT_FOUND');
       const b=bSnap.data()!;
       if (b.paymentOrderId!==orderId || b.paymentOrderAmount!==amount || b.paymentOrderCurrency!=='INR') throw new Error('AMOUNT_MISMATCH');
+      if (b.paymentStatus==='paid' && b.paymentId!==paymentId) throw new Error('BOOKING_PAYMENT_CONFLICT');
       if (b.paymentStatus!=='paid') tx.update(bookingRef,{paymentStatus:'paid',escrowStatus:'not_funded',paymentId,paymentCapturedAt:FieldValue.serverTimestamp(),paymentUpdatedAt:FieldValue.serverTimestamp()});
       tx.create(eventRef,{eventId,event,orderId,paymentId,processedAt:FieldValue.serverTimestamp(),kind:'booking'});
     });
     return res.json({success:true,received:true,kind:'booking'});
-  } catch(e) { console.error('Razorpay webhook failed:',e); return res.status(409).json({success:false,error:'Webhook could not be applied safely.'}); }
+  } catch(e) {
+    if (e instanceof Error && e.message==='BOOKING_PAYMENT_CONFLICT') return res.status(409).json({success:false,error:'Booking is already linked to a different verified payment.'});
+    console.error('Razorpay webhook failed:',e);
+    return res.status(409).json({success:false,error:'Webhook could not be applied safely.'});
+  }
 });
 
 // Channel Partner job feed. It reveals only eligible, unassigned requests and never
