@@ -13,13 +13,19 @@ data class ServiceItem(
 data class BookingLineItem(
     val serviceId: String = "",
     val serviceTitle: String = "Service item",
+    val category: String = "",
     val quantity: Double = 0.0,
     val billingUnit: String = "",
+    val pricingStatus: String = "quote_required",
     val unitRateMinimum: Double = 0.0,
     val unitRateMaximum: Double = 0.0,
+    val baseFee: Double = 0.0,
+    val minimumCharge: Double = 0.0,
+    val appliedAdjustmentPercent: Double = 0.0,
     val lineTotalMinimum: Double = 0.0,
     val lineTotalMaximum: Double = 0.0,
-    val materialsIncluded: Boolean = false
+    val materialsIncluded: Boolean = false,
+    val rateSourceName: String = ""
 )
 
 data class Booking(
@@ -41,7 +47,25 @@ data class Booking(
     val refundReason: String? = null,
     val customerLatitude: Double? = null,
     val customerLongitude: Double? = null,
-    val lineItems: List<BookingLineItem> = emptyList()
+    val lineItems: List<BookingLineItem> = emptyList(),
+    // Canonical booking fields shared by Customer, Channel Partner and Admin dashboards.
+    val customerUid: String = "",
+    val technicianUid: String = "",
+    val customerPhone: String = "",
+    val city: String = "",
+    val pincode: String = "",
+    val state: String = "",
+    val district: String = "",
+    val tehsil: String = "",
+    val scheduledDate: String = "",
+    val scheduledTimeSlot: String = "",
+    val paymentMethod: String = "",
+    val pricingStatus: String = "quote_required",
+    val quoteMinimum: Double = 0.0,
+    val quoteMaximum: Double = 0.0,
+    val priceConsentAccepted: Boolean = false,
+    val createdAt: String = "",
+    val updatedAt: String = ""
 )
 
 data class CommissionSettings(
