@@ -134,6 +134,15 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
     city: 'Indore', trades: ['electrician'], dispatchRadiusKm: 5,
     dispatchLocation: { latitude: 22.7196, longitude: 75.8577 }
   });
+  const testFcmToken = 'quickfix-fcm-test-token-' + 'x'.repeat(120);
+  const tokenRegistration = await request('/api/partners/notifications/token', partner.token, 'POST', { token: testFcmToken });
+  assert.equal(tokenRegistration.status, 200, 'authenticated Channel Partner can register an Android notification token');
+  const registeredTokens = await db.collection('users').doc(partner.uid).collection('notificationTokens').get();
+  assert.equal(registeredTokens.size, 1, 'server stores the registered FCM token under the owning partner profile');
+  assert.equal(registeredTokens.docs[0].data().token, testFcmToken);
+  const customerTokenRegistration = await request('/api/partners/notifications/token', otherCustomer.token, 'POST', { token: testFcmToken });
+  assert.equal(customerTokenRegistration.status, 403, 'customer accounts cannot register Channel Partner notification tokens');
+
   await db.collection('bookings').doc('otp-valid').set({
     id: 'otp-valid', customerUid: customer.uid, status: 'requested', serviceTitle: 'OTP integration test',
     category: 'electrician', customerAddress: 'Test address', city: 'Indore',
