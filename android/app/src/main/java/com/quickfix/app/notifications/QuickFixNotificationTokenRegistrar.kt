@@ -28,9 +28,9 @@ object QuickFixNotificationTokenRegistrar {
                             setRequestProperty("Authorization", "Bearer $idToken")
                             setRequestProperty("Content-Type", "application/json")
                         }
-                        val escaped = token.replace("\\", "\\\\").replace("\"", "\\\"")
+                        val payload = org.json.JSONObject().put("token", token).toString()
                         connection.outputStream.use {
-                            it.write("""{"token":"$escaped"}""".toByteArray(Charsets.UTF_8))
+                            it.write(payload.toByteArray(Charsets.UTF_8))
                         }
                         val status = connection.responseCode
                         if (status !in 200..299) {
