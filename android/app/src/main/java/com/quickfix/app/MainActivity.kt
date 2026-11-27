@@ -13,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +32,20 @@ import com.quickfix.app.ui.screens.PartnerRechargePaymentResult
 import com.quickfix.app.ui.screens.LocalQuickFixLanguage
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
+    private var notificationBookingId by mutableStateOf<String?>(null)
+
+    private fun readBookingNotification(source: android.content.Intent?) {
+        val id = source?.takeIf { it.action == "com.quickfix.app.OPEN_JOB_FEED" }
+            ?.getStringExtra("bookingId")
+            ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,150}")) }
+        if (id != null) notificationBookingId = id
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readBookingNotification(intent)
+    }
     override fun onPaymentSuccess(razorpayPaymentID: String?, paymentData: PaymentData?) {
         val paymentId = razorpayPaymentID ?: paymentData?.paymentId
         val orderId = paymentData?.orderId
@@ -62,6 +77,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        readBookingNotification(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "quickfix_job_alerts",
@@ -84,7 +100,9 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
                 ) {
                     QuickFixNavHost(
                         quickFixViewModel = quickFixViewModel,
-                        authViewModel = authViewModel
+                        authViewModel = authViewModel,
+                        notificationBookingId = notificationBookingId,
+                        onNotificationBookingHandled = { notificationBookingId = null }
                     )
                 }
             }
@@ -96,7 +114,9 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 @Composable
 fun QuickFixNavHost(
     quickFixViewModel: QuickFixViewModel,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    notificationBookingId: String? = null,
+    onNotificationBookingHandled: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
@@ -110,6 +130,17 @@ fun QuickFixNavHost(
             com.quickfix.app.data.model.UserRole.CHANNEL_PARTNER,
             com.quickfix.app.data.model.UserRole.TECHNICIAN -> "technician_portal"
             com.quickfix.app.data.model.UserRole.ADMIN -> "admin_dashboard"
+        }
+        if (authenticated.user.role == com.quickfix.app.data.model.UserRole.CHANNEL_PARTNER || authenticated.user.role == com.quickfix.app.data.model.UserRole.TECHNICIAN) {
+            val bookingId = notificationBookingId
+            if (!bookingId.isNullOrBlank()) {
+                navController.navigate("technician_portal?bookingId=$bookingId") {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    launchSingleTop = true
+                }
+                onNotificationBookingHandled()
+                return@LaunchedEffect
+            }
         }
         if (navController.currentDestination?.route != destination) {
             navController.navigate(destination) {
@@ -158,8 +189,19 @@ fun QuickFixNavHost(
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
             LiveTrackingScreen(bookingId = bookingId, navController = navController, viewModel = quickFixViewModel)
         }
-        composable("technician_portal") {
-            TechnicianScreen(navController = navController, viewModel = quickFixViewModel)
+        composable(
+            route = "technician_portal?bookingId={bookingId}",
+            arguments = listOf(androidx.navigation.navArgument("bookingId") {
+                type = androidx.navigation.NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { entry ->
+            TechnicianScreen(
+                navController = navController,
+                viewModel = quickFixViewModel,
+                initialBookingId = entry.arguments?.getString("bookingId")
+            )
         }
         composable("admin_login") {
             AdminLoginScreen(navController = navController, authViewModel = authViewModel)
