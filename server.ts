@@ -933,10 +933,8 @@ app.post('/api/partners/recharge/verify', authenticateFirebaseUser, async (req: 
     await db.runTransaction(async tx => {
       const [fresh, profile] = await Promise.all([tx.get(rechargeRef), tx.get(db.collection('users').doc(uid))]);
       if (!fresh.exists || fresh.data()?.partnerUid !== uid || fresh.data()?.orderId !== orderId) throw new Error('RECHARGE_CHANGED');
-      if (fresh.data()?.status === 'paid') {
-        if (fresh.data()?.paymentId !== paymentId) throw new Error('RECHARGE_PAYMENT_CONFLICT');
-        return;
-      }
+      if (isConflictingPaidPayment(fresh.data()?.status, fresh.data()?.paymentId, paymentId)) throw new Error('RECHARGE_PAYMENT_CONFLICT');
+      if (fresh.data()?.status === 'paid') return;
       if (!profile.exists) throw new Error('PARTNER_MISSING');
       const now = Date.now(), currentExpiry = profile.data()?.subscriptionExpiresAt?.toMillis?.() || 0;
       const start = Math.max(now, currentExpiry);
