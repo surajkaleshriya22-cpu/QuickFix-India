@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, getDocs, query, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from '../../lib/firebase';
 import type { BillingUnit } from '../../data/pricing';
+import { getBillingProfile } from '../../data/pricing';
+import { INITIAL_SERVICES } from '../../data/mockData';
 import type { LocationRateCard, RateApprovalStatus } from '../../data/rateCards';
 
 const units: BillingUnit[] = ['per_visit', 'per_point', 'per_piece', 'per_hour', 'per_day', 'per_sqft', 'per_kg', 'per_km', 'per_trip', 'per_job', 'quote'];
@@ -260,9 +262,14 @@ export const AdminRateCardsSection: React.FC = () => {
         <h4 className="md:col-span-2 text-sm font-bold">New rate card draft</h4>
         {([
           ['state', 'State'], ['district', 'District'], ['city', 'City (optional)'], ['tehsil', 'Tehsil (optional)'],
-          ['serviceId', 'Service ID (optional)'], ['sourceName', 'Source / quotation reference'], ['sourceUrl', 'Source URL (optional)']
+          ['sourceName', 'Source / quotation reference'], ['sourceUrl', 'Source URL (optional)']
         ] as const).map(([key, title]) => <label key={key}><span className={labelClass}>{title}</span><input className={inputClass} value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} /></label>)}
-        <label><span className={labelClass}>Partner/service category</span><select className={inputClass} value={form.serviceCategory} onChange={e => setForm(p => ({ ...p, serviceCategory: e.target.value }))}>{categories.map(c => <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>)}</select></label>
+        <label><span className={labelClass}>Partner/service category</span><select className={inputClass} value={form.serviceCategory} onChange={e => setForm(p => ({ ...p, serviceCategory: e.target.value, serviceId: '' }))}>{categories.map(c => <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>)}</select></label>
+        <label><span className={labelClass}>Specific work item (optional; blank = category-wide rate)</span><select className={inputClass} value={form.serviceId} onChange={e => {
+          const serviceId = e.target.value;
+          const selected = INITIAL_SERVICES.find(item => item.id === serviceId);
+          setForm(p => ({ ...p, serviceId, ...(selected ? { unit: getBillingProfile(selected).unit } : {}) }));
+        }}><option value="">All work items in this category</option>{INITIAL_SERVICES.filter(item => item.category === form.serviceCategory).map(item => <option key={item.id} value={item.id}>{item.title} · {item.hindiTitle || ''}</option>)}</select></label>
         <label><span className={labelClass}>Billing unit</span><select className={inputClass} value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value as BillingUnit }))}>{units.map(u => <option key={u} value={u}>{u.replaceAll('_', ' ')}</option>)}</select></label>
         {([
           ['minimumRate', 'Minimum rate (₹)'], ['maximumRate', 'Maximum rate (₹)'], ['minimumCharge', 'Minimum customer charge (₹)'], ['baseFee', 'Base fee (₹)']
