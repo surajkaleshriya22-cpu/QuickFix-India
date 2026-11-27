@@ -406,31 +406,55 @@ app.get('/api/partners/profile', authenticateFirebaseUser, async (req: Request, 
     if (!isPartner || data.phoneNumber !== identity.phone_number) {
       return res.status(403).json({ success: false, error: 'This mobile number is not linked to a registered Channel Partner account.' });
     }
-    let partnerQuickFixId = typeof data.partnerQuickFixId === 'string' ? data.partnerQuickFixId : '';
-    if (!partnerQuickFixId) {
-      const db = getFirestore(firebaseAdminApp);
-      const userRef = db.collection('users').doc(identity.uid);
-      await db.runTransaction(async (transaction) => {
-        const fresh = await transaction.get(userRef);
-        const freshData = fresh.data() || {};
-        if (typeof freshData.partnerQuickFixId === 'string' && freshData.partnerQuickFixId) {
-          partnerQuickFixId = freshData.partnerQuickFixId;
-          return;
+    let partnerQuickFixId = '';
+    const db = getFirestore(firebaseAdminApp);
+    const userRef = db.collection('users').doc(identity.uid);
+    await db.runTransaction(async (transaction) => {
+      const fresh = await transaction.get(userRef);
+      const freshData = fresh.data() || {};
+      const storedId = typeof freshData.partnerQuickFixId === 'string'
+        ? freshData.partnerQuickFixId.trim().toUpperCase()
+        : '';
+      const hasValidStoredId = /^QFP-\d{8}$/.test(storedId);
+
+      if (hasValidStoredId) {
+        const storedIndexRef = db.collection('quickfix_id_index').doc(storedId);
+        const storedIndex = await transaction.get(storedIndexRef);
+        if (storedIndex.exists && storedIndex.data()?.uid !== identity.uid) {
+          throw new Error('QUICKFIX_ID_INDEX_CONFLICT');
         }
-        let candidate = '';
-        let candidateRef: any = null;
-        for (let attempt = 0; attempt < 8; attempt++) {
-          const nextId = createQuickFixId('PARTNER');
-          const nextRef = db.collection('quickfix_id_index').doc(nextId);
-          const collision = await transaction.get(nextRef);
-          if (!collision.exists) { candidate = nextId; candidateRef = nextRef; break; }
+        partnerQuickFixId = storedId;
+        if (!storedIndex.exists) {
+          transaction.create(storedIndexRef, {
+            uid: identity.uid,
+            accountType: 'CHANNEL_PARTNER',
+            createdAt: FieldValue.serverTimestamp(),
+            repairedAt: FieldValue.serverTimestamp()
+          });
         }
-        if (!candidate || !candidateRef) throw new Error('QUICKFIX_ID_ALLOCATION_FAILED');
-        partnerQuickFixId = candidate;
-        transaction.update(userRef, { partnerQuickFixId: candidate, updatedAt: FieldValue.serverTimestamp() });
-        transaction.create(candidateRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
+        if (freshData.partnerQuickFixId !== storedId) {
+          transaction.update(userRef, { partnerQuickFixId: storedId, updatedAt: FieldValue.serverTimestamp() });
+        }
+        return;
+      }
+
+      let candidate = '';
+      let candidateRef: any = null;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const nextId = createQuickFixId('PARTNER');
+        const nextRef = db.collection('quickfix_id_index').doc(nextId);
+        const collision = await transaction.get(nextRef);
+        if (!collision.exists) { candidate = nextId; candidateRef = nextRef; break; }
+      }
+      if (!candidate || !candidateRef) throw new Error('QUICKFIX_ID_ALLOCATION_FAILED');
+      partnerQuickFixId = candidate;
+      transaction.update(userRef, { partnerQuickFixId: candidate, updatedAt: FieldValue.serverTimestamp() });
+      transaction.create(candidateRef, {
+        uid: identity.uid,
+        accountType: 'CHANNEL_PARTNER',
+        createdAt: FieldValue.serverTimestamp()
       });
-    }
+    });
     return res.json({
       success: true,
       profile: {
