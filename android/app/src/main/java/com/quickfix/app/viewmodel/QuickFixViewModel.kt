@@ -141,7 +141,44 @@ class QuickFixViewModel : ViewModel() {
                             paymentStatus = data["paymentStatus"] as? String ?: "pending",
                             escrowStatus = data["escrowStatus"] as? String ?: "not_funded",
                             customerLatitude = ((data["customerLocation"] as? Map<*, *>)?.get("latitude") as? Number)?.toDouble(),
-                            customerLongitude = ((data["customerLocation"] as? Map<*, *>)?.get("longitude") as? Number)?.toDouble()
+                            customerLongitude = ((data["customerLocation"] as? Map<*, *>)?.get("longitude") as? Number)?.toDouble(),
+                            lineItems = (data["lineItems"] as? List<*>)?.mapNotNull { raw ->
+                                val line = raw as? Map<*, *> ?: return@mapNotNull null
+                                BookingLineItem(
+                                    serviceId = line["serviceId"] as? String ?: "",
+                                    serviceTitle = line["serviceTitle"] as? String ?: "Service item",
+                                    category = line["category"] as? String ?: "",
+                                    quantity = (line["quantity"] as? Number)?.toDouble() ?: 0.0,
+                                    billingUnit = line["billingUnit"] as? String ?: "",
+                                    pricingStatus = line["pricingStatus"] as? String ?: "quote_required",
+                                    unitRateMinimum = (line["unitRateMinimum"] as? Number)?.toDouble() ?: 0.0,
+                                    unitRateMaximum = (line["unitRateMaximum"] as? Number)?.toDouble() ?: 0.0,
+                                    baseFee = (line["baseFee"] as? Number)?.toDouble() ?: 0.0,
+                                    minimumCharge = (line["minimumCharge"] as? Number)?.toDouble() ?: 0.0,
+                                    appliedAdjustmentPercent = (line["appliedAdjustmentPercent"] as? Number)?.toDouble() ?: 0.0,
+                                    lineTotalMinimum = (line["lineTotalMinimum"] as? Number)?.toDouble() ?: 0.0,
+                                    lineTotalMaximum = (line["lineTotalMaximum"] as? Number)?.toDouble() ?: 0.0,
+                                    materialsIncluded = line["materialsIncluded"] as? Boolean ?: false,
+                                    rateSourceName = line["rateSourceName"] as? String ?: ""
+                                )
+                            } ?: emptyList(),
+                            customerUid = data["customerUid"] as? String ?: "",
+                            technicianUid = data["technicianUid"] as? String ?: "",
+                            customerPhone = data["customerPhone"] as? String ?: "",
+                            city = data["city"] as? String ?: "",
+                            pincode = data["pincode"] as? String ?: "",
+                            state = (data["serviceArea"] as? Map<*, *>)?.get("state") as? String ?: "",
+                            district = (data["serviceArea"] as? Map<*, *>)?.get("district") as? String ?: "",
+                            tehsil = (data["serviceArea"] as? Map<*, *>)?.get("tehsil") as? String ?: "",
+                            scheduledDate = data["scheduledDate"] as? String ?: "",
+                            scheduledTimeSlot = data["scheduledTimeSlot"] as? String ?: "",
+                            paymentMethod = data["paymentMethod"] as? String ?: "",
+                            pricingStatus = data["pricingStatus"] as? String ?: "quote_required",
+                            quoteMinimum = ((data["quoteRange"] as? Map<*, *>)?.get("minimum") as? Number)?.toDouble() ?: 0.0,
+                            quoteMaximum = ((data["quoteRange"] as? Map<*, *>)?.get("maximum") as? Number)?.toDouble() ?: 0.0,
+                            priceConsentAccepted = (data["priceConsent"] as? Map<*, *>)?.get("accepted") as? Boolean ?: false,
+                            createdAt = data["createdAt"] as? String ?: "",
+                            updatedAt = data["updatedAt"] as? String ?: ""
                         )
                     } ?: emptyList()
                     _firestoreSyncStatus.value = "Bookings loaded from Firestore."
