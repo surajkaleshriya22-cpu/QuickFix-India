@@ -119,7 +119,7 @@ interface QuickFixContextType {
     notes?: string;
     paymentMethod: PaymentMethod;
   }) => Booking;
-  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod; serviceArea: { state: string; district: string; tehsil: string }; quantity: number; lineItems?: { serviceId: string; quantity: number }[] }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
+  submitCustomerBooking: (params: { serviceId: string; scheduledDate: string; scheduledTimeSlot: string; address: string; notes?: string; paymentMethod: PaymentMethod; serviceArea: { state: string; district: string; tehsil: string }; quantity: number; lineItems?: { serviceId: string; quantity: number }[]; customerLocation: { latitude: number; longitude: number } }) => Promise<{ success: boolean; bookingId?: string; message?: string }>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, otpProvided?: string) => { success: boolean; message?: string };
   addReview: (bookingId: string, rating: number, comment: string, tags: string[]) => void;
 
@@ -892,7 +892,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     paymentMethod,
     serviceArea,
     quantity,
-    lineItems
+    lineItems,
+    customerLocation
   }: {
     serviceId: string;
     scheduledDate: string;
@@ -903,6 +904,7 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     serviceArea: { state: string; district: string; tehsil: string };
     quantity: number;
     lineItems?: { serviceId: string; quantity: number }[];
+    customerLocation: { latitude: number; longitude: number };
   }): Promise<{ success: boolean; bookingId?: string; message?: string }> => {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser || !isAuthenticated || currentUser?.role !== 'customer' || currentUser.uid !== firebaseUser.uid) {
@@ -931,7 +933,8 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           paymentMethod,
           serviceArea,
           quantity,
-          ...(lineItems?.length ? { lineItems } : {})
+          ...(lineItems?.length ? { lineItems } : {}),
+          customerLocation
         })
       });
       const result = await response.json();

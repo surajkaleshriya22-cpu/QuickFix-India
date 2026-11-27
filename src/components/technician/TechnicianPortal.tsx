@@ -144,6 +144,8 @@ export const TechnicianPortal: React.FC = () => {
   const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState('');
+  const [jobsNextCursor, setJobsNextCursor] = useState<string | null>(null);
+  const [jobsHasMore, setJobsHasMore] = useState(false);
   const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
   const [acceptedJobMessage, setAcceptedJobMessage] = useState('');
   const [payoutSuccess, setPayoutSuccess] = useState('');
@@ -172,37 +174,66 @@ export const TechnicianPortal: React.FC = () => {
   const assignedJobs = assignedBookings;
   const currentActiveJob = assignedBookings[0];
 
-  const loadAvailableJobs = async () => {
+  const loadAvailableJobs = async (cursor?: string, append = false) => {
     const firebaseUser = auth.currentUser;
     if (!isFirebaseConfigured || !firebaseUser || !isTechnicianLoggedIn) {
       setAvailableJobs([]);
       setAssignedBookings([]);
+      setJobsNextCursor(null);
+      setJobsHasMore(false);
       return;
     }
     setJobsLoading(true);
     setJobsError('');
     try {
       const token = await firebaseUser.getIdToken();
-      const response = await fetch('/api/partners/bookings', {
+      const query = cursor ? '?cursor=' + encodeURIComponent(cursor) : '';
+      const response = await fetch('/api/partners/bookings' + query, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const result = await response.json();
       if (!response.ok || !result.success || !Array.isArray(result.bookings) || !Array.isArray(result.assignedBookings)) {
         throw new Error(result.error || 'Available jobs could not be loaded.');
       }
-      setAvailableJobs(result.bookings);
+      setAvailableJobs(previous => {
+        if (!append) return result.bookings;
+        const combined = new Map(previous.map(job => [job.id, job]));
+        result.bookings.forEach((job: (typeof previous)[number]) => combined.set(job.id, job));
+        return [...combined.values()];
+      });
       setAssignedBookings(result.assignedBookings as Booking[]);
+      // A background refresh updates the first page without discarding pages
+      // the partner has already loaded. Explicit page loads advance the cursor.
+      if (cursor || !append) {
+        setJobsNextCursor(typeof result.nextCursor === 'string' ? result.nextCursor : null);
+        setJobsHasMore(result.hasMore === true && typeof result.nextCursor === 'string');
+      }
     } catch (error) {
       setJobsError(error instanceof Error ? error.message : 'Available jobs could not be loaded. Please retry.');
-      setAvailableJobs([]);
-      setAssignedBookings([]);
+      if (!append) {
+        setAvailableJobs([]);
+        setAssignedBookings([]);
+        setJobsNextCursor(null);
+        setJobsHasMore(false);
+      }
     } finally {
       setJobsLoading(false);
     }
   };
 
+  // Keep new customer requests visible while the Channel Partner portal is open.
+  // Pause background polling to avoid unnecessary mobile data and battery use.
   useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadAvailableJobs(undefined, true);
+    };
     void loadAvailableJobs();
+    const timer = window.setInterval(refreshWhenVisible, 15_000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [currentUser?.uid, isTechnicianLoggedIn]);
 
   const handleAcceptJob = async (bookingId: string) => {
@@ -943,6 +974,13 @@ export const TechnicianPortal: React.FC = () => {
                 </button>
               </div>
             ))}
+            {jobsHasMore && (
+              <button type="button" onClick={() => jobsNextCursor && void loadAvailableJobs(jobsNextCursor, true)}
+                disabled={jobsLoading || !jobsNextCursor}
+                className="w-full rounded-lg border border-blue-200 py-2 text-xs font-semibold text-blue-700 disabled:text-slate-400">
+                {jobsLoading ? 'Loading…' : 'Load more nearby requests'}
+              </button>
+            )}
           </section>
         )}
 

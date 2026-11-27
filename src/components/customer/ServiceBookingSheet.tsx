@@ -28,6 +28,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [customerLocation, setCustomerLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState('');
 
   const dateOptions = [
     { label: 'Today', value: getIndiaBookingDate(0) },
@@ -54,6 +56,30 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
   const [isTranscribingNote, setIsTranscribingNote] = useState(false);
   const noteRecorderRef = useRef<MediaRecorder | null>(null);
   const noteAudioChunksRef = useRef<Blob[]>([]);
+
+  const captureCustomerLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('इस browser में GPS उपलब्ध नहीं है। कृपया GPS वाला फोन/browser इस्तेमाल करें।');
+      return;
+    }
+    setLocationStatus('आपकी GPS लोकेशन ली जा रही है…');
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        setCustomerLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        setLocationStatus('GPS लोकेशन मिल गई। अब सही service area के Channel Partners को request भेजी जा सकेगी।');
+      },
+      error => {
+        setCustomerLocation(null);
+        setLocationStatus(error.code === error.PERMISSION_DENIED
+          ? 'GPS अनुमति नहीं मिली। Request भेजने के लिए location permission चालू करें।'
+          : 'GPS लोकेशन नहीं मिली। फोन का Location चालू करके फिर कोशिश करें।');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  };
 
   const startNoteRecording = async () => {
     try {
@@ -304,6 +330,11 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
       window.alert('Booking ke liye State, District, Tehsil aur quantity bharein.');
       return;
     }
+    if (!customerLocation) {
+      window.alert('सही Channel Partner खोजने के लिए पहले अपनी वर्तमान GPS लोकेशन साझा करें।');
+      captureCustomerLocation();
+      return;
+    }
     if (!selectedAddress.trim()) {
       window.alert('Booking se pehle map se apna poora service address select karein.');
       setIsEditingAddress(true);
@@ -322,7 +353,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           paymentMethod,
           serviceArea: { state: stateName.trim(), district: districtName.trim(), tehsil: tehsilName.trim() },
           quantity: Number(basketLines[0]?.quantity || 1),
-          lineItems: basketServices.map(line => ({ serviceId: line.serviceId, quantity: Number(line.quantity) }))
+          lineItems: basketServices.map(line => ({ serviceId: line.serviceId, quantity: Number(line.quantity) })),
+          customerLocation
         });
         if (!result.success || !result.bookingId) {
           window.alert(result.message || 'Booking request save nahi ho payi. Please retry.');
@@ -455,6 +487,8 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                   onAddressSelect={(addr) => {
                     setCustomAddress(addr);
                     setSelectedAddress(addr);
+                    setCustomerLocation(null);
+                    setLocationStatus('Service address changed. Please capture GPS again so the partner is matched to the correct place.');
                   }}
                 />
                 <span className="text-[10px] text-slate-400 block px-1">
@@ -467,6 +501,13 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                 <span>{selectedAddress}</span>
               </div>
             )}
+          </div>
+          <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50 p-3 space-y-2">
+            <button type="button" onClick={captureCustomerLocation}
+              className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">
+              <MapPin className="inline w-3.5 h-3.5 mr-1" /> Use my current GPS location
+            </button>
+            <p className="text-[11px] text-blue-900">{locationStatus || (customerLocation ? 'GPS location saved for this booking.' : 'GPS is used only to match nearby Channel Partners within the service radius.')}</p>
           </div>
 
 

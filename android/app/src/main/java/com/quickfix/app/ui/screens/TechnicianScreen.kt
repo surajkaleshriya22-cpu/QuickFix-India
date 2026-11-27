@@ -157,7 +157,7 @@ fun TechnicianScreen(
     LaunchedEffect(viewModel) {
         while (true) {
             viewModel.refreshPartnerJobs()
-            kotlinx.coroutines.delay(30_000L)
+            kotlinx.coroutines.delay(15_000L)
         }
     }
 
