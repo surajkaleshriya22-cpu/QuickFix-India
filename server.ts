@@ -212,7 +212,7 @@ const notifyEligiblePartnersOfBooking = async (
         },
         android: {
           priority: 'high',
-          notification: { channelId: 'quickfix_job_alerts', clickAction: 'com.quickfix.app.OPEN_JOB_FEED' }
+          notification: { channelId: 'quickfix_job_alerts' }
         }
       });
       sent += result.successCount;
