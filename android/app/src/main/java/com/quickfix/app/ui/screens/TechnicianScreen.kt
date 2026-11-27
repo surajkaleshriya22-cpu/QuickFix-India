@@ -112,6 +112,7 @@ fun TechnicianScreen(
     var sosStatus by remember { mutableStateOf("") }
     val isEnglish = LocalQuickFixLanguage.current.value == "en"
     var registeredTrades by remember { mutableStateOf<List<String>>(emptyList()) }
+    var partnerQuickFixId by remember { mutableStateOf("") }
     var tradesLoadMessage by remember { mutableStateOf("आपकी सेवाएँ लोड हो रही हैं...") }
     var partnerBankName by remember { mutableStateOf("") }
     var partnerBankType by remember { mutableStateOf("savings") }
@@ -197,6 +198,9 @@ fun TechnicianScreen(
             FirebaseFirestore.getInstance().collection("users").document(uid).get()
                 .addOnSuccessListener { profile ->
                     registeredTrades = (profile.get("trades") as? List<*>)?.filterIsInstance<String>().orEmpty()
+                    partnerQuickFixId = profile.getString("partnerQuickFixId")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: profile.getString("quickFixId").orEmpty()
                     tradesLoadMessage = if (registeredTrades.isEmpty()) "आपकी सेवाएँ अभी प्रोफ़ाइल में दर्ज नहीं हैं।" else ""
                 }
                 .addOnFailureListener { tradesLoadMessage = "सेवाएँ लोड नहीं हो सकीं। इंटरनेट जाँचें।" }
@@ -324,6 +328,37 @@ fun TechnicianScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             PartnerRechargeCard()
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        if (isEnglish) "My QuickFix Partner ID" else "मेरा QuickFix पार्टनर ID",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = TextPrimary
+                    )
+                    Text(
+                        partnerQuickFixId.ifBlank {
+                            if (isEnglish) "ID is loading. Please refresh or sign in again." else "ID लोड हो रही है। कृपया रिफ्रेश करें या दोबारा लॉगिन करें।"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = if (partnerQuickFixId.isBlank()) TextSecondary else BrandBlue
+                    )
+                    Text(
+                        if (isEnglish) "Keep this ID for support and booking references." else "सहायता और बुकिंग के लिए इस ID को संभालकर रखें।",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
             if (!initialBookingId.isNullOrBlank()) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
