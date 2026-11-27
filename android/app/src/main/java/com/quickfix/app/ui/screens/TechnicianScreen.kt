@@ -648,6 +648,10 @@ fun TechnicianScreen(
                             if (job.id == initialBookingId) Text(if (isEnglish) "NOTIFICATION TARGET BOOKING" else "नोटिफिकेशन वाली बुकिंग", color = BrandBlue, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             Text(job.serviceTitle, fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 13.sp)
                             Text("काम: ${partnerCategoryHindi(job.category)} · ग्राहक: ${job.customerName}", fontSize = 11.sp, color = TextSecondary)
+                            if (job.customerAddress.isNotBlank()) Text("पता: ${job.customerAddress}, ${job.tehsil} ${job.district} ${job.state} ${job.pincode}".trim(), fontSize = 11.sp, color = TextSecondary)
+                            if (job.customerPhone.isNotBlank()) Text("ग्राहक फोन: ${job.customerPhone}", fontSize = 11.sp, color = TextSecondary)
+                            if (job.scheduledDate.isNotBlank() || job.scheduledTimeSlot.isNotBlank()) Text("समय: ${job.scheduledDate} ${job.scheduledTimeSlot}", fontSize = 11.sp, color = TextSecondary)
+                            Text("भुगतान: ${job.paymentMethod.ifBlank { "—" }} · स्थिति: ${job.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
                             if (job.lineItems.isNotEmpty()) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
