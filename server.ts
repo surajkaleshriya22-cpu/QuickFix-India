@@ -6,7 +6,7 @@ import { cert, getApps, initializeApp, applicationDefault, type App } from 'fire
 import { getAuth } from 'firebase-admin/auth';
 import { extractBearerToken } from './src/lib/serverAuth.ts';
 import { areBothLocationConsentsEnabled, getBookingLocationParticipantRole, isLiveLocationBookingStatus } from './src/utils/liveLocation';
-import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, FieldPath, type Firestore, type QueryDocumentSnapshot, type DocumentReference } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { INITIAL_SERVICES, INITIAL_COMMISSION_SETTINGS } from './src/data/mockData';
 import fs from 'fs';
@@ -26,6 +26,7 @@ import { hasDistrictServiceArea, matchesPartnerServiceArea, serviceAreaKey } fro
 import { getSosReporterRole, isActiveSosBookingStatus, isValidSosIncidentInput } from './src/utils/sosIncident';
 import { EMERGENCY_CONTACT_LIMIT, EMERGENCY_CONTACT_OTP_MAX_ATTEMPTS, EMERGENCY_CONTACT_OTP_PER_ACCOUNT_PER_HOUR, EMERGENCY_CONTACT_OTP_PER_PHONE_PER_HOUR, EMERGENCY_CONTACT_OTP_RESEND_MS, EMERGENCY_CONTACT_OTP_TTL_MS, emergencyContactDocId, hashEmergencyContactOtp, isValidEmergencyPhone, maskEmergencyPhone, normalizeEmergencyPhone, verifyEmergencyContactOtpHash } from './src/utils/emergencyContacts';
 import { isStartOtpBookingStatus, isStartOtpExpired, isValidStartOtp } from './src/utils/bookingOtp';
+import { normalizeQuickFixId } from './src/utils/quickFixId';
 
 dotenv.config();
 
@@ -339,10 +340,17 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(userRef);
       const existingData = existing.exists ? existing.data()! : undefined;
-      let issuedQuickFixId = typeof existingData?.partnerQuickFixId === 'string' ? existingData.partnerQuickFixId : '';
-      issuedPartnerQuickFixId = issuedQuickFixId;
-      let quickFixIdRef: any = null;
-      if (!issuedQuickFixId) {
+      let issuedQuickFixId = normalizeQuickFixId(existingData?.partnerQuickFixId, 'PARTNER') || '';
+      let quickFixIdRef: DocumentReference | null = null;
+      let quickFixIdIndexExists = false;
+      if (issuedQuickFixId) {
+        quickFixIdRef = db.collection('quickfix_id_index').doc(issuedQuickFixId);
+        const existingIndex = await transaction.get(quickFixIdRef);
+        if (existingIndex.exists && existingIndex.data()?.uid !== identity.uid) {
+          throw new Error('PARTNER_ID_INDEX_CONFLICT');
+        }
+        quickFixIdIndexExists = existingIndex.exists;
+      } else {
         for (let attempt = 0; attempt < 8; attempt++) {
           const candidate = createQuickFixId('PARTNER');
           const candidateRef = db.collection('quickfix_id_index').doc(candidate);
@@ -369,6 +377,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
         role: 'CHANNEL_PARTNER',
         roles: ['CUSTOMER', 'CHANNEL_PARTNER'],
         partnerQuickFixId: issuedQuickFixId,
+        quickFixId: issuedQuickFixId,
         subscriptionStatus: trialDays > 0 ? 'trial' : 'expired',
         subscriptionTrialDaysGranted: trialDays,
         ...(existingData?.subscriptionTrialStartedAt ? {} : { subscriptionTrialStartedAt: FieldValue.serverTimestamp() }),
@@ -398,7 +407,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       };
       if (existing.exists) transaction.update(userRef, partnerFields);
       else transaction.create(userRef, partnerFields);
-      if (quickFixIdRef) transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
+      if (quickFixIdRef && !quickFixIdIndexExists) {
+        transaction.create(quickFixIdRef, { uid: identity.uid, accountType: 'CHANNEL_PARTNER', createdAt: FieldValue.serverTimestamp() });
+      }
     });
 
     return res.status(201).json({
@@ -410,6 +421,9 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
   } catch (error) {
     if (error instanceof Error && error.message === 'PROFILE_ALREADY_EXISTS') {
       return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
+    }
+    if (error instanceof Error && error.message === 'PARTNER_ID_INDEX_CONFLICT') {
+      return res.status(409).json({ success: false, error: 'This Partner QuickFix ID is already linked to another account. Please contact support.' });
     }
     console.error('Secure partner registration failed:', error);
     return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
