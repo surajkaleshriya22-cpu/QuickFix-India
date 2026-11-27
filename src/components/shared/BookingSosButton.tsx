@@ -35,7 +35,7 @@ export const BookingSosButton: React.FC<{ bookingId: string; reporterRole: 'cust
     </select>
     <textarea value={message} onChange={event => setMessage(event.target.value.slice(0, 500))} maxLength={500} rows={2} placeholder="Optional details (do not include OTP or sensitive documents)" className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm" />
     <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={saving} onClick={() => void submitReport()} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Send SOS report / सुरक्षा रिपोर्ट भेजें'}</button><a href="tel:112" className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-bold text-rose-800">Call 112</a></div>
-    <p className="text-[10px] leading-relaxed text-rose-800">QuickFix केवल रिपोर्ट सेव करता है। Police, ambulance, emergency contact या admin को automatic alert अभी connected नहीं है। तत्काल खतरे में 112 पर सीधे कॉल करें।</p>
+    <p className="text-[10px] leading-relaxed text-rose-800">QuickFix आपकी रिपोर्ट सेव करता है और उसे Admin Safety Inbox में दिखाता है। Admin SMS केवल तभी जाएगा जब QuickFix ने Twilio को सही तरह configure किया हो। Police, ambulance या emergency contact को automatic alert नहीं जाता। तत्काल खतरे में 112 पर सीधे कॉल करें।</p>
     {status && <p role="status" aria-live="polite" className="text-xs font-medium text-slate-800">{status}</p>}
   </section>;
 };

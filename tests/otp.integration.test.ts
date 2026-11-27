@@ -28,6 +28,35 @@ const createEmulatorUser = async (email: string) => {
   return { uid: body.localId, token: body.idToken };
 };
 
+
+
+const createPhoneEmulatorUser = async (phoneNumber: string) => {
+  const sent = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=fake-api-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phoneNumber, recaptchaToken: 'fake-recaptcha-token' })
+  });
+  const sentBody = await sent.json() as { sessionInfo?: string; error?: { message?: string } };
+  assert.equal(sent.ok, true, sentBody.error?.message || 'Auth emulator did not issue a phone verification session');
+  assert.ok(sentBody.sessionInfo);
+
+  const codesResponse = await fetch(`http://${authHost}/emulator/v1/projects/${projectId}/verificationCodes`);
+  assert.equal(codesResponse.ok, true, 'Auth emulator SMS-code endpoint must be available');
+  const codesBody = await codesResponse.json() as { verificationCodes?: Array<{ phoneNumber: string; code: string }> };
+  const verification = codesBody.verificationCodes?.find(item => item.phoneNumber === phoneNumber);
+  assert.ok(verification?.code, 'Auth emulator must expose the generated SMS verification code');
+
+  const signedIn = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=fake-api-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionInfo: sentBody.sessionInfo, code: verification.code, returnSecureToken: true })
+  });
+  const signedInBody = await signedIn.json() as { idToken?: string; localId?: string; error?: { message?: string } };
+  assert.equal(signedIn.ok, true, signedInBody.error?.message || 'Auth emulator phone verification failed');
+  assert.ok(signedInBody.idToken && signedInBody.localId);
+  return { uid: signedInBody.localId, token: signedInBody.idToken };
+};
+
 const request = async (path: string, token: string, method = 'GET', body?: unknown) => {
   const response = await fetch(baseUrl + path, {
     method,
@@ -216,4 +245,108 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
     .where('action', '==', 'service_started')
     .get();
   assert.equal(startAudits.size, 1, 'a concurrent replay must not create a second service-start audit');
+
+  // Booking-linked SOS integration: use real Auth Emulator phone verification so
+  // the server receives a genuine phone_number claim in the Firebase ID token.
+  const sosCustomer = await createPhoneEmulatorUser('+16505550131');
+  const sosPartner = await createPhoneEmulatorUser('+16505550132');
+  const unrelatedReporter = await createPhoneEmulatorUser('+16505550133');
+  const nonPhoneReporter = await createEmulatorUser('sos-no-phone@example.test');
+
+  await db.collection('bookings').doc('sos-active-booking').set({
+    id: 'sos-active-booking', customerUid: sosCustomer.uid, technicianUid: sosPartner.uid,
+    status: 'assigned', createdAt: new Date().toISOString()
+  });
+  await db.collection('bookings').doc('sos-inactive-booking').set({
+    id: 'sos-inactive-booking', customerUid: sosCustomer.uid, technicianUid: sosPartner.uid,
+    status: 'requested', createdAt: new Date().toISOString()
+  });
+
+  const sosPath = '/api/bookings/sos-active-booking/sos';
+  const customerRequestId = 'sos-customer-request-001';
+  const customerReport = await request(sosPath, sosCustomer.token, 'POST', {
+    requestId: customerRequestId, incidentType: 'medical_emergency', message: 'Need urgent help'
+  });
+  assert.equal(customerReport.status, 202, 'verified customer may report for their own active booking');
+  assert.equal(customerReport.body.success, true);
+  assert.equal(customerReport.body.duplicate, false);
+  assert.equal(customerReport.body.emergencyDispatchConfigured, false);
+  const customerIncidentId = String(customerReport.body.incidentId || '');
+  assert.ok(customerIncidentId);
+  const customerIncidentRef = db.collection('safety_incidents').doc(customerIncidentId);
+  const customerIncident = await customerIncidentRef.get();
+  assert.equal(customerIncident.exists, true);
+  assert.equal(customerIncident.data()?.reporterUid, sosCustomer.uid);
+  assert.equal(customerIncident.data()?.reporterRole, 'CUSTOMER');
+  assert.equal(customerIncident.data()?.reporterPhoneVerified, true);
+  assert.equal(customerIncident.data()?.status, 'received_pending_review');
+
+  const duplicateReport = await request(sosPath, sosCustomer.token, 'POST', {
+    requestId: customerRequestId, incidentType: 'medical_emergency', message: 'Retry same request'
+  });
+  assert.equal(duplicateReport.status, 200);
+  assert.equal(duplicateReport.body.duplicate, true);
+  assert.equal(duplicateReport.body.incidentId, customerIncidentId);
+  const customerIncidents = await db.collection('safety_incidents')
+    .where('bookingId', '==', 'sos-active-booking')
+    .where('reporterUid', '==', sosCustomer.uid)
+    .get();
+  assert.equal(customerIncidents.size, 1, 'same request ID must create exactly one incident');
+
+  const partnerReport = await request(sosPath, sosPartner.token, 'POST', {
+    requestId: 'sos-partner-request-001', incidentType: 'safety_concern', message: 'Partner safety concern'
+  });
+  assert.equal(partnerReport.status, 202, 'assigned Channel Partner may report for the active booking');
+  const partnerIncident = await db.collection('safety_incidents').doc(String(partnerReport.body.incidentId)).get();
+  assert.equal(partnerIncident.data()?.reporterUid, sosPartner.uid);
+  assert.equal(partnerIncident.data()?.reporterRole, 'CHANNEL_PARTNER');
+
+  const unrelatedReport = await request(sosPath, unrelatedReporter.token, 'POST', {
+    requestId: 'sos-outsider-request-01', incidentType: 'other', message: 'Should be blocked'
+  });
+  assert.equal(unrelatedReport.status, 403, 'unrelated authenticated user must not report for this booking');
+  const unrelatedId = 'sos-active-booking_' + unrelatedReporter.uid + '_sos-outsider-request-01';
+  assert.equal((await db.collection('safety_incidents').doc(unrelatedId).get()).exists, false);
+
+  const noPhoneReport = await request(sosPath, nonPhoneReporter.token, 'POST', {
+    requestId: 'sos-no-phone-request-01', incidentType: 'other', message: 'No verified phone claim'
+  });
+  assert.equal(noPhoneReport.status, 403, 'email-only Firebase identity must not submit a safety report');
+  const missingToken = await fetch(baseUrl + sosPath, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requestId: 'sos-missing-token-01', incidentType: 'other' })
+  });
+  assert.equal(missingToken.status, 401);
+
+  const missingBooking = await request('/api/bookings/sos-missing-booking/sos', sosCustomer.token, 'POST', {
+    requestId: 'sos-missing-booking-01', incidentType: 'other'
+  });
+  assert.equal(missingBooking.status, 404);
+  const inactiveBooking = await request('/api/bookings/sos-inactive-booking/sos', sosCustomer.token, 'POST', {
+    requestId: 'sos-inactive-booking-01', incidentType: 'other'
+  });
+  assert.equal(inactiveBooking.status, 409);
+
+  const malformedRequest = await request(sosPath, sosCustomer.token, 'POST', {
+    requestId: 'short', incidentType: 'unknown_type', message: 'x'.repeat(501)
+  });
+  assert.equal(malformedRequest.status, 400, 'invalid request ID, incident type and oversized message must be rejected');
+
+  const partnerCannotReadAdminInbox = await request('/api/admin/safety-incidents', sosPartner.token);
+  assert.equal(partnerCannotReadAdminInbox.status, 403, 'Channel Partner must not read the admin safety inbox');
+
+  // Firestore client REST requests must be denied by rules even though the server
+  // can write the incident through the Admin SDK.
+  const firestoreDocumentUrl = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/safety_incidents/${encodeURIComponent(customerIncidentId)}`;
+  const clientRead = await fetch(firestoreDocumentUrl, {
+    headers: { Authorization: `Bearer ${sosCustomer.token}` }
+  });
+  assert.equal(clientRead.status, 403, 'customer client token must not read safety incident documents directly');
+  const clientWrite = await fetch(firestoreDocumentUrl, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${sosCustomer.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { forged: { booleanValue: true } } })
+  });
+  assert.equal(clientWrite.status, 403, 'customer client token must not write safety incident documents directly');
+
 });
