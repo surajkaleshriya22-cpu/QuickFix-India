@@ -66,7 +66,22 @@ class AuthViewModel(
             return repository.getUserProfile(uid)
                 ?: throw IllegalStateException("Partner application was submitted, but the profile could not be loaded. Please sign in again.")
         }
-        if (existing != null) return requireMatchingLoginRole(existing, pendingUser.role)
+        if (existing != null) {
+            // Older Customer accounts may predate server-issued QuickFix IDs.
+            // Re-run the authenticated registration endpoint on Customer login
+            // when the ID is missing; the server transaction safely issues or
+            // repairs the permanent QFC ID for this verified Firebase UID.
+            if (pendingUser.role == UserRole.CUSTOMER &&
+                existing.role == UserRole.CUSTOMER &&
+                existing.quickFixId.isBlank()) {
+                repository.saveUserProfile(
+                    existing.copy(uid = uid, phoneNumber = verifiedPhone)
+                )
+                return repository.getUserProfile(uid)
+                    ?: throw IllegalStateException("Customer ID registration completed, but the profile could not be reloaded. Please sign in again.")
+            }
+            return requireMatchingLoginRole(existing, pendingUser.role)
+        }
         return when (pendingUser.role) {
             UserRole.CHANNEL_PARTNER -> {
                 if (!pendingUser.isPartnerRegistration) {
