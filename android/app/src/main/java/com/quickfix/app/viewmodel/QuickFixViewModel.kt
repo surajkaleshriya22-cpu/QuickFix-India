@@ -30,7 +30,8 @@ data class CustomerBookingQuote(
     val minimum: Double = 0.0,
     val maximum: Double = 0.0,
     val materialsIncluded: Boolean = false,
-    val rateSourceName: String = ""
+    val rateSourceName: String = "",
+    val appliedAdjustmentPercent: Double = 0.0
 )
 
 
@@ -49,7 +50,8 @@ data class PartnerJobLineItem(
     val unitRateMinimum: Double = 0.0,
     val unitRateMaximum: Double = 0.0,
     val lineTotalMinimum: Double,
-    val lineTotalMaximum: Double
+    val lineTotalMaximum: Double,
+    val appliedAdjustmentPercent: Double = 0.0
 )
 
 data class PartnerJob(
@@ -534,7 +536,8 @@ class QuickFixViewModel : ViewModel() {
             minimum = quote?.optDouble("totalMinimum", 0.0) ?: 0.0,
             maximum = quote?.optDouble("totalMaximum", 0.0) ?: 0.0,
             materialsIncluded = json.optBoolean("materialsIncluded"),
-            rateSourceName = json.optString("rateSourceName", "")
+            rateSourceName = json.optString("rateSourceName", ""),
+            appliedAdjustmentPercent = quote?.optDouble("appliedAdjustmentPercent", 0.0) ?: 0.0
         )
     }
 
@@ -812,7 +815,8 @@ class QuickFixViewModel : ViewModel() {
                                             unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
                                             unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
-                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0),
+                                            appliedAdjustmentPercent = row.optDouble("appliedAdjustmentPercent", 0.0)
                                         )
                                     }
                                 }
@@ -841,7 +845,8 @@ class QuickFixViewModel : ViewModel() {
                                             unitRateMinimum = row.optDouble("unitRateMinimum", 0.0),
                                             unitRateMaximum = row.optDouble("unitRateMaximum", 0.0),
                                             lineTotalMinimum = row.optDouble("lineTotalMinimum", 0.0),
-                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0)
+                                            lineTotalMaximum = row.optDouble("lineTotalMaximum", 0.0),
+                                            appliedAdjustmentPercent = row.optDouble("appliedAdjustmentPercent", 0.0)
                                         )
                                     }
                                 }

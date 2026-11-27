@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, getDocs, query, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from '../../lib/firebase';
 import type { BillingUnit } from '../../data/pricing';
+import { getBillingProfile } from '../../data/pricing';
+import { INITIAL_SERVICES } from '../../data/mockData';
 import type { LocationRateCard, RateApprovalStatus } from '../../data/rateCards';
 
 const units: BillingUnit[] = ['per_visit', 'per_point', 'per_piece', 'per_hour', 'per_day', 'per_sqft', 'per_kg', 'per_km', 'per_trip', 'per_job', 'quote'];
@@ -211,9 +213,9 @@ export const AdminRateCardsSection: React.FC = () => {
       const token = await user.getIdTokenResult(true);
       if (token.claims.admin !== true) throw new Error('Admin custom claim is missing.');
       const percent = Number(adjustmentInputs[card.id] ?? String(card.percentageAdjustment ?? 0));
-      if (!Number.isFinite(percent) || percent < -100 || percent > 500) throw new Error('Percentage must be between -100% and +500%.');
+      if (!Number.isFinite(percent) || percent < -100 || percent > 0) throw new Error('Rate decrease must be between 0% and 100%.');
       await updateDoc(doc(db, 'rate_cards', card.id), { percentageAdjustment: percent, adjustmentUpdatedBy: user.uid, adjustmentUpdatedAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      setMessage((percent >= 0 ? '+' : '') + percent + '% adjustment saved. Approved customer rates update immediately for this service and area for all partners.');
+      setMessage(Math.abs(percent) + '% rate decrease saved. New customer quotes and partner job rates use the reduced rate; existing booking price snapshots stay unchanged.');
       await loadCards();
     } catch (e) { setError(e instanceof Error ? e.message : 'Percentage adjustment could not be saved.'); }
   };
@@ -260,9 +262,14 @@ export const AdminRateCardsSection: React.FC = () => {
         <h4 className="md:col-span-2 text-sm font-bold">New rate card draft</h4>
         {([
           ['state', 'State'], ['district', 'District'], ['city', 'City (optional)'], ['tehsil', 'Tehsil (optional)'],
-          ['serviceId', 'Service ID (optional)'], ['sourceName', 'Source / quotation reference'], ['sourceUrl', 'Source URL (optional)']
+          ['sourceName', 'Source / quotation reference'], ['sourceUrl', 'Source URL (optional)']
         ] as const).map(([key, title]) => <label key={key}><span className={labelClass}>{title}</span><input className={inputClass} value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} /></label>)}
-        <label><span className={labelClass}>Partner/service category</span><select className={inputClass} value={form.serviceCategory} onChange={e => setForm(p => ({ ...p, serviceCategory: e.target.value }))}>{categories.map(c => <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>)}</select></label>
+        <label><span className={labelClass}>Partner/service category</span><select className={inputClass} value={form.serviceCategory} onChange={e => setForm(p => ({ ...p, serviceCategory: e.target.value, serviceId: '' }))}>{categories.map(c => <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>)}</select></label>
+        <label><span className={labelClass}>Specific work item (optional; blank = category-wide rate)</span><select className={inputClass} value={form.serviceId} onChange={e => {
+          const serviceId = e.target.value;
+          const selected = INITIAL_SERVICES.find(item => item.id === serviceId);
+          setForm(p => ({ ...p, serviceId, ...(selected ? { unit: getBillingProfile(selected).unit } : {}) }));
+        }}><option value="">All work items in this category</option>{INITIAL_SERVICES.filter(item => item.category === form.serviceCategory).map(item => <option key={item.id} value={item.id}>{item.title} · {item.hindiTitle || ''}</option>)}</select></label>
         <label><span className={labelClass}>Billing unit</span><select className={inputClass} value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value as BillingUnit }))}>{units.map(u => <option key={u} value={u}>{u.replaceAll('_', ' ')}</option>)}</select></label>
         {([
           ['minimumRate', 'Minimum rate (₹)'], ['maximumRate', 'Maximum rate (₹)'], ['minimumCharge', 'Minimum customer charge (₹)'], ['baseFee', 'Base fee (₹)']
@@ -283,9 +290,9 @@ export const AdminRateCardsSection: React.FC = () => {
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h5 className="text-sm font-bold">{card.serviceCategory.replaceAll('_', ' ')} · {card.serviceId || 'All services'} · ₹{card.minimumRate}–₹{card.maximumRate}/{card.unit.replaceAll('_', ' ')}</h5><p className="text-xs text-slate-400">{[card.tehsil, card.city, card.district, card.state].filter(Boolean).join(' · ')}</p></div><span className={card.approvalStatus === 'approved' ? 'rounded-full bg-emerald-950 px-2 py-1 text-xs text-emerald-300' : 'rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-300'}>{card.approvalStatus}</span></div>
           <p className="text-xs text-slate-400">Source: {card.sourceName} · Effective {card.effectiveFrom}{card.effectiveTo ? ' to ' + card.effectiveTo : ''}</p>
           <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-800 p-2">
-            <label className="min-w-36 flex-1"><span className={labelClass}>Area-wise rate change (%)</span><input aria-label={'Percentage adjustment for ' + card.serviceCategory} type="number" min="-100" max="500" step="0.1" className={inputClass} value={adjustmentInputs[card.id] ?? String(card.percentageAdjustment ?? 0)} onChange={e => setAdjustmentInputs(p => ({ ...p, [card.id]: e.target.value }))} /></label>
+            <label className="min-w-36 flex-1"><span className={labelClass}>Admin rate decrease (%)</span><input aria-label={'Rate decrease percentage for ' + card.serviceCategory} type="number" min="-100" max="0" step="0.1" className={inputClass} value={adjustmentInputs[card.id] ?? String(card.percentageAdjustment ?? 0)} onChange={e => setAdjustmentInputs(p => ({ ...p, [card.id]: e.target.value }))} /></label>
             <button type="button" disabled={loading || !authorized} onClick={() => void applyPercentageAdjustment(card)} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold disabled:opacity-50">Apply %</button>
-            <p className="w-full text-xs text-slate-400">Adjusted: ₹{(card.minimumRate * (1 + (card.percentageAdjustment ?? 0) / 100)).toFixed(2)}–₹{(card.maximumRate * (1 + (card.percentageAdjustment ?? 0) / 100)).toFixed(2)}/{card.unit.replaceAll('_', ' ')} · {(card.percentageAdjustment ?? 0) > 0 ? '+' : ''}{card.percentageAdjustment ?? 0}%</p>
+            <p className="w-full text-xs text-slate-400">Customer / partner rate after {Math.abs(card.percentageAdjustment ?? 0)}% decrease: ₹{(card.minimumRate * (1 + (card.percentageAdjustment ?? 0) / 100)).toFixed(2)}–₹{(card.maximumRate * (1 + (card.percentageAdjustment ?? 0) / 100)).toFixed(2)}/{card.unit.replaceAll('_', ' ')}</p>
           </div>
           <p className="text-xs text-slate-500">{card.notes}</p>
           <div className="flex flex-wrap gap-2"><button onClick={() => startEditing(card)} className="rounded-lg border border-blue-700 px-3 py-1.5 text-xs text-blue-300">Edit rate</button>{card.approvalStatus === 'draft' && <button onClick={() => void changeStatus(card, 'approved')} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold">Approve</button>}{card.approvalStatus !== 'retired' && <button onClick={() => void changeStatus(card, 'retired')} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Retire</button>}</div>
