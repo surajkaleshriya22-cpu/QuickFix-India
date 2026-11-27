@@ -142,6 +142,14 @@ test('Firebase Emulator verifies customer OTP ownership and atomic partner start
   assert.equal(registeredTokens.docs[0].data().token, testFcmToken);
   const customerTokenRegistration = await request('/api/partners/notifications/token', otherCustomer.token, 'POST', { token: testFcmToken });
   assert.equal(customerTokenRegistration.status, 403, 'customer accounts cannot register Channel Partner notification tokens');
+  const crossAccountTokenRemoval = await request('/api/partners/notifications/token', otherCustomer.token, 'DELETE', { token: testFcmToken });
+  assert.equal(crossAccountTokenRemoval.body.removed, false, 'another account cannot remove a partner device token');
+  assert.equal((await db.collection('users').doc(partner.uid).collection('notificationTokens').get()).size, 1);
+  const tokenRemoval = await request('/api/partners/notifications/token', partner.token, 'DELETE', { token: testFcmToken });
+  assert.equal(tokenRemoval.status, 200, 'partner can unregister their own notification token');
+  assert.equal(tokenRemoval.body.removed, true);
+  assert.equal((await db.collection('users').doc(partner.uid).collection('notificationTokens').get()).size, 0);
+
 
   await db.collection('bookings').doc('otp-valid').set({
     id: 'otp-valid', customerUid: customer.uid, status: 'requested', serviceTitle: 'OTP integration test',
