@@ -18,6 +18,7 @@ import { randomInt, randomUUID, timingSafeEqual, createCipheriv, createDecipheri
 import { fileURLToPath } from 'url';
 import { isValidBookingDate } from './src/utils/bookingDate';
 import { canActivatePartnerDuty, canPartnerReceiveBookingCategory, isPartnerEligibleForDispatch } from './src/utils/partnerEligibility';
+import { validatePartnerRechargePolicy } from './src/utils/partnerRechargePolicy';
 import { calculateRateQuote, resolveLocationRateCard, type LocationRateCard } from './src/data/rateCards';
 import { getBillingProfile, type BillingUnit } from './src/data/pricing';
 import { isWithinPartnerDispatchRadius } from './src/utils/geo';
@@ -592,21 +593,13 @@ app.get('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requir
 app.put('/api/admin/partner-recharge/packages', authenticateFirebaseUser, requireServerAdmin, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Recharge settings are unavailable.' });
-    const packages = req.body?.packages;
-    const trialDays = req.body?.trialDays;
-    if (!Number.isInteger(trialDays) || trialDays < 0 || trialDays > 365) return res.status(400).json({ success: false, error: 'Free trial limit must be between 0 and 365 days.' });
-    if (!Array.isArray(packages) || packages.length < 1 || packages.length > 20) return res.status(400).json({ success: false, error: 'Provide between 1 and 20 packages.' });
-    const ids = new Set<string>();
-    const clean = [];
-    for (const p of packages) {
-      if (!p || typeof p.id !== 'string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(p.id) || ids.has(p.id) ||
-          typeof p.name !== 'string' || !p.name.trim() || p.name.trim().length > 80 ||
-          !Number.isInteger(p.amountRupees) || p.amountRupees < 1 || p.amountRupees > 1000000 ||
-          !Number.isInteger(p.durationDays) || p.durationDays < 1 || p.durationDays > 3650 ||
-          typeof p.active !== 'boolean') return res.status(400).json({ success: false, error: 'A package has invalid ID, name, amount, duration or active status.' });
-      ids.add(p.id);
-      clean.push({ id: p.id, name: p.name.trim(), amountPaise: p.amountRupees * 100, durationDays: p.durationDays, active: p.active });
-    }
+    const validation = validatePartnerRechargePolicy(req.body);
+    if (!validation.valid) return res.status(400).json({ success: false, error: validation.error });
+    const { trialDays, packages } = validation.value;
+    const clean = packages.map((p) => ({
+      id: p.id, name: p.name, amountPaise: p.amountRupees * 100,
+      durationDays: p.durationDays, active: p.active
+    }));
     await getFirestore(firebaseAdminApp).collection('settings').doc('partner_recharge').set({ packages: clean, trialDays, updatedAt: FieldValue.serverTimestamp(), updatedBy: (req as AuthenticatedRequest).firebaseUser!.uid }, { merge: true });
     return res.json({ success: true, trialDays, packages: clean.map(p => ({ id: p.id, name: p.name, amountPaise: p.amountPaise, durationDays: p.durationDays, active: p.active })) });
   } catch (error) {
