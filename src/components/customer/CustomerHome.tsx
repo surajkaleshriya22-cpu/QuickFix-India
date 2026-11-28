@@ -85,7 +85,7 @@ export const CustomerHome: React.FC = () => {
         const mapped: Booking[] = (result.bookings as unknown[]).map((item: any): Booking => ({
           id: String(item.id || ''),
           serviceId: '',
-          serviceTitle: String(item.serviceTitle || 'QuickFix Service'),
+          serviceTitle: String(item.serviceTitle || 'KamXApp Service'),
           category: item.category as ServiceCategoryType,
           customerName: currentUser.displayName,
           customerPhone: currentUser.phoneNumber,
