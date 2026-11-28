@@ -71,8 +71,8 @@ private fun partnerCategoryHindi(category: String): String = when (category.trim
     else -> category.replace("_", " ").replaceFirstChar { it.uppercase() }
 }
 
-private val BrandBlue = Color(0xFF2563EB)
-private val DeepNavy = Color(0xFF0F172A)
+private val BrandBlue = Color(0xFF0B4FCB)
+private val DeepNavy = Color(0xFF102A56)
 private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
@@ -282,7 +282,7 @@ fun TechnicianScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "QuickFix Channel Partner Portal",
+                                "KamXApp · Channel Partner",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 17.sp
@@ -339,7 +339,7 @@ fun TechnicianScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        if (isEnglish) "My QuickFix Partner ID" else "मेरा QuickFix पार्टनर ID",
+                        if (isEnglish) "My KamXApp Partner ID" else "मेरा KamXApp पार्टनर ID",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = TextPrimary
@@ -765,7 +765,7 @@ fun TechnicianScreen(
                         if (booking.status in listOf("assigned", "technician_en_route", "in_progress")) {
                             Divider(color = Color(0xFFFDA4AF))
                             Text(if (isEnglish) "SOS / Channel Partner Safety" else "SOS / चैनल पार्टनर सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239), fontSize = 12.sp)
-                            Text(if (isEnglish) "The report is saved in QuickFix only. Emergency team/contact alerts are not connected." else "रिपोर्ट केवल QuickFix में सेव होगी। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 10.sp, color = Color(0xFF881337))
+                            Text(if (isEnglish) "The report is saved in KamXApp only. Emergency team/contact alerts are not connected." else "रिपोर्ट केवल KamXApp में सेव होगी। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 10.sp, color = Color(0xFF881337))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(onClick = { viewModel.submitBookingSafetyReport(booking.id) { _, message -> sosStatus = message } },
                                     modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))) { Text("SOS Report") }
