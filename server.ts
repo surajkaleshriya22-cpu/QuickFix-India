@@ -1507,9 +1507,34 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
     const bookings = [...unique.values()].map(doc => {
       const item = doc.data();
       const createdAt = item.createdAt?.toDate?.()?.toISOString?.() || String(item.createdAt || '');
-      return { id: doc.id, serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
-        category: String(item.category || ''), scheduledDate: String(item.scheduledDate || ''),
-        scheduledTimeSlot: String(item.scheduledTimeSlot || ''), status: String(item.status || 'unknown'), createdAt };
+      const serviceArea = item.serviceArea && typeof item.serviceArea === 'object' ? item.serviceArea : {};
+      const quoteRange = item.quoteRange && typeof item.quoteRange === 'object' ? item.quoteRange : null;
+      return {
+        id: doc.id,
+        serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
+        category: String(item.category || ''),
+        customerName: String(item.customerName || ''),
+        customerPhone: String(item.customerPhone || ''),
+        customerAddress: String(item.customerAddress || item.address || ''),
+        city: String(item.city || ''),
+        pincode: String(item.pincode || ''),
+        state: String(serviceArea.state || ''),
+        district: String(serviceArea.district || ''),
+        tehsil: String(serviceArea.tehsil || ''),
+        scheduledDate: String(item.scheduledDate || ''),
+        scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
+        notes: typeof item.notes === 'string' ? item.notes : '',
+        status: String(item.status || 'unknown'),
+        paymentMethod: String(item.paymentMethod || ''),
+        paymentStatus: String(item.paymentStatus || 'pending'),
+        pricingStatus: String(item.pricingStatus || ''),
+        quoteRange: quoteRange ? { minimum: Number(quoteRange.minimum || 0), maximum: Number(quoteRange.maximum || 0) } : null,
+        price: Number(item.price || 0),
+        totalAmount: Number(item.totalAmount || 0),
+        acceptedAt: String(item.acceptedAt || ''),
+        serviceDeadline: String(item.serviceDeadline || ''),
+        createdAt
+      };
     }).sort((a,b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
     return res.json({ success: true, bookings });
   } catch (error) {
