@@ -235,7 +235,7 @@ fun ServiceBookingScreen(
                             } else if (customerQuote == null || !priceConsentAccepted) {
                                 bookingError = if (isEnglish) "Please review the price/quote and confirm before booking." else "बुकिंग से पहले रेट/कोटेशन देखकर मंजूरी दें।"
                             } else if (customerLatitude == null || customerLongitude == null) {
-                                bookingError = if (isEnglish) "Please share your current GPS location so QuickFix can find an eligible nearby Channel Partner." else "नज़दीकी सही Channel Partner खोजने के लिए कृपया अपनी वर्तमान GPS लोकेशन साझा करें।"
+                                bookingError = if (isEnglish) "Please share your current GPS location so KamXApp can find an eligible nearby Channel Partner." else "नज़दीकी सही Channel Partner खोजने के लिए कृपया अपनी वर्तमान GPS लोकेशन साझा करें।"
                             } else if (address.isBlank()) {
                                 bookingError = if (isEnglish) "Please enter the complete address." else "कृपया पूरा पता लिखें।"
                             } else if (state.isBlank() || district.isBlank() || tehsil.isBlank()) {
@@ -272,9 +272,9 @@ fun ServiceBookingScreen(
                                         } else {
                                             val order = createCustomerBookingPaymentOrder(bookingId)
                                             val activity = context.findActivity()
-                                                ?: throw IllegalStateException("Payment screen could not be opened. Please reopen QuickFix.")
+                                                ?: throw IllegalStateException("Payment screen could not be opened. Please reopen KamXApp.")
                                             val options = JSONObject().apply {
-                                                put("name", "QuickFix India")
+                                                put("name", "KamXApp")
                                                 put("description", "Service booking payment")
                                                 put("order_id", order.orderId)
                                                 put("currency", order.currency)
@@ -367,7 +367,7 @@ fun ServiceBookingScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "आपकी बुकिंग स्वीकार होने पर सत्यापित पार्टनर मिलेगा। ${service.warrantyDays} दिन की QuickFix गारंटी",
+                        "आपकी बुकिंग स्वीकार होने पर सत्यापित पार्टनर मिलेगा। ${service.warrantyDays} दिन की KamXApp गारंटी",
                         fontSize = 12.sp,
                         color = BrandBlue,
                         fontWeight = FontWeight.Medium
@@ -682,7 +682,7 @@ fun ServiceBookingScreen(
                 }
             }
 
-            // QuickFix Admin Escrow Buyer Protection Badge
+            // KamXApp Admin Escrow Buyer Protection Badge
             Surface(
                 color = Color(0xFFEFF6FF),
                 shape = RoundedCornerShape(12.dp),
@@ -720,7 +720,7 @@ fun ServiceBookingScreen(
                             }
                         }
                         Text(
-                            if (isEnglish) "Cash is paid after service completion. If you choose UPI, card or Net Banking, QuickFix creates a server-side Razorpay order and marks the booking paid only after server verification." else "Cash चुनने पर सेवा पूरी होने के बाद भुगतान करें। UPI, कार्ड या नेट बैंकिंग चुनने पर QuickFix सर्वर Razorpay ऑर्डर बनाता है और सर्वर से पुष्टि होने के बाद ही बुकिंग को Paid करता है।",
+                            if (isEnglish) "Cash is paid after service completion. If you choose UPI, card or Net Banking, KamXApp creates a server-side Razorpay order and marks the booking paid only after server verification." else "Cash चुनने पर सेवा पूरी होने के बाद भुगतान करें। UPI, कार्ड या नेट बैंकिंग चुनने पर KamXApp सर्वर Razorpay ऑर्डर बनाता है और सर्वर से पुष्टि होने के बाद ही बुकिंग को Paid करता है।",
                             fontSize = 11.sp,
                             color = Color(0xFF1E40AF),
                             lineHeight = 15.sp
