@@ -43,7 +43,7 @@ export const PartnerIdentityCard: React.FC<PartnerIdentityCardProps> = ({ user, 
       <div id="quickfix-partner-id-card" className="mx-auto w-full max-w-[430px] overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-lg">
         <div className="flex items-center justify-between bg-gradient-to-r from-blue-950 via-blue-800 to-cyan-700 px-4 py-3 text-white">
           <div>
-            <div className="text-[17px] font-black tracking-[0.12em] leading-none">QUICKFIX INDIA</div>
+            <div className="text-[17px] font-black tracking-[0.12em] leading-none">KAMXAPP</div>
             <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-blue-100">{hindi ? 'चैनल पार्टनर पहचान पत्र' : 'Channel Partner Identity Card'}</div>
           </div>
           <div className="rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[8px] font-bold tracking-wider">PARTNER ID</div>
