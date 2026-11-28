@@ -111,14 +111,28 @@ class AuthViewModel(
                 try {
                     _authState.value = AuthState.Loading
                     val adminProfile = repository.getAdminUser(repository.currentUserEmail.orEmpty())
-                    val profile = if (adminProfile != null) adminProfile else repository.getUserProfile(uid)
+                    var profile = if (adminProfile != null) adminProfile else repository.getUserProfile(uid)
+                    // Repair older Customer accounts that were created before server-issued
+                    // QuickFix IDs were enforced. Run the authenticated, idempotent endpoint
+                    // on session restore too, not only after a fresh OTP login.
+                    if (profile != null &&
+                        profile.role == UserRole.CUSTOMER &&
+                        profile.quickFixId.isBlank()) {
+                        repository.saveUserProfile(
+                            profile.copy(phoneNumber = repository.currentUserPhoneNumber.orEmpty())
+                        )
+                        profile = repository.getUserProfile(uid)
+                            ?: throw IllegalStateException("Customer ID was requested but the profile could not be reloaded.")
+                    }
                     if (profile != null) {
                         _authState.value = AuthState.Authenticated(profile)
                     } else {
                         _authState.value = AuthState.Idle
                     }
                 } catch (e: Exception) {
-                    _authState.value = AuthState.Idle
+                    _authState.value = AuthState.Error(
+                        e.localizedMessage ?: "QuickFix account details could not be loaded."
+                    )
                 }
             }
         }
