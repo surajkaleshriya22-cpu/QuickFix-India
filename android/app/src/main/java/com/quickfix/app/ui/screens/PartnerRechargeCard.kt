@@ -127,7 +127,7 @@ fun PartnerRechargeCard() {
                             val checkout = Checkout()
                             checkout.setKeyID(keyId)
                             val options = JSONObject().apply {
-                                put("name", "QuickFix India")
+                                put("name", "KamXApp")
                                 put("description", "Channel Partner subscription recharge")
                                 put("order_id", orderId)
                                 put("currency", "INR")
