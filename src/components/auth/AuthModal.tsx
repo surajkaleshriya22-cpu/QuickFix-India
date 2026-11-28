@@ -492,7 +492,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                             ['driver', 'Driver'],
                             ['tourist_guide', 'Tourist Guide'],
                             ['contractor', 'Contractor'],
-                            ['bike_taxi', 'QuickFix Bike Taxi Captain'],
+                            ['bike_taxi', 'KamXApp Bike Taxi Captain'],
                             ['kaamkaaj_partner', 'Kaam-Kaaj Partner (सभी घरेलू काम)'],
                             ['house_cleaning', 'House Cleaning'],
                             ['cook', 'Cook / खाना बनाना'],
