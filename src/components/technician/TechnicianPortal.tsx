@@ -367,8 +367,8 @@ export const TechnicianPortal: React.FC = () => {
     return (
       <div className="flex-1 bg-slate-50 flex flex-col justify-center p-5">
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-md space-y-4 max-w-sm mx-auto w-full">
-          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl">
-            <Wrench className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-xl bg-white border border-blue-100 shadow-sm p-1">
+            <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-full h-full object-contain" />
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900">{language === 'hi' ? 'KamXApp चैनल पार्टनर पोर्टल' : 'KamXApp Channel Partner Portal'}</h2>
