@@ -70,15 +70,15 @@ fun AuthScreen(
                         Surface(
                             modifier = Modifier.size(32.dp),
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF2563EB)
+                            color = Color(0xFF0B4FCB)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("Q", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("KX", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
                             }
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("QuickFix India", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A))
+                            Text("KamXApp", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0B4FCB))
                             Text(if (isEnglish) "Secure sign-in and account setup" else "सुरक्षित लॉगिन और खाता सेटअप", fontSize = 10.sp, color = Color.Gray)
                         }
                     }
