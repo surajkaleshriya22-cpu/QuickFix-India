@@ -10,9 +10,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_kamxapp_mark"
+        android:icon="@android:drawable/sym_def_app_icon"
         android:label="KamXApp"
-        android:roundIcon="@drawable/ic_kamxapp_mark"
+        android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
