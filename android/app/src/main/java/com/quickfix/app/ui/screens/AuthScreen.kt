@@ -433,7 +433,7 @@ fun AuthScreen(
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
                             Text(
-                                if (isSignUp) "Already have an account? Sign In" else "New to QuickFix? Register Here",
+                                if (isSignUp) "Already have an account? Sign In" else "New to KamXApp? Register Here",
                                 fontSize = 12.sp,
                                 color = Color(0xFF2563EB)
                             )
