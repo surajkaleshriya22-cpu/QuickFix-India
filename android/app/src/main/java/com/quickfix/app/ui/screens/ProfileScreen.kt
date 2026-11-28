@@ -121,7 +121,7 @@ fun ProfileScreen(
                     ProfileItemRow(
                         icon = Icons.Default.Person,
                         label = if (isEnglish) "QuickFix ID" else "QuickFix आईडी",
-                        value = user.quickFixId.ifEmpty { if (isEnglish) "Assigning…" else "जारी हो रही है…" }
+                        value = user.quickFixId.ifEmpty { if (isEnglish) "ID not available — retry sign-in" else "आईडी उपलब्ध नहीं — दोबारा लॉगिन करें" }
                     )
                     ProfileItemRow(icon = Icons.Default.LocationOn, label = if (isEnglish) "Address" else "पता", value = user.address.ifEmpty { if (isEnglish) "Not set" else "सेट नहीं है" })
                     ProfileItemRow(icon = Icons.Default.Place, label = if (isEnglish) "City" else "शहर", value = user.city)
