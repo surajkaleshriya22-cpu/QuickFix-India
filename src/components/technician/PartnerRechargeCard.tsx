@@ -63,7 +63,7 @@ export const PartnerRechargeCard: React.FC = () => {
         const finish = (err?: Error) => { if (settled) return; settled = true; err ? reject(err) : resolve(); };
         const checkout = new Checkout({
           key: order.keyId, amount: order.amount, currency: order.currency, order_id: order.orderId,
-          name: 'QuickFix India', description: pkg.name,
+          name: 'KamXApp', description: pkg.name,
           handler: async (payment: any) => {
             try {
               const verifyResponse = await fetch('/api/partners/recharge/verify', {
@@ -88,7 +88,7 @@ export const PartnerRechargeCard: React.FC = () => {
 
   return <section className="rounded-2xl border border-emerald-800 bg-slate-950 p-4 text-white space-y-3">
     <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-emerald-400" /><div><h3 className="font-bold text-sm">Partner Subscription Recharge</h3><p className="text-[10px] text-slate-400">Separate from your service earnings wallet</p></div></div>
-    <div className="rounded-xl bg-emerald-950/50 border border-emerald-900 p-3 text-xs text-emerald-200">{trialDays > 0 ? `New partner free trial: ${trialDays} days (set by QuickFix Admin).` : 'No free trial is currently configured.'}</div>
+    <div className="rounded-xl bg-emerald-950/50 border border-emerald-900 p-3 text-xs text-emerald-200">{trialDays > 0 ? `New partner free trial: ${trialDays} days (set by KamXApp Admin).` : 'No free trial is currently configured.'}</div>
     {packages.length === 0 && !error && <p className="text-xs text-slate-400">No active recharge packages are available yet. Please check again later.</p>}
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{packages.map(pkg => <div key={pkg.id} className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-2">
       <div className="font-bold text-sm">{pkg.name}</div><div className="text-xl font-extrabold">₹{Math.round(pkg.amountPaise / 100).toLocaleString('en-IN')}</div><div className="text-xs text-slate-400">{pkg.durationDays} days validity</div>
