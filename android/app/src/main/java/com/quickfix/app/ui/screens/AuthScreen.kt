@@ -135,7 +135,7 @@ fun AuthScreen(
             // Status feedback / Error
             when (val state = authState) {
                 is AuthState.Loading -> {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF2563EB))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF0B4FCB))
                 }
                 is AuthState.Error -> {
                     Surface(
@@ -185,7 +185,7 @@ fun AuthScreen(
                         Text(
                             text = "Enter the SMS code sent by Firebase. No demo or fixed OTP is accepted.",
                             fontSize = 11.sp,
-                            color = Color(0xFF2563EB)
+                            color = Color(0xFF0B4FCB)
                         )
 
                         OutlinedTextField(
@@ -218,7 +218,7 @@ fun AuthScreen(
                                     }
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B4FCB)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(if (isEnglish) "Verify OTP & Login" else "ओटीपी जाँचें और लॉगिन करें", fontWeight = FontWeight.Bold)
@@ -244,7 +244,7 @@ fun AuthScreen(
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Text(if (isEnglish) "Resend OTP" else "ओटीपी दोबारा भेजें", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                            Text(if (isEnglish) "Resend OTP" else "ओटीपी दोबारा भेजें", color = Color(0xFF0B4FCB), fontWeight = FontWeight.SemiBold)
                         }
 
                     } else if (selectedRole == UserRole.ADMIN) {
@@ -422,7 +422,7 @@ fun AuthScreen(
                                     authViewModel.sendOtp("+91 $phone", act, pendingUser)
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B4FCB)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(if (isEnglish) "Send Mobile OTP" else "मोबाइल पर ओटीपी भेजें", fontWeight = FontWeight.Bold)
@@ -435,7 +435,7 @@ fun AuthScreen(
                             Text(
                                 if (isSignUp) "Already have an account? Sign In" else "New to KamXApp? Register Here",
                                 fontSize = 12.sp,
-                                color = Color(0xFF2563EB)
+                                color = Color(0xFF0B4FCB)
                             )
                         }
                     }
@@ -456,7 +456,7 @@ fun TabRoleButton(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
-        color = if (isSelected) Color(0xFF2563EB) else Color.Transparent
+        color = if (isSelected) Color(0xFF0B4FCB) else Color.Transparent
     ) {
         Box(
             modifier = Modifier.padding(vertical = 8.dp),
