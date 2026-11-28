@@ -660,9 +660,7 @@ fun ServiceBookingScreen(
                         }
                     }
                     listOf(
-                        "upi" to (if (isEnglish) "UPI (GPay, PhonePe, Paytm, BHIM)" else "UPI (GPay, PhonePe, Paytm, BHIM)"),
-                        "card" to (if (isEnglish) "Debit / Credit Card" else "डेबिट / क्रेडिट कार्ड"),
-                        "netbanking" to (if (isEnglish) "Net Banking" else "नेट बैंकिंग")
+                        "upi" to "UPI (GPay, PhonePe, Paytm, BHIM)"
                     ).forEach { (method, title) ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
@@ -674,11 +672,11 @@ fun ServiceBookingScreen(
                         }
                     }
                     Text(
-                        if (isEnglish) "UPI, cards and Net Banking are available only when an approved local rate card confirms the booking amount. If no approved rate exists, no online payment is collected; choose cash or request an inspection quote." else "UPI, कार्ड और नेट बैंकिंग तभी उपलब्ध होंगे जब approved local rate card बुकिंग की कीमत तय करे। Rate उपलब्ध न होने पर online payment नहीं कटेगा; Cash चुनें या inspection quote लें।",
+                        if (isEnglish) "UPI is available only when an approved local rate card confirms the booking amount. If no approved rate exists, no online payment is collected; choose cash or request an inspection quote." else "UPI तभी उपलब्ध होगा जब approved local rate card बुकिंग की कीमत तय करे। Rate उपलब्ध न होने पर online payment नहीं कटेगा; Cash चुनें या inspection quote लें।",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
-                    if (pendingBookingId != null && paymentMethod in listOf("upi", "card", "netbanking")) {
+                    if (pendingBookingId != null && paymentMethod == "upi") {
                         Text(if (isEnglish) "Booking saved. Retry online payment without creating another booking." else "बुकिंग सेव है। दोबारा online भुगतान करें—नई बुकिंग नहीं बनेगी।", fontSize = 11.sp, color = BrandBlue)
                     }
                 }
