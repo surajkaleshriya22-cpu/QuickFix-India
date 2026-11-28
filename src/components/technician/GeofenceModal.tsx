@@ -162,7 +162,7 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                QuickFix partners must be within registered service radius zones to guarantee our 1-Hour SLA.
+                KamXApp partners must be within registered service radius zones to guarantee our 1-Hour SLA.
               </p>
             </div>
           </div>
@@ -293,7 +293,7 @@ export const GeofenceModal: React.FC<GeofenceModalProps> = ({
             <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <strong className="text-white block">Why Geo-fencing is Enforced:</strong>
-              QuickFix provides an automated <strong>1-Hour Service Delivery SLA</strong>. When a customer confirms a booking, the assigned partner must arrive within 60 minutes. Technicians located beyond the service perimeter cannot meet arrival commitments.
+              KamXApp provides an automated <strong>1-Hour Service Delivery SLA</strong>. When a customer confirms a booking, the assigned partner must arrive within 60 minutes. Technicians located beyond the service perimeter cannot meet arrival commitments.
             </div>
           </div>
         </div>
