@@ -2,6 +2,7 @@ package com.quickfix.app.ui.screens
 
 import android.app.Activity
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -67,15 +69,11 @@ fun AuthScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF0B4FCB)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text("KX", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
-                            }
-                        }
+                        Image(
+                            painter = painterResource(id = com.quickfix.app.R.drawable.ic_kamxapp_mark),
+                            contentDescription = "KamXApp",
+                            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("KamXApp", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0B4FCB))
