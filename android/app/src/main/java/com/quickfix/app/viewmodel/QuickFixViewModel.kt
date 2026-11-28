@@ -221,7 +221,14 @@ class QuickFixViewModel : ViewModel() {
                         }
                         val users = snapshot?.documents?.mapNotNull { document ->
                             val data = document.data ?: return@mapNotNull null
-                            val role = if (data["role"] == "CHANNEL_PARTNER") UserRole.CHANNEL_PARTNER else if (data["role"] == "TECHNICIAN") UserRole.TECHNICIAN else UserRole.CUSTOMER
+                            val rawRole = data["role"] as? String ?: ""
+                            val roleMemberships = (data["roles"] as? List<*>)?.filterIsInstance<String>()?.toSet().orEmpty()
+                            val role = when {
+                                rawRole == "CHANNEL_PARTNER" || roleMemberships.contains("CHANNEL_PARTNER") -> UserRole.CHANNEL_PARTNER
+                                rawRole == "TECHNICIAN" || roleMemberships.contains("TECHNICIAN") -> UserRole.TECHNICIAN
+                                rawRole == "CUSTOMER" || roleMemberships.contains("CUSTOMER") -> UserRole.CUSTOMER
+                                else -> return@mapNotNull null
+                            }
                             User(
                                 uid = document.id,
                                 phoneNumber = data["phoneNumber"] as? String ?: "",
