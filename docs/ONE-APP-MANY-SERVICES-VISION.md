@@ -1,7 +1,7 @@
-# QuickFix-India product direction: one app, many services
+# KamXApp product direction: one app, many services
 
 ## North star
-QuickFix-India is a unified, India-wide multi-service platform. The customer installs one app—QuickFix-India—to request many kinds of everyday work. Do not split service verticals into separate customer apps or separate brands.
+KamXApp is a unified, India-wide multi-service platform. The customer installs one app—KamXApp—to request many kinds of everyday work. Do not split service verticals into separate customer apps or separate brands.
 
 ## One app, shared foundation
 All service verticals use the same:
@@ -28,16 +28,16 @@ A single platform does not mean every job has the same form. Each category can d
 - Commission, wallet, reserve and payout policy.
 - Customer/partner safety checklist and completion evidence.
 
-These are configurations and workflows within QuickFix-India, not separate apps.
+These are configurations and workflows within KamXApp, not separate apps.
 
 ## Product experience
 - Hindi-first/simple-language option with English toggle.
 - Large service tiles, voice/search, clear prices and a short booking flow.
 - Show only services available in the customer's selected service area; never imply nationwide live coverage before partners and operations exist there.
-- One customer app, one Channel Partner experience, and one Admin dashboard under the QuickFix-India product.
+- One customer app, one Channel Partner experience, and one Admin dashboard under the KamXApp product.
 
 ## Implementation rule
-Extend the existing `surajkaleshriya22-cpu/QuickFix-India` repository. Do not create or switch to a separate QuickFix app/repository. Keep the current staging and security boundaries honest: a category in the catalogue is not proof that booking, dispatch, payments, maps or service delivery are live in every city.
+Extend the existing `surajkaleshriya22-cpu/KamXApp` repository. Do not create or switch to a separate QuickFix app/repository. Keep the current staging and security boundaries honest: a category in the catalogue is not proof that booking, dispatch, payments, maps or service delivery are live in every city.
 
 ## Delivery order
 1. Establish one canonical service catalogue shared by web and Android.
