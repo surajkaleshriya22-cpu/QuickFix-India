@@ -1,6 +1,6 @@
-# QuickFix-India — one app, many services
+# KamXApp — one app, many services
 
-**Product vision:** QuickFix-India is one unified India-wide services and everyday-work platform. Customers should not need a separate app for each kind of work. One QuickFix-India app should let them discover, book, track, and pay for supported services through a consistent, simple experience.
+**Product vision:** KamXApp is one unified India-wide services and everyday-work platform. Customers should not need a separate app for each kind of work. One KamXApp app should let them discover, book, track, and pay for supported services through a consistent, simple experience.
 
 The platform brings many service verticals together under one product and one account system:
 - **Home repair:** electrician, plumber, AC, refrigerator and appliance repair.
@@ -9,7 +9,7 @@ The platform brings many service verticals together under one product and one ac
 - **Local expertise and projects:** mechanic, welder/fabricator, tourist guide, contractor, house shifting and additional verified services.
 - **Future categories:** new work types can be added to the same service catalogue without creating a separate QuickFix app for each vertical.
 
-One shared platform should provide customer accounts, Channel Partner accounts, service discovery, location and service zones, booking, safety, support, payments and Admin operations. Each service category may have its own workflow, pricing, partner qualifications and wallet rules, while remaining inside the single QuickFix-India app.
+One shared platform should provide customer accounts, Channel Partner accounts, service discovery, location and service zones, booking, safety, support, payments and Admin operations. Each service category may have its own workflow, pricing, partner qualifications and wallet rules, while remaining inside the single KamXApp app.
 
 - Customer: one place to discover and request all supported services.
 - Channel Partner: one partner app experience with category-specific work, availability, earnings and wallet.
