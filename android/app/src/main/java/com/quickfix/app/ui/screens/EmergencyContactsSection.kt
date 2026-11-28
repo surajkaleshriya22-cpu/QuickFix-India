@@ -55,8 +55,8 @@ private suspend fun emergencyContactsRequest(path: String = "", method: String =
     return withContext(Dispatchers.IO) {
         val connection = (URL(EMERGENCY_CONTACTS_API + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
-            connectTimeout = 12000
-            readTimeout = 12000
+            connectTimeout = 20000
+            readTimeout = 45000
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Accept", "application/json")
             if (body != null) {
