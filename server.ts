@@ -205,7 +205,7 @@ const notifyEligiblePartnersOfBooking = async (
       const result = await getMessaging(firebaseAdminApp).sendEachForMulticast({
         tokens: chunk.map(item => item.token),
         notification: {
-          title: 'New QuickFix service request',
+          title: 'New KamXApp service request',
           body: String(booking.serviceTitle || 'A nearby service request') + ' · ' +
             String(booking.serviceArea?.district || booking.city || 'Your service area')
         },
@@ -373,7 +373,7 @@ app.get('/api/rates/quote', authenticateFirebaseUser, async (req: Request, res: 
   }
 });
 
-// Customer identity registration. The permanent QuickFix ID is issued only by the server.
+// Customer identity registration. The permanent KamXApp ID is issued only by the server.
 app.post('/api/customers/register', authenticateFirebaseUser, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure customer registration is temporarily unavailable.' });
@@ -450,7 +450,7 @@ app.post('/api/customers/register', authenticateFirebaseUser, async (req: Reques
     return res.status(200).json({ success: true, quickFixId: issuedId });
   } catch (error) {
     if (error instanceof Error && error.message === 'CUSTOMER_PROFILE_CONFLICT') return res.status(409).json({ success: false, error: 'This account is not eligible for Customer registration.' });
-    if (error instanceof Error && error.message === 'CUSTOMER_ID_INDEX_CONFLICT') return res.status(409).json({ success: false, error: 'This QuickFix ID is already linked to another account. Please contact support.' });
+    if (error instanceof Error && error.message === 'CUSTOMER_ID_INDEX_CONFLICT') return res.status(409).json({ success: false, error: 'This KamXApp ID is already linked to another account. Please contact support.' });
     console.error('Secure customer registration failed:', error);
     return res.status(500).json({ success: false, error: 'Customer ID could not be issued securely. Please retry.' });
   }
@@ -589,7 +589,7 @@ app.post('/api/partners/register', authenticateFirebaseUser, async (req: Request
       return res.status(409).json({ success: false, error: 'An account already exists for this verified mobile number. Please use the correct sign-in option.' });
     }
     if (error instanceof Error && error.message === 'PARTNER_ID_INDEX_CONFLICT') {
-      return res.status(409).json({ success: false, error: 'This Partner QuickFix ID is already linked to another account. Please contact support.' });
+      return res.status(409).json({ success: false, error: 'This Partner KamXApp ID is already linked to another account. Please contact support.' });
     }
     console.error('Secure partner registration failed:', error);
     return res.status(500).json({ success: false, error: 'Partner registration could not be saved securely. Please retry.' });
@@ -1511,7 +1511,7 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
       const quoteRange = item.quoteRange && typeof item.quoteRange === 'object' ? item.quoteRange : null;
       return {
         id: doc.id,
-        serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
+        serviceTitle: String(item.serviceTitle || item.serviceName || 'KamXApp Service'),
         category: String(item.category || ''),
         customerName: String(item.customerName || ''),
         customerPhone: String(item.customerPhone || ''),
@@ -1944,7 +1944,7 @@ app.get('/api/admin/bookings', authenticateFirebaseUser, requireServerAdmin, asy
       const quoteRange = b.quoteRange && typeof b.quoteRange === 'object' ? b.quoteRange : null;
       return {
         id: document.id, serviceId: String(b.serviceId || ''),
-        serviceTitle: String(b.serviceTitle || b.serviceName || 'QuickFix Service'),
+        serviceTitle: String(b.serviceTitle || b.serviceName || 'KamXApp Service'),
         category: String(b.category || ''), customerUid: String(b.customerUid || ''),
         customerName: String(b.customerName || ''), customerPhone: String(b.customerPhone || ''),
         customerAddress: String(b.customerAddress || b.address || ''), city: String(b.city || ''),
@@ -1992,7 +1992,7 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         : String(booking.createdAt || '');
       return {
         id: doc.id,
-        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'QuickFix Service'),
+        serviceTitle: String(booking.serviceTitle || booking.serviceName || 'KamXApp Service'),
         category: String(booking.category || ''),
         customerUid: String(booking.customerUid || ''),
         customerName: String(booking.customerName || ''),
@@ -2454,7 +2454,7 @@ app.post('/api/audio/transcribe', authenticateFirebaseUser, async (req: Request,
 app.post('/api/music/generate', async (req: Request, res: Response) => {
   try {
     const { prompt } = req.body;
-    const musicPrompt = prompt || 'Create a cheerful 15-second upbeat brand jingle for QuickFix home services with acoustic guitar and pleasant chimes.';
+    const musicPrompt = prompt || 'Create a cheerful 15-second upbeat brand jingle for KamXApp home services with acoustic guitar and pleasant chimes.';
 
     const response = await getAI().models.generateContentStream({
       model: 'lyria-3-clip-preview',
@@ -2848,17 +2848,17 @@ app.post('/api/admin/complaints/:complaintId/review', authenticateFirebaseUser, 
   }
 });
 
-// Customer Care: search by the permanent QuickFix ID. Only server-authorized admins can access it.
+// Customer Care: search by the permanent KamXApp ID. Only server-authorized admins can access it.
 app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requireCustomerCareAccess, async (req: Request, res: Response) => {
   try {
     if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure Customer Care lookup is unavailable.' });
     const quickFixId = String(req.params.quickFixId || '').trim().toUpperCase();
-    if (!/^QF[CP]-\d{8}$/.test(quickFixId)) return res.status(400).json({ success: false, error: 'Enter a valid QuickFix ID.' });
+    if (!/^QF[CP]-\d{8}$/.test(quickFixId)) return res.status(400).json({ success: false, error: 'Enter a valid KamXApp ID.' });
     const db = getFirestore(firebaseAdminApp);
     const index = await db.collection('quickfix_id_index').doc(quickFixId).get();
-    if (!index.exists) return res.status(404).json({ success: false, error: 'No account was found for this QuickFix ID.' });
+    if (!index.exists) return res.status(404).json({ success: false, error: 'No account was found for this KamXApp ID.' });
     const uid = String(index.data()?.uid || '');
-    if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return res.status(404).json({ success: false, error: 'The QuickFix ID record is unavailable.' });
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return res.status(404).json({ success: false, error: 'The KamXApp ID record is unavailable.' });
     const userSnap = await db.collection('users').doc(uid).get();
     if (!userSnap.exists) return res.status(404).json({ success: false, error: 'The account profile is unavailable.' });
     const user = userSnap.data()!;
@@ -3510,7 +3510,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
     const fromNumber = process.env.TWILIO_FROM_NUMBER?.trim() || '';
     if (!/^AC[0-9a-fA-F]{32}$/.test(accountSid) || !authToken || !isValidEmergencyPhone(fromNumber)) {
-      return res.status(503).json({ success: false, error: 'SMS verification is not configured yet. Contact QuickFix support.' });
+      return res.status(503).json({ success: false, error: 'SMS verification is not configured yet. Contact KamXApp support.' });
     }
     const db = getFirestore(firebaseAdminApp);
     const userRef = db.collection('users').doc(identity.uid);
@@ -3570,7 +3570,7 @@ app.post('/api/me/emergency-contacts/send-otp', authenticateFirebaseUser, async 
     if (sendAllowed === 'max_contacts') return res.status(409).json({ success: false, error: 'You can save up to 3 emergency contacts.' });
     try {
       const form = new URLSearchParams({ To: phone, From: fromNumber,
-        Body: 'QuickFix: Someone wants to add this number as an emergency contact. If you agree, share this one-time code only with that person: ' + otp + '. Valid for 5 minutes. If you do not agree, ignore this message.' });
+        Body: 'KamXApp: Someone wants to add this number as an emergency contact. If you agree, share this one-time code only with that person: ' + otp + '. Valid for 5 minutes. If you do not agree, ignore this message.' });
       const providerResponse = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + encodeURIComponent(accountSid) + '/Messages.json', {
         method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(accountSid + ':' + authToken).toString('base64'),
           'Content-Type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(8000)
@@ -3676,7 +3676,7 @@ const dispatchAdminSafetySms = async (incident: {
   const body = new URLSearchParams({
     To: adminNumber,
     From: fromNumber,
-    Body: 'QuickFix SOS: ' + incident.incidentType + ' for booking ' + incident.bookingId +
+    Body: 'KamXApp SOS: ' + incident.incidentType + ' for booking ' + incident.bookingId +
       '. Incident ' + incident.incidentId + '. Reporter: ' + incident.reporterRole +
       '. This is not emergency dispatch. Call 112 if immediate danger.'
   });
@@ -3726,7 +3726,7 @@ const dispatchEmergencyContactSms = async (uid: string, incident: {
       const phone = String(doc.data().phoneNumber || '');
       if (!isValidEmergencyPhone(phone)) return false;
       const form = new URLSearchParams({ To: phone, From: fromNumber,
-        Body: 'QuickFix safety alert: A person who listed you as an emergency contact has raised an SOS during an active service booking. Reference: ' +
+        Body: 'KamXApp safety alert: A person who listed you as an emergency contact has raised an SOS during an active service booking. Reference: ' +
           incident.incidentId + '. Incident type: ' + incident.incidentType +
           '. Please contact them if you can. If anyone is in immediate danger, call India emergency number 112. This SMS is not emergency-service dispatch.' });
       try {
@@ -3820,7 +3820,7 @@ app.post('/api/bookings/:bookingId/sos', authenticateFirebaseUser, async (req: R
       emergencyContactSmsStatus, emergencyContactSmsSent, emergencyContactSmsFailed,
       message: emergencyContactSmsSent > 0
         ? 'आपकी सुरक्षा रिपोर्ट दर्ज हुई है। Admin और verified emergency contacts को SMS provider ने request स्वीकार की है; handset delivery की guarantee नहीं है। यह police/ambulance dispatch नहीं है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
-        : 'आपकी सुरक्षा रिपोर्ट QuickFix में दर्ज हुई है। Admin SMS: ' + adminSmsStatus +
+        : 'आपकी सुरक्षा रिपोर्ट KamXApp में दर्ज हुई है। Admin SMS: ' + adminSmsStatus +
           '; emergency contact SMS: ' + emergencyContactSmsStatus +
           '. Emergency services को सूचना नहीं भेजी गई है। तत्काल खतरे में 112 पर सीधे कॉल करें।'
     });
