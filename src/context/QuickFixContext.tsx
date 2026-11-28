@@ -316,11 +316,15 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           customerAddress: String(item.customerAddress || ''),
           city: String(item.city || ''),
           pincode: String(item.pincode || ''),
+          state: String(item.state || ''),
+          district: String(item.district || ''),
+          tehsil: String(item.tehsil || ''),
           scheduledDate: String(item.scheduledDate || ''),
           scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
           notes: String(item.notes || ''),
           lineItems: Array.isArray(item.lineItems) ? item.lineItems : [],
           quoteRange: item.quoteRange || undefined,
+          pricingStatus: String(item.pricingStatus || ''),
           status: item.status || 'requested',
           technicianId: item.technicianId || undefined,
           technicianName: item.technicianName || undefined,
@@ -334,8 +338,12 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           commissionRate: 0,
           adminCommission: 0,
           technicianPayout: 0,
-          paymentMethod: item.paymentMethod || 'cash',
+          // Never silently label a missing server payment method as Cash.
+          paymentMethod: item.paymentMethod || 'unknown',
           paymentStatus: item.paymentStatus || 'pending',
+          acceptedAt: String(item.acceptedAt || ''),
+          serviceDeadline: String(item.serviceDeadline || ''),
+          updatedAt: String(item.updatedAt || ''),
           createdAt: String(item.createdAt || '')
         })) as Booking[];
         setBookings(mapped);
