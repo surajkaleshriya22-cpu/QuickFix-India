@@ -966,6 +966,7 @@ export const TechnicianPortal: React.FC = () => {
                     <strong className="text-slate-900">₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</strong>
                   </div>)}
                   <div className="border-t border-slate-200 pt-1 flex justify-between text-xs font-bold"><span>Estimated total</span><span>₹{job.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)}{job.lineItems.some(line => line.lineTotalMaximum !== line.lineTotalMinimum) ? ' – ₹' + job.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0) : ''}</span></div>
+                  <p className="text-[10px] font-semibold text-amber-800">Materials are to be supplied by the customer; do not add material cost to the QuickFix service rate.</p>
                 </div> : <p className="text-[10px] text-amber-700">Item-wise approved price not available yet; do not add unapproved charges.</p>}
                 <button type="button" disabled={acceptingBookingId !== null || jobsLoading}
                   onClick={() => void handleAcceptJob(job.id)}
@@ -1017,7 +1018,7 @@ export const TechnicianPortal: React.FC = () => {
                   <strong>₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</strong>
                 </div>)}
                 <div className="border-t border-blue-200 pt-1 flex justify-between text-xs font-bold text-slate-900"><span>Estimated total</span><span>₹{currentActiveJob.lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0)} – ₹{currentActiveJob.lineItems.reduce((sum, line) => sum + line.lineTotalMaximum, 0)}</span></div>
-                <p className="text-[10px] text-blue-800">Extra work/materials only after a separate customer-approved quote.</p>
+                <p className="text-[10px] text-blue-800">Materials must be supplied by the customer. Do not include material costs in the service rate. Extra work needs customer approval before starting.</p>
               </div> : <p className="text-[10px] text-amber-700">No published item-wise rate snapshot on this older booking.</p>}
             </div>
 

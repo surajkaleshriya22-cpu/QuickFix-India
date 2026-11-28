@@ -73,7 +73,7 @@ export const AdminRateCardsSection: React.FC = () => {
         tehsil: form.tehsil.trim() || null, serviceCategory: form.serviceCategory,
         serviceId: form.serviceId.trim() || null, unit: form.unit, currency: 'INR',
         minimumRate: min, maximumRate: max, minimumCharge: charge, baseFee: base,
-        materialsIncluded: form.materialsIncluded, approvalStatus: 'draft' as RateApprovalStatus,
+        materialsIncluded: false, approvalStatus: 'draft' as RateApprovalStatus,
         effectiveFrom: form.effectiveFrom, effectiveTo: form.effectiveTo || null,
         sourceName: form.sourceName.trim(), sourceUrl: form.sourceUrl.trim() || null,
         sourceCheckedAt: new Date().toISOString(), notes: form.notes.trim(),
@@ -194,7 +194,7 @@ export const AdminRateCardsSection: React.FC = () => {
       maximumRate: String(card.maximumRate),
       minimumCharge: String(card.minimumCharge),
       baseFee: String(card.baseFee || 0),
-      materialsIncluded: Boolean(card.materialsIncluded),
+      materialsIncluded: false,
       effectiveFrom: card.effectiveFrom,
       effectiveTo: card.effectiveTo || '',
       sourceName: card.sourceName || '',
@@ -276,7 +276,7 @@ export const AdminRateCardsSection: React.FC = () => {
         ] as const).map(([key, title]) => <label key={key}><span className={labelClass}>{title}</span><input required type="number" min="0" step="0.01" className={inputClass} value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} /></label>)}
         <label><span className={labelClass}>Effective from</span><input required type="date" className={inputClass} value={form.effectiveFrom} onChange={e => setForm(p => ({ ...p, effectiveFrom: e.target.value }))} /></label>
         <label><span className={labelClass}>Effective to (optional)</span><input type="date" className={inputClass} value={form.effectiveTo} onChange={e => setForm(p => ({ ...p, effectiveTo: e.target.value }))} /></label>
-        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.materialsIncluded} onChange={e => setForm(p => ({ ...p, materialsIncluded: e.target.checked }))} /> Materials included in rate</label>
+        <div className="md:col-span-2 rounded-lg border border-amber-800 bg-amber-950/30 p-3 text-xs text-amber-200"><strong>Material policy:</strong> Materials are always supplied by the customer and are not included in the service rate.</div>
         <label className="md:col-span-2"><span className={labelClass}>Notes / exclusions / evidence details</span><textarea className={inputClass} rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></label>
         <div className="md:col-span-2 flex flex-wrap items-center gap-2"><button disabled={loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold disabled:opacity-50">{editingCardId ? 'Save changes as Draft' : 'Save as draft'}</button>{editingCardId && <button type="button" onClick={() => { setEditingCardId(null); setForm(blank); }} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Cancel edit</button>}<button type="button" onClick={() => void loadCards()} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Refresh</button></div>
       </form>

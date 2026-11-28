@@ -212,7 +212,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         return {
           serviceId: line.serviceId, title: line.service!.title, quantity: Number(line.quantity), unit: billing.unit,
           priced: true, minimum: data.quote.totalMinimum, maximum: data.quote.totalMaximum,
-          materialsIncluded: data.quote.materialsIncluded, source: data.source?.name || 'Published local rate',
+          materialsIncluded: false, source: data.source?.name || 'Published QuickFix rate',
           unitRateMinimum: data.quote.rateMinimum, unitRateMaximum: data.quote.rateMaximum,
           baseFee: data.quote.baseFee, minimumCharge: data.quote.minimumCharge,
           appliedAdjustmentPercent: data.quote.appliedAdjustmentPercent
@@ -637,10 +637,10 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
 
           {/* Server-approved local quote; no mock starting price is presented as payable. */}
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Local Price Estimate</div>
+            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">QuickFix Service Price</div>
             <div className="text-[11px] text-slate-600">Billing basis: {billingProfile.label} ({billingProfile.hindiLabel}) · {billingProfile.note}</div>
             <button type="button" onClick={fetchRateQuote} disabled={isLoadingQuote} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
-              {isLoadingQuote ? 'Calculating total…' : 'Calculate item-wise total'}
+              {isLoadingQuote ? 'Loading QuickFix price…' : 'Show QuickFix service price'}
             </button>
             {quoteMessage && <p className="text-[11px] text-slate-600" role="status">{quoteMessage}</p>}
             {rateQuote ? (
@@ -650,22 +650,22 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                     <div><strong>{line.title}</strong><div className="text-[10px] text-slate-500">Qty {line.quantity} · {line.unit}</div>
                       {line.priced && <div className="text-[10px] text-slate-500">Rate ₹{line.unitRateMinimum}–₹{line.unitRateMaximum}/{line.unit}{line.baseFee > 0 ? ` · Base fee ₹${line.baseFee}` : ''}{line.minimumCharge > 0 ? ` · Minimum charge ₹${line.minimumCharge}` : ''}</div>}
                       {line.priced && line.appliedAdjustmentPercent < 0 && <div className="text-[10px] font-semibold text-emerald-700">Admin rate decrease: {Math.abs(line.appliedAdjustmentPercent)}%</div>}
-                      {line.priced && <div className="text-[10px] text-slate-500">Materials: {line.materialsIncluded ? 'included' : 'not included; extra only with your approval'} · Source: {line.source}</div>}
-                      {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
+                      {line.priced && <div className="text-[10px] font-semibold text-amber-800">Materials are not included. Customer must provide all required materials.</div>}
+                      {!line.priced && <div className="text-[10px] text-amber-700">QuickFix rate not published; booking unavailable</div>}
                     </div>
-                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'After inspection'}</strong>
+                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'Rate unavailable'}</strong>
                   </div>
                 ))}
                 <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold">
-                  <span>{rateQuote.allPriced ? 'Estimated total' : 'Priced items subtotal'}</span>
+                  <span>{rateQuote.allPriced ? 'Service charge' : 'Priced items subtotal'}</span>
                   <strong>₹{rateQuote.totalMinimum} – ₹{rateQuote.totalMaximum}</strong>
                 </div>
-                <div className="text-[10px] text-slate-600">Rates are from approved local rate cards. This is an estimate range, not permission for unlisted work. Materials/parts and extra work are chargeable only after a separate itemised quote and your approval.</div>
-                {rateQuote.allPriced && <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950"><input type="checkbox" checked={priceAccepted} onChange={e => setPriceAccepted(e.target.checked)} className="mt-0.5" /><span><strong>I have reviewed the price.</strong> I understand the item-wise rates, quantity, minimum charge, total estimate range and material exclusions. No extra work or extra charge may be added without my approval.</span></label>}
+                <div className="text-[10px] text-slate-600">The displayed amount is the published QuickFix service charge. Materials are not included and must be supplied by the customer. Work outside the selected service scope needs a separately agreed price.</div>
+                {rateQuote.allPriced && <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950"><input type="checkbox" checked={priceAccepted} onChange={e => setPriceAccepted(e.target.checked)} className="mt-0.5" /><span><strong>I accept the displayed QuickFix service charge.</strong> Materials are not included and will be supplied by me. No work outside this selected service may begin without my approval.</span></label>}
               </>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                Published rate cards se total calculate karein. Har item ka approved rate milna zaroori hai. Rate unavailable ho to pehle alag itemised quotation banega; bina rate dekhe normal order confirm nahi hoga.
+                QuickFix ne abhi har selected service ka published rate जारी नहीं किया है। Rate publish hone tak booking available nahi hogi.
               </div>
             )}
           </div>
@@ -675,7 +675,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between gap-4">
           <div>
             <span className="text-[11px] text-slate-500 block">Total Amount</span>
-            <span className="text-lg font-extrabold text-blue-700 font-mono">{totalAmount === null ? 'Quote after inspection' : `₹${totalAmount}${quoteMaximum !== basePrice ? ` – ₹${quoteMaximum}` : ''}`}</span>
+            <span className="text-lg font-extrabold text-blue-700 font-mono">{totalAmount === null ? 'Rate unavailable' : `₹${totalAmount}${quoteMaximum !== basePrice ? ` – ₹${quoteMaximum}` : ''}`}</span>
           </div>
 
           <button
