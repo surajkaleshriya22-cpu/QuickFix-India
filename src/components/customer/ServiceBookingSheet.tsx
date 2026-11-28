@@ -651,9 +651,9 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
                       {line.priced && <div className="text-[10px] text-slate-500">Rate ₹{line.unitRateMinimum}–₹{line.unitRateMaximum}/{line.unit}{line.baseFee > 0 ? ` · Base fee ₹${line.baseFee}` : ''}{line.minimumCharge > 0 ? ` · Minimum charge ₹${line.minimumCharge}` : ''}</div>}
                       {line.priced && line.appliedAdjustmentPercent < 0 && <div className="text-[10px] font-semibold text-emerald-700">Admin rate decrease: {Math.abs(line.appliedAdjustmentPercent)}%</div>}
                       {line.priced && <div className="text-[10px] font-semibold text-amber-800">Materials are not included. Customer must provide all required materials.</div>}
-                      {!line.priced && <div className="text-[10px] text-amber-700">Inspection / quote required</div>}
+                      {!line.priced && <div className="text-[10px] text-amber-700">QuickFix rate not published; booking unavailable</div>}
                     </div>
-                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'After inspection'}</strong>
+                    <strong className="shrink-0">{line.priced ? `₹${line.minimum} – ₹${line.maximum}` : 'Rate unavailable'}</strong>
                   </div>
                 ))}
                 <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold">
@@ -665,7 +665,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
               </>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                Published rate cards se total calculate karein. Har item ka approved rate milna zaroori hai. Rate unavailable ho to pehle alag itemised quotation banega; bina rate dekhe normal order confirm nahi hoga.
+                QuickFix ne abhi har selected service ka published rate जारी नहीं किया है। Rate publish hone tak booking available nahi hogi.
               </div>
             )}
           </div>
@@ -675,7 +675,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between gap-4">
           <div>
             <span className="text-[11px] text-slate-500 block">Total Amount</span>
-            <span className="text-lg font-extrabold text-blue-700 font-mono">{totalAmount === null ? 'Quote after inspection' : `₹${totalAmount}${quoteMaximum !== basePrice ? ` – ₹${quoteMaximum}` : ''}`}</span>
+            <span className="text-lg font-extrabold text-blue-700 font-mono">{totalAmount === null ? 'Rate unavailable' : `₹${totalAmount}${quoteMaximum !== basePrice ? ` – ₹${quoteMaximum}` : ''}`}</span>
           </div>
 
           <button
