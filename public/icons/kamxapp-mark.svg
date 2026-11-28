@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="KamXApp">
+  <rect width="128" height="128" rx="28" fill="#fff"/>
+  <path d="M13 57 64 15l51 42v12H13z" fill="#0B4FCB"/>
+  <path d="M26 64 64 33l38 31v43H26z" fill="#102A56"/>
+  <path d="M46 91 80 57l8 8-34 34z" fill="#fff"/>
+  <path d="M74 54a17 17 0 0 0 21 21l-9-9 8-8 9 9a17 17 0 0 0-21-21l-8 8-8-8 8-8" fill="#fff" opacity=".98"/>
+  <path d="M15 106c19 13 48 15 74 4" fill="none" stroke="#FF8A00" stroke-width="9" stroke-linecap="round"/>
+</svg>
