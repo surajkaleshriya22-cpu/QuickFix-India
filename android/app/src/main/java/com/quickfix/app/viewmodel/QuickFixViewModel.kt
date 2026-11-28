@@ -75,7 +75,12 @@ data class PartnerJob(
     val scheduledTimeSlot: String = "",
     val paymentMethod: String = "",
     val paymentStatus: String = "pending",
-    val pricingStatus: String = ""
+    val pricingStatus: String = "",
+    val notes: String = "",
+    val quoteMinimum: Double = 0.0,
+    val quoteMaximum: Double = 0.0,
+    val acceptedAt: String = "",
+    val serviceDeadline: String = ""
 )
 
 data class AdminMetrics(
@@ -178,6 +183,10 @@ class QuickFixViewModel : ViewModel() {
                             customerUid = data["customerUid"] as? String ?: "",
                             technicianUid = data["technicianUid"] as? String ?: "",
                             customerPhone = data["customerPhone"] as? String ?: "",
+                            technicianPhone = data["technicianPhone"] as? String ?: "",
+                            notes = data["notes"] as? String ?: "",
+                            acceptedAt = data["acceptedAt"]?.toString() ?: "",
+                            serviceDeadline = data["serviceDeadline"]?.toString() ?: "",
                             city = data["city"] as? String ?: "",
                             pincode = data["pincode"] as? String ?: "",
                             state = (data["serviceArea"] as? Map<*, *>)?.get("state") as? String ?: "",
@@ -864,6 +873,11 @@ class QuickFixViewModel : ViewModel() {
                             paymentMethod = item.optString("paymentMethod", ""),
                             paymentStatus = item.optString("paymentStatus", "pending"),
                             pricingStatus = item.optString("pricingStatus", ""),
+                            notes = item.optString("notes", ""),
+                            quoteMinimum = item.optJSONObject("quoteRange")?.optDouble("minimum", 0.0) ?: 0.0,
+                            quoteMaximum = item.optJSONObject("quoteRange")?.optDouble("maximum", 0.0) ?: 0.0,
+                            acceptedAt = item.optString("acceptedAt", ""),
+                            serviceDeadline = item.optString("serviceDeadline", ""),
                             price = item.optInt("price", 0),
                             totalAmount = item.optInt("totalAmount", 0),
                             status = "requested",
