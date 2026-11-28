@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="KamXApp">
   <rect width="128" height="128" rx="28" fill="#fff"/>
-  <path d="M13 57 64 15l51 42v12H13z" fill="#0B4FCB"/>
-  <path d="M26 64 64 33l38 31v43H26z" fill="#102A56"/>
-  <path d="M46 91 80 57l8 8-34 34z" fill="#fff"/>
-  <path d="M74 54a17 17 0 0 0 21 21l-9-9 8-8 9 9a17 17 0 0 0-21-21l-8 8-8-8 8-8" fill="#fff" opacity=".98"/>
-  <path d="M15 106c19 13 48 15 74 4" fill="none" stroke="#FF8A00" stroke-width="9" stroke-linecap="round"/>
+  <!-- Royal-blue house roof and chimney -->
+  <path d="M10 54 62 12 115 53 106 66 62 31 18 67Z" fill="#0B4FCB"/>
+  <path d="M101 35h13v20h-13z" fill="#0B4FCB"/>
+  <!-- Deep-navy house body -->
+  <path d="M22 62 62 31 103 62v42H22Z" fill="#102A56"/>
+  <!-- White service wrench, matching the approved mark -->
+  <path d="M76 48c-8-4-18-1-22 7-3 5-3 11 0 16L37 88c-3 3-3 8 0 11s8 3 11 0l17-17c7 2 14-1 18-7 3-5 3-11 0-16l-9 9-8-8z" fill="#fff"/>
+  <!-- Saffron motion underline -->
+  <path d="M13 94c19 20 53 24 82 8 10-6 18-14 24-24-17 13-33 20-51 22-21 3-39-2-51-14z" fill="none" stroke="#FF8A00" stroke-width="9" stroke-linecap="round"/>
 </svg>
