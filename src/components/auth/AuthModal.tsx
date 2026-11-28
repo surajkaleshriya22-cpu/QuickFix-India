@@ -244,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header with QuickFix Branding */}
+        {/* Header with KamXApp Branding */}
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white p-5 relative">
           <button
             onClick={onClose}
@@ -258,8 +258,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
               Q
             </div>
             <div>
-              <span className="font-extrabold tracking-tight text-white text-sm">QuickFix</span>
-              <span className="text-[10px] text-blue-200 ml-1.5 uppercase tracking-wider font-semibold">India</span>
+              <span className="font-extrabold tracking-tight text-white text-sm">KamXApp</span>
+              <span className="text-[10px] text-blue-200 ml-1.5 uppercase tracking-wider font-semibold">भारत</span>
             </div>
           </div>
 
@@ -674,7 +674,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                       ? 'Already registered? Sign In'
                       : selectedRoleTab === 'technician'
                       ? 'New Service Technician? Register Trade & KYC'
-                      : 'New to QuickFix? Create Account'}
+                      : 'New to KamXApp? Create Account'}
                   </button>
                 </div>
               )}
@@ -706,7 +706,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'cu
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-blue-600/20 active:scale-98 transition-all flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Verify OTP & Enter QuickFix</span>
+                <span>Verify OTP & Enter KamXApp</span>
               </button>
 
               <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
