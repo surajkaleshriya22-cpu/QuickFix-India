@@ -24,7 +24,7 @@ import com.quickfix.app.data.model.User
 import com.quickfix.app.data.model.UserRole
 import com.quickfix.app.viewmodel.AuthViewModel
 
-// Deep blue & dark slate styling for QuickFix HQ
+// Deep blue & dark slate styling for KamXApp HQ
 private val DarkSlate950 = Color(0xFF020617)
 private val DarkSlate900 = Color(0xFF0F172A)
 private val Slate800 = Color(0xFF1E293B)
@@ -62,7 +62,7 @@ fun AdminLoginScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (isEnglish) "QuickFix Admin HQ" else "QuickFix एडमिन मुख्यालय",
+                        if (isEnglish) "KamXApp Admin HQ" else "KamXApp एडमिन मुख्यालय",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 18.sp
