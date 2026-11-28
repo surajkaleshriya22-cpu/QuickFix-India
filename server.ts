@@ -981,8 +981,8 @@ app.get('/api/bookings/quote', authenticateFirebaseUser, async (req: Request, re
       message: 'No approved rate is available for this exact service and location. Obtain an itemised quote before work starts.' });
     const quote = calculateRateQuote(card, quantity);
     return res.json({ success: true, quoteAvailable: true, pricingStatus: 'priced_from_approved_rate_card',
-      serviceTitle: service.title, billingUnit: billing.unit, quantity, quote,
-      materialsIncluded: quote.materialsIncluded, rateSourceName: card.sourceName,
+      serviceTitle: service.title, billingUnit: billing.unit, quantity, quote: { ...quote, materialsIncluded: false },
+      materialsIncluded: false, rateSourceName: card.sourceName,
       effectiveFrom: card.effectiveFrom, effectiveTo: card.effectiveTo || null });
   } catch (error) {
     console.error('Customer quote preview failed:', error);
@@ -1090,7 +1090,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
           appliedAdjustmentPercent: quote.appliedAdjustmentPercent,
           lineTotalMinimum: quote.totalMinimum,
           lineTotalMaximum: quote.totalMaximum,
-          materialsIncluded: quote.materialsIncluded,
+          materialsIncluded: false,
           rateSourceName: card.sourceName,
           rateSourceUrl: card.sourceUrl || null,
           rateEffectiveFrom: card.effectiveFrom,
@@ -1099,10 +1099,10 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       };
     });
     const allLinesPriced = lineItems.every(line => line.pricingStatus === 'priced_from_published_rate');
-    if (['upi', 'card', 'netbanking'].includes(paymentMethod) && !allLinesPriced) {
+    if (!allLinesPriced) {
       return res.status(409).json({
         success: false,
-        error: 'Online payment needs an approved local rate card and confirmed booking amount. Choose Cash or request an inspection quote; no payment has been collected.'
+        error: 'A published QuickFix service rate is required before booking. No inspection quote or later price approval is available.'
       });
     }
     const totalMinimum = lineItems.reduce((sum, line) => sum + line.lineTotalMinimum, 0);
@@ -1140,7 +1140,7 @@ app.post('/api/bookings', authenticateFirebaseUser, async (req: Request, res: Re
       ...(allLinesPriced ? {
         rateCardId: rateCardIds[0],
         rateCardIds,
-        quoteRange: { minimum: totalMinimum, maximum: totalMaximum, materialsIncluded: lineItems.every(line => line.materialsIncluded === true), lineItems }
+        quoteRange: { minimum: totalMinimum, maximum: totalMaximum, materialsIncluded: false, lineItems }
       } : { rateCardIds, quoteRange: { minimum: totalMinimum, maximum: totalMaximum, lineItems } }),
       paymentMethod,
       ...(priceConsent ? { priceConsent: { accepted: true, acceptedBy: identity.uid, acceptedAt: FieldValue.serverTimestamp(), quoteMinimum: totalMinimum, quoteMaximum: totalMaximum, pricingStatus: allLinesPriced ? 'priced_from_approved_rate_card' : 'inspection_quote_required', lineItems } } : {}),
