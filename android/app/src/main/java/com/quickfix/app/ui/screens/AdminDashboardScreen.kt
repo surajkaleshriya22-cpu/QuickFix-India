@@ -92,19 +92,6 @@ fun AdminDashboardScreen(
                                 fontSize = 18.sp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                color = Color(0xFF10B981).copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(4.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
-                            ) {
-                                Text(
-                                    "NOT VERIFIED",
-                                    color = Color(0xFF34D399),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
                         }
                         Text(
                             if (isEnglish) "Operations & Marketplace Governance" else "ऑपरेशन और मार्केटप्लेस प्रबंधन",
@@ -997,35 +984,51 @@ fun CommissionsTab(
 
 @Composable
 fun ReviewsTab(bookings: List<Booking>) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Ratings and Customer Reviews", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
-            shape = RoundedCornerShape(10.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("⭐ 5.0", fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ananya Deshmukh", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("“Ramesh was exceptionally polite and fixed the sparking switchboard in less than 20 minutes! Standard QuickFix warranty provided.”", fontSize = 12.sp, color = TextSecondary)
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = Color(0xFFEFF6FF),
-                    shape = RoundedCornerShape(6.dp),
+    val reviews = bookings.filter { it.reviewRating != null && it.reviewComment.isNotBlank() }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text("Ratings and Customer Reviews (${reviews.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+        }
+        if (reviews.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CardBg),
+                    shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "QuickFix Admin Response: Thank you Ananya! We have passed your appreciation to Ramesh.",
-                        fontSize = 11.sp,
-                        color = BrandBlue,
-                        modifier = Modifier.padding(8.dp)
+                        "अभी किसी Booking में सत्यापित Customer Review उपलब्ध नहीं है। यहाँ केवल Firestore से मिले वास्तविक Reviews दिखेंगे।",
+                        modifier = Modifier.padding(16.dp),
+                        fontSize = 12.sp,
+                        color = TextSecondary
                     )
+                }
+            }
+        }
+        items(reviews, key = { it.id }) { booking ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardBg),
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(booking.customerName, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        Text("★ ${booking.reviewRating}/5", fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontSize = 12.sp)
+                    }
+                    Text("${booking.serviceTitle} • Booking ${booking.id}", fontSize = 11.sp, color = TextSecondary)
+                    Text(booking.reviewComment, fontSize = 12.sp, color = TextPrimary)
+                    if (booking.reviewTags.isNotEmpty()) {
+                        Text(booking.reviewTags.joinToString(" • "), fontSize = 10.sp, color = BrandBlue)
+                    }
+                    if (booking.reviewAdminReply.isNotBlank()) {
+                        Text("QuickFix response: ${booking.reviewAdminReply}", fontSize = 11.sp, color = BrandBlue)
+                    }
                 }
             }
         }
