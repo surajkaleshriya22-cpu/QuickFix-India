@@ -207,7 +207,12 @@ class QuickFixViewModel : ViewModel() {
                             quoteMaximum = ((data["quoteRange"] as? Map<*, *>)?.get("maximum") as? Number)?.toDouble() ?: 0.0,
                             priceConsentAccepted = (data["priceConsent"] as? Map<*, *>)?.get("accepted") as? Boolean ?: false,
                             createdAt = bookingFieldText(data["createdAt"]),
-                            updatedAt = bookingFieldText(data["updatedAt"])
+                            updatedAt = bookingFieldText(data["updatedAt"]),
+                            reviewRating = ((data["review"] as? Map<*, *>)?.get("rating") as? Number)?.toInt(),
+                            reviewComment = (data["review"] as? Map<*, *>)?.get("comment") as? String ?: "",
+                            reviewTags = ((data["review"] as? Map<*, *>)?.get("tags") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                            reviewCreatedAt = bookingFieldText((data["review"] as? Map<*, *>)?.get("createdAt")),
+                            reviewAdminReply = (data["review"] as? Map<*, *>)?.get("adminReply") as? String ?: ""
                         )
                     } ?: emptyList()
                     _firestoreSyncStatus.value = "Bookings loaded from Firestore."
