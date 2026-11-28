@@ -1957,9 +1957,17 @@ app.get('/api/admin/bookings', authenticateFirebaseUser, requireServerAdmin, asy
         lineItems: Array.isArray(b.lineItems) ? b.lineItems : [],
         quoteRange: quoteRange ? { minimum: Number(quoteRange.minimum || 0), maximum: Number(quoteRange.maximum || 0) } : null,
         pricingStatus: String(b.pricingStatus || ''), price: Number(b.price || 0),
-        totalAmount: Number(b.totalAmount || 0), paymentMethod: String(b.paymentMethod || ''),
-        paymentStatus: String(b.paymentStatus || 'pending'), createdAt: iso(b.createdAt),
-        updatedAt: iso(b.updatedAt), acceptedAt: iso(b.acceptedAt), serviceDeadline: iso(b.serviceDeadline)
+        visitingCharges: Number(b.visitingCharges || 0), discount: Number(b.discount || 0), taxes: Number(b.taxes || 0),
+        totalAmount: Number(b.totalAmount || 0), commissionRate: Number(b.commissionRate || b.effectiveCommissionRate || 0),
+        adminCommission: Number(b.adminCommission || 0), technicianPayout: Number(b.technicianPayout || 0),
+        paymentMethod: String(b.paymentMethod || ''), paymentStatus: String(b.paymentStatus || 'pending'),
+        transactionRef: String(b.transactionRef || ''), paidAt: iso(b.paidAt),
+        review: b.review && typeof b.review === 'object' ? {
+          rating: Number(b.review.rating || 0), comment: String(b.review.comment || ''),
+          tags: Array.isArray(b.review.tags) ? b.review.tags.filter((tag: unknown) => typeof tag === 'string').slice(0, 20) : [],
+          createdAt: iso(b.review.createdAt), adminReply: String(b.review.adminReply || '')
+        } : null,
+        createdAt: iso(b.createdAt), updatedAt: iso(b.updatedAt), acceptedAt: iso(b.acceptedAt), serviceDeadline: iso(b.serviceDeadline)
       };
     });
     return res.json({ success: true, bookings });
