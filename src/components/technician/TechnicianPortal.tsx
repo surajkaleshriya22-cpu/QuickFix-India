@@ -446,7 +446,7 @@ export const TechnicianPortal: React.FC = () => {
                     ['electrician','Electrician'],['plumber','Plumber'],['technician','Technician (AC / Fridge / Appliances)'],
                     ['welder','Welder / Fabricator'],['mechanic','Mechanic'],
                     ['driver','Driver'],['tourist_guide','Tourist Guide'],['contractor','Contractor'],
-                    ['bike_taxi','QuickFix Bike Taxi Captain'],['kaamkaaj_partner','Kaam-Kaaj Partner (घर के सभी रोजमर्रा के काम)'],
+                    ['bike_taxi','KamXApp Bike Taxi Captain'],['kaamkaaj_partner','Kaam-Kaaj Partner (घर के सभी रोजमर्रा के काम)'],
                     ['house_cleaning','House Cleaning'],['cook','Cook / खाना बनाना'],['laundry','Laundry / कपड़े धोना-प्रेस'],['maid','Maid / घरेलू सहायता'],
                     ['carpenter','Carpenter'],['painter','Painter'],['gardener','Gardener'],
                     ['pest_control','Pest Control'],['house_shifting','House Shifting'],
@@ -1093,7 +1093,7 @@ export const TechnicianPortal: React.FC = () => {
               <button type="button" disabled={jobActionLoading} onClick={() => void handleCompleteJob(currentActiveJob.id)} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{jobActionLoading ? 'Saving…' : 'Mark Service Complete'}</button>
             ) : null}
             {jobActionError && <p className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{jobActionError}</p>}
-            <p className="text-[10px] text-slate-500">Job status is verified by QuickFix server. Payment or payout is not marked settled by this action.</p>
+            <p className="text-[10px] text-slate-500">Job status is verified by KamXApp server. Payment or payout is not marked settled by this action.</p>
 
           </div>
         ) : (
