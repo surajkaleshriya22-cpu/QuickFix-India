@@ -1589,10 +1589,6 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           paymentMethod: String(booking.paymentMethod || ''),
           paymentStatus: String(booking.paymentStatus || 'pending'),
           pricingStatus: String(booking.pricingStatus || ''),
-          quoteRange: booking.quoteRange && typeof booking.quoteRange === 'object' ? {
-            minimum: Number(booking.quoteRange.minimum || 0),
-            maximum: Number(booking.quoteRange.maximum || 0)
-          } : null,
           serviceDeadline: typeof booking.serviceDeadline === 'string' ? booking.serviceDeadline : '',
           acceptedAt: typeof booking.acceptedAt === 'string' ? booking.acceptedAt : '',
           createdAt: booking.createdAt && typeof booking.createdAt.toDate === 'function' ? booking.createdAt.toDate().toISOString() : String(booking.createdAt || '')
