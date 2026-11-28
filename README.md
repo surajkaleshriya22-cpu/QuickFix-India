@@ -5,9 +5,9 @@
 The platform brings many service verticals together under one product and one account system:
 - **Home repair:** electrician, plumber, AC, refrigerator and appliance repair.
 - **Home and daily help:** cleaning, cooking, laundry, carpenter, painter, gardening and pest control.
-- **Mobility and delivery:** QuickFix Bike Taxi Captain, driver and future delivery/rider services.
+- **Mobility and delivery:** KamXApp Bike Taxi Captain, driver and future delivery/rider services.
 - **Local expertise and projects:** mechanic, welder/fabricator, tourist guide, contractor, house shifting and additional verified services.
-- **Future categories:** new work types can be added to the same service catalogue without creating a separate QuickFix app for each vertical.
+- **Future categories:** new work types can be added to the same service catalogue without creating a separate KamXApp app for each vertical.
 
 One shared platform should provide customer accounts, Channel Partner accounts, service discovery, location and service zones, booking, safety, support, payments and Admin operations. Each service category may have its own workflow, pricing, partner qualifications and wallet rules, while remaining inside the single KamXApp app.
 
@@ -24,7 +24,7 @@ Requirements: Node.js 20+.
 ```bash
 npm install
 cp .env.example .env
-# Fill in the Firebase Web App values for the intended QuickFix Firebase project.
+# Fill in the Firebase Web App values for the intended KamXApp Firebase project.
 # Add GEMINI_API_KEY only if using the server-side Gemini endpoints.
 npm run dev
 ```
