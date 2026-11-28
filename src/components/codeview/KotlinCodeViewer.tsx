@@ -119,7 +119,7 @@ class AuthViewModel(
             val adminUser = User(
                 uid = "admin-master-uid",
                 phoneNumber = phone,
-                displayName = "QuickFix HQ Admin",
+                displayName = "KamXApp HQ Admin",
                 email = "ops.admin@quickfix.in",
                 role = UserRole.ADMIN,
                 city = "Bengaluru"
@@ -260,7 +260,7 @@ fun AuthScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("QuickFix Login & Registration", fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A)) },
+                title = { Text("KamXApp Login & Registration", fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
@@ -468,7 +468,7 @@ fun AdminLoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("QuickFix Admin HQ", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text("KamXApp Admin HQ", fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("customer_home") }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -609,7 +609,7 @@ fun AdminDashboardScreen(
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("QuickFix Admin HQ", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
+                            Text("KamXApp Admin HQ", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 color = Color(0xFF10B981).copy(alpha = 0.2f),
