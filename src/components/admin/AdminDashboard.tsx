@@ -724,7 +724,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white tracking-tight">QuickFix Operations HQ</h2>
+                <h2 className="text-sm font-bold text-white tracking-tight">KamXApp Operations HQ</h2>
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-700/60 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                   <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
                   <span>PREVIEW MODE</span>
@@ -1063,7 +1063,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-3">
             <section className="bg-slate-950 border border-blue-700/60 rounded-2xl p-4 space-y-3">
               <div>
-                <h3 className="text-sm font-bold text-white">Customer Care — QuickFix ID Search</h3>
+                <h3 className="text-sm font-bold text-white">Customer Care — KamXApp ID Search</h3>
                 <p className="text-[10px] text-slate-400 mt-1">Enter a customer's or Channel Partner's permanent ID to open their verified account record and service history.</p>
               </div>
               <div className="flex gap-2">
