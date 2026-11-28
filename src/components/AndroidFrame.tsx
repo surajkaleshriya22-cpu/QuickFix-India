@@ -55,11 +55,12 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#102A56] text-slate-100 flex flex-col font-sans">
       {/* Top Universal Control Bar */}
-      <header className="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 z-50">
+      <header className="relative bg-gradient-to-r from-[#102A56] via-[#123B79] to-[#0B4FCB] border-b border-blue-950 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 z-50 shadow-lg shadow-blue-950/20">
+        <div className="absolute bottom-0 left-0 right-0 kamxapp-accent-rule" />
         <div className="flex items-center gap-3">
-          <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-9 h-9 rounded-xl bg-white p-0.5 shadow-md shadow-blue-500/20" />
+          <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-11 h-11 rounded-xl bg-white p-0.5 shadow-md shadow-blue-950/30 ring-1 ring-white/50" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-white tracking-tight text-sm">KamX<span className="text-orange-400">App</span></span>
