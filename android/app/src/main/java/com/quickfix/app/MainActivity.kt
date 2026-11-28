@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "quickfix_job_alerts",
-                "QuickFix service requests",
+                "KamXApp service requests",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Alerts for new nearby customer service requests"
