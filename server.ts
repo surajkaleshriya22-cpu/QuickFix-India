@@ -1507,9 +1507,34 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
     const bookings = [...unique.values()].map(doc => {
       const item = doc.data();
       const createdAt = item.createdAt?.toDate?.()?.toISOString?.() || String(item.createdAt || '');
-      return { id: doc.id, serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
-        category: String(item.category || ''), scheduledDate: String(item.scheduledDate || ''),
-        scheduledTimeSlot: String(item.scheduledTimeSlot || ''), status: String(item.status || 'unknown'), createdAt };
+      const serviceArea = item.serviceArea && typeof item.serviceArea === 'object' ? item.serviceArea : {};
+      const quoteRange = item.quoteRange && typeof item.quoteRange === 'object' ? item.quoteRange : null;
+      return {
+        id: doc.id,
+        serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
+        category: String(item.category || ''),
+        customerName: String(item.customerName || ''),
+        customerPhone: String(item.customerPhone || ''),
+        customerAddress: String(item.customerAddress || item.address || ''),
+        city: String(item.city || ''),
+        pincode: String(item.pincode || ''),
+        state: String(serviceArea.state || ''),
+        district: String(serviceArea.district || ''),
+        tehsil: String(serviceArea.tehsil || ''),
+        scheduledDate: String(item.scheduledDate || ''),
+        scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
+        notes: typeof item.notes === 'string' ? item.notes : '',
+        status: String(item.status || 'unknown'),
+        paymentMethod: String(item.paymentMethod || ''),
+        paymentStatus: String(item.paymentStatus || 'pending'),
+        pricingStatus: String(item.pricingStatus || ''),
+        quoteRange: quoteRange ? { minimum: Number(quoteRange.minimum || 0), maximum: Number(quoteRange.maximum || 0) } : null,
+        price: Number(item.price || 0),
+        totalAmount: Number(item.totalAmount || 0),
+        acceptedAt: String(item.acceptedAt || ''),
+        serviceDeadline: String(item.serviceDeadline || ''),
+        createdAt
+      };
     }).sort((a,b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
     return res.json({ success: true, bookings });
   } catch (error) {
@@ -1552,6 +1577,12 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           customerPhone: String(booking.customerPhone || ''),
           customerAddress: String(booking.customerAddress || ''),
           city: String(booking.city || ''),
+          pincode: String(booking.pincode || ''),
+          state: String(booking.serviceArea?.state || ''),
+          district: String(booking.serviceArea?.district || ''),
+          tehsil: String(booking.serviceArea?.tehsil || ''),
+          scheduledDate: String(booking.scheduledDate || ''),
+          scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
           notes: typeof booking.notes === 'string' ? booking.notes : '',
           status: String(booking.status || 'assigned'),
           price: Number(booking.price || 0),
@@ -1581,9 +1612,11 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
           adminCommission: Number(booking.adminCommission || 0),
           commissionRate: Number(booking.commissionRate || 0),
           paymentMethod: String(booking.paymentMethod || ''),
+          paymentStatus: String(booking.paymentStatus || 'pending'),
+          pricingStatus: String(booking.pricingStatus || ''),
           serviceDeadline: typeof booking.serviceDeadline === 'string' ? booking.serviceDeadline : '',
           acceptedAt: typeof booking.acceptedAt === 'string' ? booking.acceptedAt : '',
-          createdAt: typeof booking.createdAt === 'string' ? booking.createdAt : ''
+          createdAt: booking.createdAt && typeof booking.createdAt.toDate === 'function' ? booking.createdAt.toDate().toISOString() : String(booking.createdAt || '')
         };
       });
 
@@ -1959,6 +1992,10 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         city: String(booking.city || ''),
         pincode: String(booking.pincode || ''),
         serviceArea: booking.serviceArea && typeof booking.serviceArea === 'object' ? booking.serviceArea : {},
+        state: String(booking.serviceArea?.state || ''),
+        district: String(booking.serviceArea?.district || ''),
+        tehsil: String(booking.serviceArea?.tehsil || ''),
+        notes: typeof booking.notes === 'string' ? booking.notes : '',
         lineItems: Array.isArray(booking.lineItems) ? booking.lineItems : [],
         quoteRange: booking.quoteRange && typeof booking.quoteRange === 'object' ? booking.quoteRange : null,
         pricingStatus: String(booking.pricingStatus || ''),
@@ -1973,6 +2010,8 @@ app.get('/api/customer/bookings', authenticateFirebaseUser, async (req: Request,
         scheduledTimeSlot: String(booking.scheduledTimeSlot || ''),
         status: String(booking.status || 'requested'),
         technicianName: String(booking.technicianName || ''),
+        technicianPhone: String(booking.technicianPhone || ''),
+        acceptedAt: String(booking.acceptedAt || ''),
         serviceDeadline: String(booking.serviceDeadline || ''),
         createdAt
       };
