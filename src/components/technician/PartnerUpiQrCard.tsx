@@ -20,7 +20,7 @@ export const PartnerUpiQrCard: React.FC = () => {
   const [savedBank, setSavedBank] = useState<{ bankName: string; accountType: string; accountLast4: string; ifsc: string; accountHolderName: string } | null>(null);
   const [bankSaving, setBankSaving] = useState(false);
 
-  const paymentUri = useMemo(() => savedUpiId ? 'upi://pay?' + new URLSearchParams({ pa: savedUpiId, pn: payeeName || 'QuickFix Partner', cu: 'INR' }).toString() : '', [savedUpiId, payeeName]);
+  const paymentUri = useMemo(() => savedUpiId ? 'upi://pay?' + new URLSearchParams({ pa: savedUpiId, pn: payeeName || 'KamXApp Partner', cu: 'INR' }).toString() : '', [savedUpiId, payeeName]);
 
   useEffect(() => {
     let active = true;
@@ -133,6 +133,6 @@ export const PartnerUpiQrCard: React.FC = () => {
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
     {message && <p className="rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">{message}</p>}
     {savedUpiId && <div className="flex flex-col items-center gap-2 rounded-xl bg-slate-50 p-3">{qrDataUrl ? <img src={qrDataUrl} alt="Channel Partner UPI payment QR code" width="220" height="220" className="h-56 w-56 rounded-lg bg-white p-2"/> : <p className="text-xs text-slate-500">Generating your QR…</p>}<p className="text-sm font-bold text-slate-900">{savedUpiId}</p><button type="button" onClick={async () => { try { if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable'); await navigator.clipboard.writeText(savedUpiId); setMessage('UPI ID copied.'); } catch { setError('Copy is unavailable on this device. Please copy the UPI ID manually.'); } }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Copy UPI ID</button></div>}
-    <p className="rounded-lg bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900">Important: QR payment customer ke UPI app mein initiate hota hai. QuickFix abhi is direct UPI payment ko automatically verify nahi karta. Payment milne ki pushti apne bank/UPI app mein khud karein; app booking ko paid mark nahi karega.</p>
+    <p className="rounded-lg bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900">Important: QR payment customer ke UPI app mein initiate hota hai. KamXApp abhi is direct UPI payment ko automatically verify nahi karta. Payment milne ki pushti apne bank/UPI app mein khud karein; app booking ko paid mark nahi karega.</p>
   </section>;
 };
