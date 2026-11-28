@@ -394,7 +394,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     ['driver','Hire a Driver','ड्राइवर बुक करें','Hourly, full-day and outstation driver service',499,60],
     ['tourist_guide','Tourist Guide','पर्यटक गाइड','Local sightseeing and guided city tours',599,120],
     ['contractor','Home Contractor','घर के ठेकेदार','Renovation, civil work and project supervision',999,120],
-    ['bike_taxi','QuickFix Bike Taxi Captain','क्विकफिक्स बाइक टैक्सी','Point-to-point local bike ride with verified captain',49,15],
+    ['bike_taxi','KamXApp Bike Taxi Captain','KamXApp बाइक टैक्सी','Point-to-point local bike ride with verified captain',49,15],
     ['kaamkaaj_partner','घर की सफाई — झाड़ू-पोछा','घर की सफाई','कमरे, रसोई, बाथरूम की सफाई और झाड़ू-पोछा',249,60],
     ['kaamkaaj_partner','बर्तन साफ करना','बर्तन सफाई','रोज के बर्तन धोना और रसोई की सफाई',149,45],
     ['kaamkaaj_partner','खाना बनाना','घर पर खाना बनाना','रोज का खाना, नाश्ता और भोजन की तैयारी',299,90],
