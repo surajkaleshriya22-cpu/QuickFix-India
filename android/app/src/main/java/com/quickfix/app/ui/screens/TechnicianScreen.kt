@@ -15,6 +15,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -29,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -279,33 +281,41 @@ fun TechnicianScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "KamXApp · Channel Partner",
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                fontSize = 17.sp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                color = Color(0xFF10B981),
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    "CHANNEL PARTNER",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            if (isEnglish) "Signed-in partner account" else "लॉगिन किया हुआ पार्टनर खाता",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = com.quickfix.app.R.drawable.ic_kamxapp_mark),
+                            contentDescription = "KamXApp",
+                            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "KamXApp · Channel Partner",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 17.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = Color(0xFF10B981),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        "CHANNEL PARTNER",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                if (isEnglish) "Signed-in partner account" else "लॉगिन किया हुआ पार्टनर खाता",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
