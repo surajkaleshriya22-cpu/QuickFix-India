@@ -69,7 +69,12 @@ data class Booking(
     val quoteMaximum: Double = 0.0,
     val priceConsentAccepted: Boolean = false,
     val createdAt: String = "",
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val reviewRating: Int? = null,
+    val reviewComment: String = "",
+    val reviewTags: List<String> = emptyList(),
+    val reviewCreatedAt: String = "",
+    val reviewAdminReply: String = ""
 )
 
 data class CommissionSettings(
