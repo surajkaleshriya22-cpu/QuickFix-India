@@ -2953,6 +2953,59 @@ app.get('/api/admin/customer-care/:quickFixId', authenticateFirebaseUser, requir
   }
 });
 
+// Admin-only account directory for Customer and Channel Partner dashboards.
+// Return minimal profile fields only; never expose KYC document numbers or bank credentials.
+app.get('/api/admin/users', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
+  try {
+    if (!firebaseAdminApp) return res.status(503).json({ success: false, error: 'Secure admin service is unavailable.' });
+    const snapshot = await getFirestore(firebaseAdminApp).collection('users').limit(500).get();
+    const customers: Record<string, any>[] = [];
+    const partners: Record<string, any>[] = [];
+    const iso = (value: any) => value && typeof value.toDate === 'function'
+      ? value.toDate().toISOString()
+      : typeof value === 'string' ? value : '';
+    snapshot.docs.forEach((document) => {
+      const data = document.data();
+      const role = String(data.role || '').toUpperCase();
+      const roles = Array.isArray(data.roles) ? data.roles.map((item: unknown) => String(item).toUpperCase()) : [];
+      const base = {
+        uid: document.id,
+        quickFixId: String(data.quickFixId || ''),
+        displayName: String(data.displayName || ''),
+        phoneNumber: String(data.phoneNumber || ''),
+        email: String(data.email || ''),
+        address: String(data.address || ''),
+        city: String(data.city || ''),
+        pincode: String(data.pincode || ''),
+        createdAt: iso(data.createdAt),
+        isSuspended: data.isSuspended === true,
+        isActive: data.isActive !== false
+      };
+      if (role === 'CHANNEL_PARTNER' || role === 'TECHNICIAN' || roles.includes('CHANNEL_PARTNER') || roles.includes('TECHNICIAN')) {
+        partners.push({
+          ...base,
+          role: role || 'CHANNEL_PARTNER',
+          trades: Array.isArray(data.trades) ? data.trades.filter((item: unknown) => typeof item === 'string').slice(0, 30) : [],
+          experienceYears: Number.isFinite(data.experienceYears) ? Number(data.experienceYears) : 0,
+          approvalStatus: String(data.approvalStatus || 'unknown'),
+          kycStatus: String(data.kycStatus || 'not_submitted'),
+          isVerified: data.isVerified === true,
+          isOnline: data.isOnline === true,
+          rating: Number.isFinite(data.rating) ? Number(data.rating) : 0,
+          totalJobsCompleted: Number.isFinite(data.totalJobsCompleted) ? Number(data.totalJobsCompleted) : 0,
+          walletBalance: typeof data.walletBalance === 'number' && Number.isFinite(data.walletBalance) ? data.walletBalance : 0
+        });
+      } else if (role === 'CUSTOMER' || roles.includes('CUSTOMER')) {
+        customers.push(base);
+      }
+    });
+    return res.json({ success: true, customers, partners, truncated: snapshot.size === 500, limit: 500 });
+  } catch (error) {
+    console.error('Admin user directory lookup failed:', error);
+    return res.status(500).json({ success: false, error: 'Customer and partner directory could not be loaded securely.' });
+  }
+});
+
 // Admin-only directory for all registered Channel Partners and legacy Technicians.
 app.get('/api/admin/partners', authenticateFirebaseUser, requireServerAdmin, async (_req: Request, res: Response) => {
   try {
