@@ -24,7 +24,7 @@ export type BookingStatus =
   | 'completed'
   | 'cancelled';
 
-export type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cash';
+export type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cash' | 'unknown';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
 export interface BookingLineItem {
