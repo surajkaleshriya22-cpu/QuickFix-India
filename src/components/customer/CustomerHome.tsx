@@ -144,6 +144,14 @@ export const CustomerHome: React.FC = () => {
     <div className="flex-1 flex flex-col min-h-0 relative">
       {/* Top Bar */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 z-20">
+        <div className="flex items-center gap-2.5 mb-3">
+          <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-10 h-10 rounded-xl border border-blue-100 bg-white p-0.5 shadow-sm" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[17px] leading-tight font-black tracking-tight text-[#102A56]">KamX<span className="text-[#FF8A00]">App</span></div>
+            <div className="text-[10px] font-semibold text-slate-500">{language === 'hi' ? 'हर काम का एक समाधान' : 'One solution for every need'}</div>
+          </div>
+          <div className="h-8 w-1 rounded-full bg-gradient-to-b from-[#0B4FCB] via-white to-[#FF8A00]" />
+        </div>
         <div className="flex items-center justify-between gap-3 mb-2.5">
           {/* City Selector */}
           <div className="flex items-center gap-1.5 text-xs text-slate-700">
