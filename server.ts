@@ -1509,10 +1509,14 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
       const createdAt = item.createdAt?.toDate?.()?.toISOString?.() || String(item.createdAt || '');
       const serviceArea = item.serviceArea && typeof item.serviceArea === 'object' ? item.serviceArea : {};
       const quoteRange = item.quoteRange && typeof item.quoteRange === 'object' ? item.quoteRange : null;
+      const updatedAt = item.updatedAt?.toDate?.()?.toISOString?.() || String(item.updatedAt || '');
       return {
         id: doc.id,
+        serviceId: String(item.serviceId || ''),
         serviceTitle: String(item.serviceTitle || item.serviceName || 'QuickFix Service'),
         category: String(item.category || ''),
+        customerUid: String(item.customerUid || ''),
+        technicianId: String(item.technicianUid || item.technicianId || uid),
         customerName: String(item.customerName || ''),
         customerPhone: String(item.customerPhone || ''),
         customerAddress: String(item.customerAddress || item.address || ''),
@@ -1524,8 +1528,9 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
         scheduledDate: String(item.scheduledDate || ''),
         scheduledTimeSlot: String(item.scheduledTimeSlot || ''),
         notes: typeof item.notes === 'string' ? item.notes : '',
+        lineItems: Array.isArray(item.lineItems) ? item.lineItems : [],
         status: String(item.status || 'unknown'),
-        paymentMethod: String(item.paymentMethod || ''),
+        paymentMethod: String(item.paymentMethod || 'unknown'),
         paymentStatus: String(item.paymentStatus || 'pending'),
         pricingStatus: String(item.pricingStatus || ''),
         quoteRange: quoteRange ? { minimum: Number(quoteRange.minimum || 0), maximum: Number(quoteRange.maximum || 0) } : null,
@@ -1533,6 +1538,7 @@ app.get('/api/partners/bookings/mine', authenticateFirebaseUser, async (req: Req
         totalAmount: Number(item.totalAmount || 0),
         acceptedAt: String(item.acceptedAt || ''),
         serviceDeadline: String(item.serviceDeadline || ''),
+        updatedAt,
         createdAt
       };
     }).sort((a,b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
