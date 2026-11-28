@@ -545,7 +545,16 @@ export const TechnicianPortal: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
+    <div className="flex-1 bg-[#fffdf8] flex flex-col min-h-0">
+      {/* KamXApp identity is shared with Customer and Admin dashboards. */}
+      <div className="bg-gradient-to-r from-[#102A56] via-[#123B79] to-[#0B4FCB] px-4 py-2 flex items-center gap-2.5 relative">
+        <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-8 h-8 rounded-lg bg-white p-0.5" />
+        <div className="min-w-0">
+          <div className="text-sm font-black tracking-tight text-white">KamX<span className="text-[#FF8A00]">App</span></div>
+          <div className="text-[10px] text-blue-100">{language === 'hi' ? 'हर काम का एक समाधान' : 'One solution for every need'}</div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 kamxapp-accent-rule" />
+      </div>
       {/* Top Bar with Online Switch & Profile */}
       <header className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5">
