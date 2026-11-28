@@ -176,8 +176,7 @@ fun ServiceBookingScreen(
                 quoteError = error.localizedMessage ?: if (isEnglish) "Local price could not be loaded." else "स्थानीय रेट नहीं मिल सका।"
             } finally {
                 quoteLoading = false
-            }        }
-    }
+            }        }    }
 
     Scaffold(
         topBar = {
@@ -417,8 +416,7 @@ fun ServiceBookingScreen(
                     locationMessage?.let { message ->
                         Text(message, fontSize = 11.sp, color = TextSecondary)
                     }
-                    if (customerLatitude != null && customerLongitude != null) {
-                        val lat = customerLatitude!!
+                    if (customerLatitude != null && customerLongitude != null) {                        val lat = customerLatitude!!
                         val lon = customerLongitude!!
                         val south = lat - 0.008
                         val north = lat + 0.008
@@ -557,8 +555,7 @@ fun ServiceBookingScreen(
                             dismissButton = {
                                 TextButton(onClick = { showDatePicker = false }) { Text(if (isEnglish) "Cancel" else "रद्द करें") }                            }
                         ) {
-                            DatePicker(state = datePickerState)
-                        }
+                            DatePicker(state = datePickerState)                        }
                     }
                 }
             }
@@ -592,7 +589,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "4. Review local price before booking" else "4. बुकिंग से पहले स्थानीय रेट जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "3. Review local price before booking" else "3. बुकिंग से पहले स्थानीय रेट जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     when {
                         quoteLoading -> Text(if (isEnglish) "Checking the approved rate for your area…" else "आपके क्षेत्र का मंजूर रेट जाँचा जा रहा है…", color = TextSecondary, fontSize = 12.sp)
                         quoteError != null -> Text(quoteError!!, color = Color(0xFFB45309), fontSize = 12.sp)
@@ -625,7 +622,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "3. What is the issue? (optional)" else "3. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "4. What is the issue? (optional)" else "4. क्या समस्या है? (ज़रूरी नहीं)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
@@ -644,7 +641,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "4. Payment method" else "4. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "5. Payment method" else "5. भुगतान का तरीका", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = paymentMethod == "cash",
