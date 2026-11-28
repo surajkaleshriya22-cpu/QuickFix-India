@@ -651,6 +651,10 @@ fun TechnicianScreen(
                             if (job.customerAddress.isNotBlank()) Text("पता: ${job.customerAddress}, ${job.tehsil} ${job.district} ${job.state} ${job.pincode}".trim(), fontSize = 11.sp, color = TextSecondary)
                             if (job.customerPhone.isNotBlank()) Text("ग्राहक फोन: ${job.customerPhone}", fontSize = 11.sp, color = TextSecondary)
                             if (job.scheduledDate.isNotBlank() || job.scheduledTimeSlot.isNotBlank()) Text("समय: ${job.scheduledDate} ${job.scheduledTimeSlot}", fontSize = 11.sp, color = TextSecondary)
+                            if (job.notes.isNotBlank()) Text("ग्राहक की जानकारी: ${job.notes}", fontSize = 11.sp, color = TextSecondary)
+                            if (job.quoteMinimum > 0 || job.quoteMaximum > 0) Text("अनुमानित रेंज: ₹${job.quoteMinimum.toInt()}–₹${job.quoteMaximum.toInt()}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = BrandBlue)
+                            if (job.acceptedAt.isNotBlank()) Text("स्वीकार किया: ${job.acceptedAt}", fontSize = 10.sp, color = TextSecondary)
+                            if (job.serviceDeadline.isNotBlank()) Text("सेवा की समय-सीमा: ${job.serviceDeadline}", fontSize = 10.sp, color = TextSecondary)
                             Text("भुगतान: ${job.paymentMethod.ifBlank { "—" }} · स्थिति: ${job.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
                             Text("Service price: ₹${job.price} · Total: ₹${job.totalAmount}", fontSize = 11.sp, color = TextSecondary)
                             if (job.lineItems.isNotEmpty()) {
