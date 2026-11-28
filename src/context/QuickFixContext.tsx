@@ -356,6 +356,74 @@ export const QuickFixProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentUser]);
 
 
+  // Load canonical Customer and Channel Partner directory for the Web Admin.
+  // This is server-authorized and replaces the previously empty preview-only arrays.
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') {
+      setCustomers([]);
+      setTechnicians([]);
+      return;
+    }
+    let cancelled = false;
+    const loadAdminUsers = async () => {
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || firebaseUser.uid !== currentUser.uid) return;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/admin/users', {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'Admin account directory could not be loaded.');
+        if (cancelled) return;
+        const customerRows = Array.isArray(result.customers) ? result.customers : [];
+        const partnerRows = Array.isArray(result.partners) ? result.partners : [];
+        setCustomers(customerRows.map((item: any) => ({
+          id: String(item.uid || ''),
+          name: String(item.displayName || ''),
+          phone: String(item.phoneNumber || ''),
+          email: String(item.email || ''),
+          status: item.isSuspended ? 'suspended' : 'active',
+          addresses: item.address ? [{
+            id: 'addr-main', label: 'Home', addressLine: String(item.address),
+            city: String(item.city || ''), pincode: String(item.pincode || '')
+          }] : []
+        })));
+        setTechnicians(partnerRows.map((item: any) => ({
+          id: String(item.uid || ''),
+          name: String(item.displayName || ''),
+          phone: String(item.phoneNumber || ''),
+          email: String(item.email || ''),
+          trades: Array.isArray(item.trades) ? item.trades : [],
+          experienceYears: Number(item.experienceYears || 0),
+          city: String(item.city || ''),
+          rating: Number(item.rating || 0),
+          totalJobsCompleted: Number(item.totalJobsCompleted || 0),
+          avatar: '',
+          isOnline: item.isOnline === true,
+          isVerified: item.isVerified === true,
+          isSuspended: item.isSuspended === true,
+          approvalStatus: item.approvalStatus === 'approved' || item.approvalStatus === 'rejected' ? item.approvalStatus : 'pending_audit',
+          kycDocType: 'PAN',
+          kycDocNumber: '',
+          walletBalance: Number(item.walletBalance || 0),
+          bankAccount: { accountNumber: '', ifsc: '', upiId: '' },
+          todayEarnings: 0,
+          totalEarnings: 0,
+          pendingPayout: 0
+        })));
+      } catch (error) {
+        console.error('Admin customer/partner directory sync failed:', error);
+        if (!cancelled) {
+          setCustomers([]);
+          setTechnicians([]);
+        }
+      }
+    };
+    void loadAdminUsers();
+    return () => { cancelled = true; };
+  }, [currentUser?.uid, currentUser?.role]);
+
   // Sync customer details when currentUser changes
   useEffect(() => {
     if (currentUser && currentUser.role === 'customer') {
