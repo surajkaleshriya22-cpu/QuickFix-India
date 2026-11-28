@@ -3421,7 +3421,7 @@ export const AdminDashboard: React.FC = () => {
                       <div className="min-w-0">
                         <span className="font-semibold block">{line.serviceTitle}</span>
                         <span className="text-[10px] text-slate-400">{line.quantity} × {line.billingUnit.replaceAll('_', ' ')} · ₹{line.unitRateMinimum ?? 0}{line.unitRateMaximum !== undefined && line.unitRateMaximum !== line.unitRateMinimum ? '–₹' + line.unitRateMaximum : ''} per unit</span>
-                        <span className="text-[10px] text-slate-500 block">{line.materialsIncluded ? 'Materials included' : 'Materials/parts excluded unless separately approved'}</span>
+                        <span className="text-[10px] text-slate-500 block">'Materials to be supplied by customer (not included)'</span>
                       </div>
                       <span className="font-mono font-semibold whitespace-nowrap">₹{line.lineTotalMinimum}{line.lineTotalMaximum !== line.lineTotalMinimum ? '–₹' + line.lineTotalMaximum : ''}</span>
                     </div>
