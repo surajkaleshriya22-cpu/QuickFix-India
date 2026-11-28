@@ -280,7 +280,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
         key: order.keyId,
         amount: order.amount,
         currency: 'INR',
-        name: 'QuickFix India',
+        name: 'KamXApp',
         description: `Service booking ${bookingId}`,
         order_id: order.orderId,
         method: { upi: selectedMethod === 'upi', card: selectedMethod === 'card', netbanking: selectedMethod === 'netbanking', wallet: false },
@@ -372,7 +372,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           window.alert(`${payment.message} Booking ID: ${bookingId}`);
           return;
         }
-        window.alert(`Payment verified. QuickFix booking confirmed. Booking ID: ${bookingId}`);
+        window.alert(`Payment verified. KamXApp booking confirmed. Booking ID: ${bookingId}`);
       } else {
         window.alert(`Booking request successfully save ho gayi. Request ID: ${bookingId}. Payment service ke baad cash mein hogi.`);
       }
@@ -409,7 +409,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-2.5">
             <Shield className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-xs text-slate-700">
-              <span className="font-semibold text-blue-900">QuickFix {service.warrantyDays}-Day Warranty:</span> Verified technicians equipped with professional tools. Any rework within warranty is 100% free.
+              <span className="font-semibold text-blue-900">KamXApp {service.warrantyDays}-Day Warranty:</span> Verified technicians equipped with professional tools. Any rework within warranty is 100% free.
             </div>
           </div>
 
@@ -629,7 +629,7 @@ export const ServiceBookingSheet: React.FC<ServiceBookingSheetProps> = ({ servic
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5">
               <Shield className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
               <p className="text-[10px] text-blue-900 leading-relaxed">
-                UPI payment opens through Razorpay Test Mode when the server is configured. QuickFix marks payment paid only after server-side signature and gateway verification. Gateway payment is not escrow or partner payout.
+                UPI payment opens through Razorpay Test Mode when the server is configured. KamXApp marks payment paid only after server-side signature and gateway verification. Gateway payment is not escrow or partner payout.
               </p>
             </div>
             {paymentMessage && <p className="text-xs text-slate-700" role="status">{paymentMessage}</p>}
