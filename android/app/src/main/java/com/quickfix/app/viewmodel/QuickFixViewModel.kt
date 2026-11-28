@@ -22,6 +22,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
+private fun bookingFieldText(value: Any?): String = when (value) {
+    is com.google.firebase.Timestamp -> java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(value.toDate())
+    is java.util.Date -> java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(value)
+    is String -> value
+    else -> ""
+}
+
 data class CustomerBookingQuote(
     val quoteAvailable: Boolean,
     val pricingStatus: String,
@@ -185,8 +192,8 @@ class QuickFixViewModel : ViewModel() {
                             customerPhone = data["customerPhone"] as? String ?: "",
                             technicianPhone = data["technicianPhone"] as? String ?: "",
                             notes = data["notes"] as? String ?: "",
-                            acceptedAt = data["acceptedAt"]?.toString() ?: "",
-                            serviceDeadline = data["serviceDeadline"]?.toString() ?: "",
+                            acceptedAt = bookingFieldText(data["acceptedAt"]),
+                            serviceDeadline = bookingFieldText(data["serviceDeadline"]),
                             city = data["city"] as? String ?: "",
                             pincode = data["pincode"] as? String ?: "",
                             state = (data["serviceArea"] as? Map<*, *>)?.get("state") as? String ?: "",
@@ -199,8 +206,8 @@ class QuickFixViewModel : ViewModel() {
                             quoteMinimum = ((data["quoteRange"] as? Map<*, *>)?.get("minimum") as? Number)?.toDouble() ?: 0.0,
                             quoteMaximum = ((data["quoteRange"] as? Map<*, *>)?.get("maximum") as? Number)?.toDouble() ?: 0.0,
                             priceConsentAccepted = (data["priceConsent"] as? Map<*, *>)?.get("accepted") as? Boolean ?: false,
-                            createdAt = data["createdAt"] as? String ?: "",
-                            updatedAt = data["updatedAt"] as? String ?: ""
+                            createdAt = bookingFieldText(data["createdAt"]),
+                            updatedAt = bookingFieldText(data["updatedAt"])
                         )
                     } ?: emptyList()
                     _firestoreSyncStatus.value = "Bookings loaded from Firestore."
