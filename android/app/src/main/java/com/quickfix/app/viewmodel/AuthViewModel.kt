@@ -111,7 +111,20 @@ class AuthViewModel(
                 try {
                     _authState.value = AuthState.Loading
                     val adminProfile = repository.getAdminUser(repository.currentUserEmail.orEmpty())
-                    val profile = if (adminProfile != null) adminProfile else repository.getUserProfile(uid)
+                    val storedProfile = if (adminProfile != null) adminProfile else repository.getUserProfile(uid)
+                    // Older Customer accounts can already have a valid Firebase session
+                    // while their server-issued QuickFix ID is missing. Repair that
+                    // profile through the authenticated registration API before showing it.
+                    val profile = if (
+                        adminProfile == null &&
+                        storedProfile != null &&
+                        storedProfile.role == UserRole.CUSTOMER &&
+                        storedProfile.quickFixId.isBlank()
+                    ) {
+                        resolveVerifiedProfile(uid, storedProfile)
+                    } else {
+                        storedProfile
+                    }
                     if (profile != null) {
                         _authState.value = AuthState.Authenticated(profile)
                     } else {
