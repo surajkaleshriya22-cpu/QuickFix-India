@@ -216,7 +216,7 @@ fun ServiceBookingScreen(
                             when {
                                 quoteLoading -> if (isEnglish) "Checking local rate…" else "स्थानीय रेट जाँच रहे हैं…"
                                 customerQuote?.quoteAvailable == true -> "₹${String.format(Locale.US, "%.0f", customerQuote!!.minimum)}–₹${String.format(Locale.US, "%.0f", customerQuote!!.maximum)}"
-                                else -> if (isEnglish) "Quote required before work" else "काम से पहले कोटेशन जरूरी"
+                                else -> if (isEnglish) "Rate not published yet" else "अभी रेट प्रकाशित नहीं है"
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -230,8 +230,8 @@ fun ServiceBookingScreen(
                                 bookingError = if (isEnglish) "Please choose today or a future date." else "कृपया आज या आगे की सही तारीख चुनें।"
                             } else if (!isValidQuantity) {
                                 bookingError = if (isEnglish) "Please enter a quantity greater than 0." else "कृपया मात्रा 0 से अधिक लिखें।"
-                            } else if (customerQuote == null || !priceConsentAccepted) {
-                                bookingError = if (isEnglish) "Please review the price/quote and confirm before booking." else "बुकिंग से पहले रेट/कोटेशन देखकर मंजूरी दें।"
+                            } else if (customerQuote?.quoteAvailable != true) {
+                                bookingError = if (isEnglish) "This service cannot be booked until QuickFix publishes its fixed rate for your area." else "इस क्षेत्र में QuickFix का तय रेट प्रकाशित होने तक यह सेवा बुक नहीं हो सकती।"
                             } else if (customerLatitude == null || customerLongitude == null) {
                                 bookingError = if (isEnglish) "Please share your current GPS location so QuickFix can find an eligible nearby Channel Partner." else "नज़दीकी सही Channel Partner खोजने के लिए कृपया अपनी वर्तमान GPS लोकेशन साझा करें।"
                             } else if (address.isBlank()) {
@@ -259,7 +259,7 @@ fun ServiceBookingScreen(
                                             customerLatitude = customerLatitude,
                                             customerLongitude = customerLongitude,
                                             paymentMethod = paymentMethod,
-                                            priceConsentAccepted = priceConsentAccepted,
+                                            priceConsentAccepted = true,
                                             acceptedQuoteMinimum = customerQuote?.minimum ?: 0.0,
                                             acceptedQuoteMaximum = customerQuote?.maximum ?: 0.0
                                         ).id.also { pendingBookingId = it }
@@ -589,7 +589,7 @@ fun ServiceBookingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "3. Review local price before booking" else "3. बुकिंग से पहले स्थानीय रेट जाँचें", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(if (isEnglish) "3. QuickFix service price" else "3. QuickFix सेवा शुल्क", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     when {
                         quoteLoading -> Text(if (isEnglish) "Checking the approved rate for your area…" else "आपके क्षेत्र का मंजूर रेट जाँचा जा रहा है…", color = TextSecondary, fontSize = 12.sp)
                         quoteError != null -> Text(quoteError!!, color = Color(0xFFB45309), fontSize = 12.sp)
@@ -601,16 +601,13 @@ fun ServiceBookingScreen(
                                 if (isEnglish) "Admin-approved rate decrease: ${kotlin.math.abs(q.appliedAdjustmentPercent)}%" else "एडमिन द्वारा रेट में ${kotlin.math.abs(q.appliedAdjustmentPercent)}% कमी",
                                 color = Color(0xFF15803D), fontWeight = FontWeight.SemiBold, fontSize = 11.sp
                             )
-                            Text(if (isEnglish) { if (q.materialsIncluded) "Materials are included as stated by the approved rate card." else "Materials are not included; approve any additional material cost first." } else { if (q.materialsIncluded) "मंजूर रेट कार्ड के अनुसार सामग्री शामिल है।" else "सामग्री शामिल नहीं है; अतिरिक्त सामग्री का रेट पहले मंजूर करें।" }, color = TextSecondary, fontSize = 11.sp)
+                            Text(if (isEnglish) "Materials are not included. The customer must provide all required materials." else "सेवा शुल्क में सामग्री शामिल नहीं है। सभी आवश्यक सामग्री ग्राहक को स्वयं उपलब्ध करानी होगी।", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                             if (q.rateSourceName.isNotBlank()) Text("${if (isEnglish) "Rate source" else "रेट स्रोत"}: ${q.rateSourceName}", color = TextSecondary, fontSize = 10.sp)
                         }
-                        customerQuote != null -> Text(if (isEnglish) "No admin-approved rate is available for this service and area. Ask the partner for an itemised quote and approve it before work begins." else "इस सेवा और क्षेत्र के लिए एडमिन-मंजूर रेट उपलब्ध नहीं है। काम शुरू होने से पहले पार्टनर से मदवार कोटेशन लेकर मंजूर करें।", color = Color(0xFFB45309), fontSize = 12.sp)
-                        else -> Text(if (isEnglish) "Enter state, district, tehsil and quantity to check the approved local rate." else "मंजूर स्थानीय रेट देखने के लिए राज्य, जिला, तहसील और मात्रा भरें।", color = TextSecondary, fontSize = 12.sp)
+                        customerQuote != null -> Text(if (isEnglish) "QuickFix has not published a fixed price for this service and area yet. Booking will open once the rate is published." else "इस सेवा और क्षेत्र के लिए QuickFix का तय रेट अभी प्रकाशित नहीं है। रेट प्रकाशित होने पर बुकिंग उपलब्ध होगी।", color = Color(0xFFB45309), fontSize = 12.sp)
+                        else -> Text(if (isEnglish) "QuickFix has not published a fixed price for this service and area yet. Booking will open once the rate is published." else "इस सेवा और क्षेत्र के लिए QuickFix का तय रेट अभी प्रकाशित नहीं है। रेट प्रकाशित होने पर बुकिंग उपलब्ध होगी।", color = Color(0xFFB45309), fontSize = 12.sp)
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = priceConsentAccepted, onCheckedChange = { priceConsentAccepted = it }, enabled = customerQuote != null && !quoteLoading)
-                        Text(if (isEnglish) { if (customerQuote?.quoteAvailable == true) "I have reviewed and accept the displayed price range." else "I understand that no fixed rate is available yet; I will review and approve an itemised quote before work starts." } else { if (customerQuote?.quoteAvailable == true) "मैंने ऊपर दिखाया गया रेट/अनुमान पढ़ लिया है और इसे स्वीकार करता/करती हूँ।" else "मैं समझता/समझती हूँ कि अभी निश्चित रेट उपलब्ध नहीं है; काम शुरू होने से पहले मदवार कोटेशन लेकर मंजूर करूँगा/करूँगी।" }, color = TextPrimary, fontSize = 11.sp)
-                    }
+                    Text(if (isEnglish) "Materials are not included. The customer must provide all required materials." else "सेवा शुल्क में सामग्री शामिल नहीं है। सभी आवश्यक सामग्री ग्राहक को स्वयं उपलब्ध करानी होगी।", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                 }
             }
 
