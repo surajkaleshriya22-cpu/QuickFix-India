@@ -8,6 +8,7 @@ import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,8 +34,8 @@ import androidx.navigation.NavController
 import com.quickfix.app.data.model.ServiceItem
 import com.quickfix.app.viewmodel.QuickFixViewModel
 
-private val BrandBlue = Color(0xFF2563EB)
-private val DeepNavy = Color(0xFF0F172A)
+private val BrandBlue = Color(0xFF0B4FCB)
+private val DeepNavy = Color(0xFF102A56)
 private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
@@ -142,35 +144,43 @@ fun CustomerHomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { showCityMenu = !showCityMenu }
-                        ) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = if (isEnglish) "City" else "शहर",
-                                tint = Color(0xFF60A5FA),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = com.quickfix.app.R.drawable.ic_kamxapp_mark),
+                            contentDescription = "KamXApp",
+                            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { showCityMenu = !showCityMenu }
+                            ) {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = if (isEnglish) "City" else "शहर",
+                                    tint = Color(0xFF60A5FA),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    currentCity,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = if (isEnglish) "Select City" else "शहर चुनें",
+                                    tint = Color(0xFF94A3B8)
+                                )
+                            }
                             Text(
-                                currentCity,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                fontSize = 15.sp
-                            )
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = if (isEnglish) "Select City" else "शहर चुनें",
-                                tint = Color(0xFF94A3B8)
+                                if (isEnglish) "KamXApp · One solution for every need" else "KamXApp · हर काम का एक समाधान",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.sp
                             )
                         }
-                        Text(
-                            if (isEnglish) "Choose your city" else "अपना शहर चुनें",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 10.sp
-                        )
                     }
                 },
                 actions = {
@@ -273,7 +283,7 @@ fun CustomerHomeScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (isEnglish) "SOS / Customer safety" else "SOS / ग्राहक सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239))
-                            Text(if (isEnglish) "This saves a safety report in QuickFix only. Emergency team/contact alerts are not connected." else "यह सुरक्षा रिपोर्ट केवल QuickFix में सेव करता है। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 11.sp, color = Color(0xFF881337))
+                            Text(if (isEnglish) "This saves a safety report in KamXApp only. Emergency team/contact alerts are not connected." else "यह सुरक्षा रिपोर्ट केवल KamXApp में सेव करता है। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 11.sp, color = Color(0xFF881337))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(onClick = { viewModel.submitBookingSafetyReport(activeBooking.id) { _, message -> sosStatus = message } },
                                     modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))) { Text("SOS Report") }
@@ -300,7 +310,7 @@ fun CustomerHomeScreen(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "QUICKFIX SERVICES IN $currentCity",
+                                    "KAMXAPP SERVICES IN $currentCity",
                                     color = Color.White,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,

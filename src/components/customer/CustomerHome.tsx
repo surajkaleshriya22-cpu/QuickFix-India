@@ -85,7 +85,7 @@ export const CustomerHome: React.FC = () => {
         const mapped: Booking[] = (result.bookings as unknown[]).map((item: any): Booking => ({
           id: String(item.id || ''),
           serviceId: '',
-          serviceTitle: String(item.serviceTitle || 'QuickFix Service'),
+          serviceTitle: String(item.serviceTitle || 'KamXApp Service'),
           category: item.category as ServiceCategoryType,
           customerName: currentUser.displayName,
           customerPhone: currentUser.phoneNumber,
@@ -144,6 +144,14 @@ export const CustomerHome: React.FC = () => {
     <div className="flex-1 flex flex-col min-h-0 relative">
       {/* Top Bar */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 z-20">
+        <div className="flex items-center gap-2.5 mb-3">
+          <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-10 h-10 rounded-xl border border-blue-100 bg-white p-0.5 shadow-sm" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[17px] leading-tight font-black tracking-tight text-[#102A56]">KamX<span className="text-[#FF8A00]">App</span></div>
+            <div className="text-[10px] font-semibold text-slate-500">{language === 'hi' ? 'हर काम का एक समाधान' : 'One solution for every need'}</div>
+          </div>
+          <div className="h-8 w-1 rounded-full bg-gradient-to-b from-[#0B4FCB] via-white to-[#FF8A00]" />
+        </div>
         <div className="flex items-center justify-between gap-3 mb-2.5">
           {/* City Selector */}
           <div className="flex items-center gap-1.5 text-xs text-slate-700">
@@ -202,7 +210,7 @@ export const CustomerHome: React.FC = () => {
         {isAuthenticated && currentUser?.role === 'customer' && currentUser.quickFixId && (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-blue-700">{language === 'hi' ? 'आपकी स्थायी QuickFix ID' : 'Your permanent QuickFix ID'}</p>
+              <p className="text-[10px] font-semibold text-blue-700">{language === 'hi' ? 'आपकी स्थायी KamXApp ID' : 'Your permanent KamXApp ID'}</p>
               <p className="font-mono text-sm font-extrabold tracking-wide text-blue-950">{currentUser.quickFixId}</p>
               <p className="text-[10px] text-blue-700">{language === 'hi' ? 'Customer Care से मदद लेते समय यह ID बताएं।' : 'Share this ID with Customer Care when you need help.'}</p>
             </div>
@@ -412,7 +420,7 @@ export const CustomerHome: React.FC = () => {
                 <Shield className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">QuickFix Admin HQ & Operations</h4>
+                <h4 className="text-xs font-bold text-white">KamXApp Admin HQ & Operations</h4>
                 <p className="text-[10px] text-slate-400">Customer, Booking Dispatch, KYC & Payment Console</p>
               </div>
             </div>
@@ -443,7 +451,7 @@ export const CustomerHome: React.FC = () => {
 
         {/* QuickFix Trust Pillars */}
         <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 space-y-2.5">
-          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">QuickFix Trust Guarantee</div>
+          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">KamXApp Trust Guarantee</div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />

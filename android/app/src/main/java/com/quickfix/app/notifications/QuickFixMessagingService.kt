@@ -25,8 +25,8 @@ class QuickFixMessagingService : FirebaseMessagingService() {
             android.util.Log.w("QuickFixFCM", "Ignoring notification with missing or invalid bookingId")
             return
         }
-        val title = message.notification?.title ?: "New QuickFix service request"
-        val body = message.notification?.body ?: "A nearby customer needs a service. Open QuickFix to review."
+        val title = message.notification?.title ?: "New KamXApp service request"
+        val body = message.notification?.body ?: "A nearby customer needs a service. Open KamXApp to review."
 
         val intent = Intent(this, MainActivity::class.java).apply {
             action = "com.quickfix.app.OPEN_JOB_FEED"
@@ -68,7 +68,7 @@ class QuickFixMessagingService : FirebaseMessagingService() {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    "QuickFix service requests",
+                    "KamXApp service requests",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = "Alerts for new nearby customer service requests"

@@ -621,7 +621,7 @@ export const AdminDashboard: React.FC = () => {
             <Shield className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">QuickFix HQ Admin Console</h3>
+            <h3 className="text-base font-bold text-white">KamXApp Admin HQ</h3>
             <p className="text-xs text-slate-400 mt-1">
               Role-Based Access Control: Restricted to platform executives and dispatch managers.
             </p>
@@ -724,7 +724,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white tracking-tight">QuickFix Operations HQ</h2>
+                <h2 className="text-sm font-bold text-white tracking-tight">KamXApp Operations HQ</h2>
                 <span className="bg-emerald-950 text-emerald-400 border border-emerald-700/60 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                   <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
                   <span>PREVIEW MODE</span>
@@ -1063,7 +1063,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-3">
             <section className="bg-slate-950 border border-blue-700/60 rounded-2xl p-4 space-y-3">
               <div>
-                <h3 className="text-sm font-bold text-white">Customer Care — QuickFix ID Search</h3>
+                <h3 className="text-sm font-bold text-white">Customer Care — KamXApp ID Search</h3>
                 <p className="text-[10px] text-slate-400 mt-1">Enter a customer's or Channel Partner's permanent ID to open their verified account record and service history.</p>
               </div>
               <div className="flex gap-2">
@@ -2252,7 +2252,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-[11px] text-amber-300">
-                              Payment actions are disabled. QuickFix has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
+                              Payment actions are disabled. KamXApp has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
                             </p>
                           </div>
 
@@ -3013,7 +3013,7 @@ export const AdminDashboard: React.FC = () => {
                       </h4>
                     </div>
                     <p className="text-xs text-blue-200 mt-0.5">
-                      Restricts technician duty status updates (Online/Offline) to defined operating perimeters. Enforces QuickFix 1-Hour SLA delivery.
+                      Restricts technician duty status updates (Online/Offline) to defined operating perimeters. Enforces KamXApp 1-Hour SLA delivery.
                     </p>
                   </div>
 
@@ -3231,7 +3231,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="bg-blue-950/40 border border-blue-900/60 p-2.5 rounded-xl text-[11px] space-y-1">
                       <span className="text-blue-400 font-bold block flex items-center gap-1">
                         <MessageSquare className="w-3 h-3" />
-                        <span>QuickFix Official Response:</span>
+                        <span>KamXApp Official Response:</span>
                       </span>
                       <p className="text-slate-300 italic">{b.review.adminReply}</p>
                     </div>
@@ -3402,7 +3402,7 @@ export const AdminDashboard: React.FC = () => {
 
                 <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Fulfilled By (Partner):</span>
-                  <p className="font-bold text-white">{selectedReceiptBooking.technicianName || 'QuickFix Direct Dispatch'}</p>
+                  <p className="font-bold text-white">{selectedReceiptBooking.technicianName || 'KamXApp Direct Dispatch'}</p>
                   <p className="text-slate-400 font-mono text-[11px]">{selectedReceiptBooking.technicianPhone || 'Not provided'}</p>
                   <p className="text-blue-300 font-mono text-[10px] capitalize">Trade: {selectedReceiptBooking.category}</p>
                   <p className="text-slate-400 text-[10px]">Start OTP: <strong className="text-amber-400 font-mono">{selectedReceiptBooking.startOtp}</strong></p>

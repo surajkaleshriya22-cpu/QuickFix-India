@@ -118,7 +118,7 @@ class AuthRepository(
         val idToken = firebaseUser.getIdToken(true).await().token
             ?: throw SecurityException("Could not obtain a secure Firebase sign-in token.")
         val payload = JSONObject().apply {
-            put("displayName", user.displayName.trim().ifBlank { "QuickFix Customer" })
+            put("displayName", user.displayName.trim().ifBlank { "KamXApp Customer" })
             put("email", user.email.trim())
             put("address", user.address.trim())
             put("city", user.city.trim())

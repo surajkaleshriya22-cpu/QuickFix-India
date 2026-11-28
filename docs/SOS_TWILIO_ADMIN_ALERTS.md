@@ -1,15 +1,15 @@
-# Optional QuickFix Admin SMS for SOS
+# Optional KamXApp Admin SMS for SOS
 
-The SOS API saves an incident first. It then makes one best-effort SMS request to the configured QuickFix operations number. It does not contact police, ambulance, customers' or partners' emergency contacts, or a call centre.
+The SOS API saves an incident first. It then makes one best-effort SMS request to the configured KamXApp operations number. It does not contact police, ambulance, customers' or partners' emergency contacts, or a call centre.
 
 ## Render environment variables
 
-Set these only as encrypted environment variables on the existing QuickFix-India Render service:
+Set these only as encrypted environment variables on the existing Render service used by KamXApp:
 
 - `TWILIO_ACCOUNT_SID`: Twilio Account SID (starts with `AC`).
 - `TWILIO_AUTH_TOKEN`: Twilio Auth Token. Keep it secret.
 - `TWILIO_FROM_NUMBER`: SMS-capable Twilio sender in E.164 format.
-- `SOS_ADMIN_ALERT_TO`: authorized QuickFix operations number in E.164 format.
+- `SOS_ADMIN_ALERT_TO`: authorized KamXApp operations number in E.164 format.
 
 If any variable is missing, the incident is still saved and `adminSmsStatus` is `not_configured`. Invalid settings, provider rejection, or network failure produce `failed`. `sent` means only that Twilio accepted the API request; it does not prove handset delivery.
 

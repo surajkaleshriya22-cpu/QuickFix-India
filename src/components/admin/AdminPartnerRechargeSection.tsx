@@ -133,7 +133,7 @@ export const AdminPartnerRechargeSection: React.FC = () => {
       </div> : <p className="text-xs text-slate-400">Razorpay readiness could not be checked.</p>}
       <div className="rounded-lg border border-amber-800 bg-amber-950/40 p-3 text-xs text-amber-200 flex gap-2">
         <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span>Razorpay settles captured payments to the bank account registered in your Razorpay merchant Dashboard. The bank account saved separately inside QuickFix does not redirect Razorpay settlements. Verify the settlement bank and settlement status in Razorpay before treating money as credited.</span>
+        <span>Razorpay settles captured payments to the bank account registered in your Razorpay merchant Dashboard. The bank account saved separately inside KamXApp does not redirect Razorpay settlements. Verify the settlement bank and settlement status in Razorpay before treating money as credited.</span>
       </div>
     </div>
 
@@ -159,7 +159,7 @@ export const AdminPartnerRechargeSection: React.FC = () => {
           {item.verifiedAt && <p className="text-emerald-400">Verified: {formatDate(item.verifiedAt)}</p>}
         </div>)}
       </div>}
-      <p className="text-xs text-slate-400">“Captured & verified” means Razorpay confirmed the payment and QuickFix recorded it. It does not mean Razorpay has completed bank settlement.</p>
+      <p className="text-xs text-slate-400">“Captured & verified” means Razorpay confirmed the payment and KamXApp recorded it. It does not mean Razorpay has completed bank settlement.</p>
     </div>
 
     {error && <p role="alert" className="rounded-lg bg-rose-950/50 border border-rose-800 p-3 text-sm text-rose-300">{error}</p>}

@@ -126,7 +126,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 text-white border border-blue-400/30">
             <ShieldCheck className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-xl font-black text-white tracking-tight">QuickFix Super Admin HQ</h1>
+          <h1 className="text-xl font-black text-white tracking-tight">KamXApp Super Admin HQ</h1>
           <p className="text-xs text-slate-400 max-w-xs mx-auto">
             Authorized Executive Command Center. Customer & Partner access is permanently blocked.
           </p>
@@ -246,7 +246,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ onBackToApp 
 
       {/* Footer Info */}
       <div className="text-center text-[10px] text-slate-500 pt-3 border-t border-slate-800">
-        QuickFix Operations Platform · Zero-Trust Role-Based Access Control · Non-admin access prohibited
+        KamXApp Operations Platform · Zero-Trust Role-Based Access Control · Non-admin access prohibited
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.quickfix.app.notifications.QuickFixNotificationTokenRegistrar
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -28,7 +29,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -71,8 +74,8 @@ private fun partnerCategoryHindi(category: String): String = when (category.trim
     else -> category.replace("_", " ").replaceFirstChar { it.uppercase() }
 }
 
-private val BrandBlue = Color(0xFF2563EB)
-private val DeepNavy = Color(0xFF0F172A)
+private val BrandBlue = Color(0xFF0B4FCB)
+private val DeepNavy = Color(0xFF102A56)
 private val CardBg = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
@@ -279,33 +282,41 @@ fun TechnicianScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "QuickFix Channel Partner Portal",
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                fontSize = 17.sp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                color = Color(0xFF10B981),
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    "CHANNEL PARTNER",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            if (isEnglish) "Signed-in partner account" else "लॉगिन किया हुआ पार्टनर खाता",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = com.quickfix.app.R.drawable.ic_kamxapp_mark),
+                            contentDescription = "KamXApp",
+                            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "KamXApp · Channel Partner",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 17.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = Color(0xFF10B981),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        "CHANNEL PARTNER",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                if (isEnglish) "Signed-in partner account" else "लॉगिन किया हुआ पार्टनर खाता",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -339,7 +350,7 @@ fun TechnicianScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        if (isEnglish) "My QuickFix Partner ID" else "मेरा QuickFix पार्टनर ID",
+                        if (isEnglish) "My KamXApp Partner ID" else "मेरा KamXApp पार्टनर ID",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = TextPrimary
@@ -765,7 +776,7 @@ fun TechnicianScreen(
                         if (booking.status in listOf("assigned", "technician_en_route", "in_progress")) {
                             Divider(color = Color(0xFFFDA4AF))
                             Text(if (isEnglish) "SOS / Channel Partner Safety" else "SOS / चैनल पार्टनर सुरक्षा", fontWeight = FontWeight.Bold, color = Color(0xFF9F1239), fontSize = 12.sp)
-                            Text(if (isEnglish) "The report is saved in QuickFix only. Emergency team/contact alerts are not connected." else "रिपोर्ट केवल QuickFix में सेव होगी। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 10.sp, color = Color(0xFF881337))
+                            Text(if (isEnglish) "The report is saved in KamXApp only. Emergency team/contact alerts are not connected." else "रिपोर्ट केवल KamXApp में सेव होगी। Emergency team/contact alerts अभी जुड़े नहीं हैं।", fontSize = 10.sp, color = Color(0xFF881337))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(onClick = { viewModel.submitBookingSafetyReport(booking.id) { _, message -> sosStatus = message } },
                                     modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))) { Text("SOS Report") }

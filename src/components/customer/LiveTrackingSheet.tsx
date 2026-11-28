@@ -189,7 +189,7 @@ export const LiveTrackingSheet: React.FC<LiveTrackingSheetProps> = ({ booking, o
               <span>Service Successfully Completed!</span>
             </div>
             <p className="text-xs text-slate-700">
-              The booking is marked completed. Please contact QuickFix support if you need help with this service.
+              The booking is marked completed. Please contact KamXApp support if you need help with this service.
             </p>
 
             {booking.review ? (

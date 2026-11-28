@@ -33,7 +33,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEnglish) "My QuickFix Account" else "मेरा QuickFix खाता", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "My KamXApp Account" else "मेरा KamXApp खाता", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Back" else "वापस जाएँ")
@@ -120,7 +120,7 @@ fun ProfileScreen(
                     ProfileItemRow(icon = Icons.Default.Email, label = if (isEnglish) "Email" else "ईमेल", value = user.email.ifEmpty { if (isEnglish) "Not set" else "सेट नहीं है" })
                     ProfileItemRow(
                         icon = Icons.Default.Person,
-                        label = if (isEnglish) "QuickFix ID" else "QuickFix आईडी",
+                        label = if (isEnglish) "KamXApp ID" else "KamXApp आईडी",
                         value = user.quickFixId.ifEmpty { if (isEnglish) "ID not available — retry sign-in" else "आईडी उपलब्ध नहीं — दोबारा लॉगिन करें" }
                     )
                     ProfileItemRow(icon = Icons.Default.LocationOn, label = if (isEnglish) "Address" else "पता", value = user.address.ifEmpty { if (isEnglish) "Not set" else "सेट नहीं है" })
@@ -151,7 +151,7 @@ fun ProfileScreen(
             ) {
                 Icon(Icons.Default.ExitToApp, contentDescription = if (isEnglish) "Sign out" else "लॉगआउट")
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isEnglish) "Sign Out of QuickFix" else "QuickFix से लॉगआउट करें", fontWeight = FontWeight.Bold)
+                Text(if (isEnglish) "Sign Out of KamXApp" else "KamXApp से लॉगआउट करें", fontWeight = FontWeight.Bold)
             }
         }
     }

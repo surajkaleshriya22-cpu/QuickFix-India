@@ -187,7 +187,7 @@ fun LiveTrackingScreen(
                                 color = TextPrimary
                             )
                             Text(
-                                if (booking.technicianName != null) "Assigned QuickFix partner" else "Waiting for partner acceptance",
+                                if (booking.technicianName != null) "Assigned KamXApp partner" else "Waiting for partner acceptance",
                                 fontSize = 12.sp,
                                 color = TextSecondary
                             )

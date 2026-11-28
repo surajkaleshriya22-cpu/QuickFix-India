@@ -1,5 +1,6 @@
 package com.quickfix.app.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -33,9 +35,9 @@ import com.quickfix.app.data.model.UserRole
 import com.quickfix.app.viewmodel.QuickFixViewModel
 
 // Modern Dark Blue and Crisp White Theme Colors
-private val DarkNavy = Color(0xFF0F172A)
+private val DarkNavy = Color(0xFF102A56)
 private val DeepBlue = Color(0xFF1E3A8A)
-private val BrandBlue = Color(0xFF2563EB)
+private val BrandBlue = Color(0xFF0B4FCB)
 private val AccentCyan = Color(0xFF0284C7)
 private val CardBg = Color(0xFFFFFFFF)
 private val BorderColor = Color(0xFFE2E8F0)
@@ -83,21 +85,26 @@ fun AdminDashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = com.quickfix.app.R.drawable.ic_kamxapp_mark),
+                            contentDescription = "KamXApp",
+                            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
                             Text(
-                                if (isEnglish) "QuickFix Admin HQ" else "QuickFix एडमिन मुख्यालय",
+                                if (isEnglish) "KamXApp Admin HQ" else "KamXApp एडमिन मुख्यालय",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 18.sp
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                if (isEnglish) "Operations & Marketplace Governance" else "ऑपरेशन और मार्केटप्लेस प्रबंधन",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp
+                            )
                         }
-                        Text(
-                            if (isEnglish) "Operations & Marketplace Governance" else "ऑपरेशन और मार्केटप्लेस प्रबंधन",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp
-                        )
                     }
                 },
                 navigationIcon = {
@@ -812,7 +819,7 @@ fun CommissionsTab(
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (isEnglish) "Channel Partner Payouts & Escrow" else "चैनल पार्टनर payout और एस्क्रो", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                    Text(if (isEnglish) "Payout processing is disabled. QuickFix has no connected payment provider or verified server-side payout ledger, so this app cannot approve, hold, reverse, or disburse funds." else "अभी payout बंद है। QuickFix में verified server-side payout ledger और payment provider जुड़ने तक पैसा approve, रोकना, वापस करना या भेजना संभव नहीं है।", fontSize = 12.sp, color = Color(0xFFB45309))
+                    Text(if (isEnglish) "Payout processing is disabled. KamXApp has no connected payment provider or verified server-side payout ledger, so this app cannot approve, hold, reverse, or disburse funds." else "अभी payout बंद है। KamXApp में verified server-side payout ledger और payment provider जुड़ने तक पैसा approve, रोकना, वापस करना या भेजना संभव नहीं है।", fontSize = 12.sp, color = Color(0xFFB45309))
                     Surface(
                         color = Color(0xFFFFFBEB),
                         shape = RoundedCornerShape(8.dp),
@@ -971,8 +978,8 @@ fun CommissionsTab(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(if (isEnglish) "Market-based service pricing" else "बाज़ार के अनुसार सेवा की कीमत", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
                     Text(
-                        if (isEnglish) "QuickFix does not apply a per-booking commission cut. The customer sees the service price before booking; partners receive the listed service amount subject to the published platform subscription and payment terms."
-                        else "QuickFix हर booking पर commission नहीं काटता। ग्राहक को booking से पहले सेवा की कीमत दिखाई जाएगी। पार्टनर को दिखाई गई सेवा राशि मिलेगी; लागू subscription और payment नियम अलग से दिखाए जाएँगे।",
+                        if (isEnglish) "KamXApp does not apply a per-booking commission cut. The customer sees the service price before booking; partners receive the listed service amount subject to the published platform subscription and payment terms."
+                        else "KamXApp हर booking पर commission नहीं काटता। ग्राहक को booking से पहले सेवा की कीमत दिखाई जाएगी। पार्टनर को दिखाई गई सेवा राशि मिलेगी; लागू subscription और payment नियम अलग से दिखाए जाएँगे।",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -1027,7 +1034,7 @@ fun ReviewsTab(bookings: List<Booking>) {
                         Text(booking.reviewTags.joinToString(" • "), fontSize = 10.sp, color = BrandBlue)
                     }
                     if (booking.reviewAdminReply.isNotBlank()) {
-                        Text("QuickFix response: ${booking.reviewAdminReply}", fontSize = 11.sp, color = BrandBlue)
+                        Text("KamXApp response: ${booking.reviewAdminReply}", fontSize = 11.sp, color = BrandBlue)
                     }
                 }
             }

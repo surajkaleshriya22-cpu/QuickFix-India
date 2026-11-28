@@ -344,7 +344,7 @@ export const TechnicianPortal: React.FC = () => {
           {currentUser.quickFixId && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center justify-between gap-2">
               <div>
-                <p className="text-[10px] font-semibold text-blue-700">Your permanent QuickFix ID</p>
+                <p className="text-[10px] font-semibold text-blue-700">Your permanent KamXApp ID</p>
                 <p className="font-mono text-sm font-extrabold tracking-wide text-blue-950">{currentUser.quickFixId}</p>
               </div>
               <button type="button" onClick={() => { void navigator.clipboard?.writeText(currentUser.quickFixId || ''); }}
@@ -367,11 +367,11 @@ export const TechnicianPortal: React.FC = () => {
     return (
       <div className="flex-1 bg-slate-50 flex flex-col justify-center p-5">
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-md space-y-4 max-w-sm mx-auto w-full">
-          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl">
-            <Wrench className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-xl bg-white border border-blue-100 shadow-sm p-1">
+            <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">{language === 'hi' ? 'QuickFix चैनल पार्टनर पोर्टल' : 'QuickFix Channel Partner Portal'}</h2>
+            <h2 className="text-base font-bold text-slate-900">{language === 'hi' ? 'KamXApp चैनल पार्टनर पोर्टल' : 'KamXApp Channel Partner Portal'}</h2>
             <p className="text-xs text-slate-500">Sign in to manage service jobs and withdraw verified earnings.</p>
           </div>
 
@@ -446,7 +446,7 @@ export const TechnicianPortal: React.FC = () => {
                     ['electrician','Electrician'],['plumber','Plumber'],['technician','Technician (AC / Fridge / Appliances)'],
                     ['welder','Welder / Fabricator'],['mechanic','Mechanic'],
                     ['driver','Driver'],['tourist_guide','Tourist Guide'],['contractor','Contractor'],
-                    ['bike_taxi','QuickFix Bike Taxi Captain'],['kaamkaaj_partner','Kaam-Kaaj Partner (घर के सभी रोजमर्रा के काम)'],
+                    ['bike_taxi','KamXApp Bike Taxi Captain'],['kaamkaaj_partner','Kaam-Kaaj Partner (घर के सभी रोजमर्रा के काम)'],
                     ['house_cleaning','House Cleaning'],['cook','Cook / खाना बनाना'],['laundry','Laundry / कपड़े धोना-प्रेस'],['maid','Maid / घरेलू सहायता'],
                     ['carpenter','Carpenter'],['painter','Painter'],['gardener','Gardener'],
                     ['pest_control','Pest Control'],['house_shifting','House Shifting'],
@@ -545,7 +545,16 @@ export const TechnicianPortal: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
+    <div className="flex-1 bg-[#fffdf8] flex flex-col min-h-0">
+      {/* KamXApp identity is shared with Customer and Admin dashboards. */}
+      <div className="bg-gradient-to-r from-[#102A56] via-[#123B79] to-[#0B4FCB] px-4 py-2 flex items-center gap-2.5 relative">
+        <img src="/icons/kamxapp-mark.svg" alt="KamXApp" className="w-8 h-8 rounded-lg bg-white p-0.5" />
+        <div className="min-w-0">
+          <div className="text-sm font-black tracking-tight text-white">KamX<span className="text-[#FF8A00]">App</span></div>
+          <div className="text-[10px] text-blue-100">{language === 'hi' ? 'हर काम का एक समाधान' : 'One solution for every need'}</div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 kamxapp-accent-rule" />
+      </div>
       {/* Top Bar with Online Switch & Profile */}
       <header className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5">
@@ -567,7 +576,7 @@ export const TechnicianPortal: React.FC = () => {
             </div>
             {currentUser?.quickFixId && (
               <div className="mt-1 flex items-center gap-1.5">
-                <span className="text-[9px] font-semibold text-blue-700">QuickFix ID</span>
+                <span className="text-[9px] font-semibold text-blue-700">KamXApp ID</span>
                 <span className="font-mono text-[10px] font-extrabold tracking-wide text-slate-800">{currentUser.quickFixId}</span>
                 <button
                   type="button"
@@ -575,7 +584,7 @@ export const TechnicianPortal: React.FC = () => {
                     void navigator.clipboard?.writeText(currentUser.quickFixId || '');
                   }}
                   className="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700"
-                  aria-label="Copy QuickFix ID"
+                  aria-label="Copy KamXApp ID"
                 >Copy</button>
               </div>
             )}
@@ -714,7 +723,7 @@ export const TechnicianPortal: React.FC = () => {
           <div className="bg-amber-500 text-slate-950 p-3 rounded-2xl shadow-md flex items-start gap-2.5 animate-in slide-in-from-top-2">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-slate-950" />
             <div className="text-xs">
-              <strong className="font-extrabold block">QuickFix Safety & Policy Rule</strong>
+              <strong className="font-extrabold block">KamXApp Safety & Policy Rule</strong>
               <p>{qualificationAlertMsg}</p>
             </div>
           </div>
@@ -735,10 +744,10 @@ export const TechnicianPortal: React.FC = () => {
 
             <div>
               <h4 className="text-sm font-extrabold text-amber-950">
-                Awaiting QuickFix HQ Qualification Clearance
+                Awaiting KamXApp HQ Qualification Clearance
               </h4>
               <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                As per QuickFix India safety policy, only verified and qualified <strong className="font-bold">Electricians</strong>, <strong className="font-bold">Plumbers</strong>, and <strong className="font-bold">Appliance Technicians</strong> can go online or accept bookings.
+                As per KamXApp safety policy, only verified and qualified <strong className="font-bold">Electricians</strong>, <strong className="font-bold">Plumbers</strong>, and <strong className="font-bold">Appliance Technicians</strong> can go online or accept bookings.
               </p>
             </div>
 
@@ -770,7 +779,7 @@ export const TechnicianPortal: React.FC = () => {
               <span>Qualification Audit Rejected</span>
             </div>
             <p className="text-xs">
-              Reason: {currentTechnician.rejectionReason || 'Trade certificate could not be validated.'} Please visit QuickFix HQ with original ITI / Skill India diploma for manual clearance.
+              Reason: {currentTechnician.rejectionReason || 'Trade certificate could not be validated.'} Please visit KamXApp HQ with original ITI / Skill India diploma for manual clearance.
             </p>
           </div>
         ) : (
@@ -781,7 +790,7 @@ export const TechnicianPortal: React.FC = () => {
               </div>
               <div className="text-xs">
                 <span className="font-bold block text-emerald-900">
-                  QuickFix Certified {currentTechnician.trades.map(t => t.replace(/_/g, ' ')).join(' & ')}
+                  KamXApp Certified {currentTechnician.trades.map(t => t.replace(/_/g, ' ')).join(' & ')}
                 </span>
                 <span className="text-[11px] text-emerald-700 font-mono">
                   {currentTechnician.qualificationType} ({currentTechnician.qualificationRegNumber})
@@ -928,7 +937,7 @@ export const TechnicianPortal: React.FC = () => {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">KYC Pending Admin Review:</span> Your trade documentation ({currentTechnician.kycDocType}) is queued for verification by the QuickFix operations team.
+              <span className="font-bold">KYC Pending Admin Review:</span> Your trade documentation ({currentTechnician.kycDocType}) is queued for verification by the KamXApp operations team.
             </div>
           </div>
         )}
@@ -955,7 +964,7 @@ export const TechnicianPortal: React.FC = () => {
                   <div>
                     <p className="text-xs font-bold text-slate-900">{job.serviceTitle || 'Service request'}</p>
                     <p className="text-[11px] text-slate-500">Request #{job.id} · {job.category}</p>
-                    <p className="text-[11px] text-slate-600 mt-1">Customer: {job.customerName || 'QuickFix customer'}</p>
+                    <p className="text-[11px] text-slate-600 mt-1">Customer: {job.customerName || 'KamXApp customer'}</p>
                   </div>
                   <span className="text-xs font-bold text-slate-800">₹{job.totalAmount || job.price || 0}</span>
                 </div>
@@ -1084,7 +1093,7 @@ export const TechnicianPortal: React.FC = () => {
               <button type="button" disabled={jobActionLoading} onClick={() => void handleCompleteJob(currentActiveJob.id)} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{jobActionLoading ? 'Saving…' : 'Mark Service Complete'}</button>
             ) : null}
             {jobActionError && <p className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{jobActionError}</p>}
-            <p className="text-[10px] text-slate-500">Job status is verified by QuickFix server. Payment or payout is not marked settled by this action.</p>
+            <p className="text-[10px] text-slate-500">Job status is verified by KamXApp server. Payment or payout is not marked settled by this action.</p>
 
           </div>
         ) : (

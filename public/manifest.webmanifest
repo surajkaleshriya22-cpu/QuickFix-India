@@ -1,30 +1,24 @@
 {
   "id": "/",
-  "name": "QuickFix-India — One App, Many Services",
-  "short_name": "QuickFix-India",
-  "description": "One app for many services across India: home repair, daily help, mobility, delivery, local experts and more.",
+  "name": "KamXApp — हर काम का एक समाधान",
+  "short_name": "KamXApp",
+  "description": "भारत में घरेलू सेवाएँ, रोज़मर्रा की मदद, मोबिलिटी, डिलीवरी और स्थानीय सेवाएँ — एक ही ऐप में।",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B4FCB",
   "categories": [
     "lifestyle",
     "business"
   ],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "/icons/kamxapp-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

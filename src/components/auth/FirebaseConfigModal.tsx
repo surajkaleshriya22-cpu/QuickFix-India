@@ -49,7 +49,7 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
 service cloud.firestore {
   match /databases/{database}/documents {
     // STAGING ONLY: deny client access until reviewed, tested rules are deployed.
-    // This is a safety template, not a copy of the current QuickFix rules.
+    // This is a safety template, not a copy of the current KamXApp rules.
     match /{document=**} {
       allow read, write: if false;
     }
@@ -210,7 +210,7 @@ dependencies {
 
         {/* Footer */}
         <div className="bg-slate-900 border-t border-slate-800 px-5 py-3 flex items-center justify-between text-xs">
-          <span className="text-slate-500">QuickFix Architecture Specification v2.0</span>
+          <span className="text-slate-500">KamXApp Architecture Specification v2.0</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors"

@@ -96,7 +96,7 @@ export const PartnerEmergencyContactPanel: React.FC = () => {
       )}
       {message && <p role="status" className="text-xs text-emerald-700">{message}</p>}
       {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
-      <p className="rounded-lg bg-amber-50 p-2 text-[11px] text-amber-900">महत्वपूर्ण: contact save करने से SMS, फोन कॉल, पुलिस या एम्बुलेंस को सूचना नहीं जाती। मौजूदा SOS केवल QuickFix safety report दर्ज करता है। तत्काल खतरे में 112 पर सीधे कॉल करें।</p>
+      <p className="rounded-lg bg-amber-50 p-2 text-[11px] text-amber-900">महत्वपूर्ण: contact save करने से SMS, फोन कॉल, पुलिस या एम्बुलेंस को सूचना नहीं जाती। मौजूदा SOS केवल KamXApp safety report दर्ज करता है। तत्काल खतरे में 112 पर सीधे कॉल करें।</p>
     </section>
   );
 };

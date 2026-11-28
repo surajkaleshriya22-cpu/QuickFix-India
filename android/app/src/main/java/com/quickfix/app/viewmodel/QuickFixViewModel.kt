@@ -722,7 +722,7 @@ class QuickFixViewModel : ViewModel() {
             id = bookingId,
             serviceTitle = serviceTitle,
             category = category,
-            customerName = firebaseUser.displayName ?: "QuickFix Customer",
+            customerName = firebaseUser.displayName ?: "KamXApp Customer",
             customerAddress = customerAddress.trim(),
             status = "requested",
             technicianName = null,
@@ -1196,7 +1196,7 @@ class QuickFixViewModel : ViewModel() {
                             error(json.optString("error").ifBlank { "Safety report save नहीं हो सका (HTTP $status)." })
                         }
                         when (json.optString("adminSmsStatus")) {
-                            "sent" -> "Safety report save हो गई। Twilio ने QuickFix Admin SMS request स्वीकार की है; handset delivery की गारंटी नहीं है। यह emergency dispatch नहीं है। तत्काल खतरे में 112 call करें।"
+                            "sent" -> "Safety report save हो गई। Twilio ने KamXApp Admin SMS request स्वीकार की है; handset delivery की गारंटी नहीं है। यह emergency dispatch नहीं है। तत्काल खतरे में 112 call करें।"
                             "failed" -> "Safety report save हो गई, लेकिन Admin SMS नहीं भेजा जा सका। तत्काल खतरे में 112 call करें।"
                             else -> "Safety report save हो गई। Admin SMS configure नहीं है। तत्काल खतरे में 112 call करें।"
                         }

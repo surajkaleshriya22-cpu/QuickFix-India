@@ -46,6 +46,6 @@ export const AdminSafetyIncidentsSection: React.FC = () => {
       <p className="text-[11px] font-semibold text-slate-600">Admin SMS: {item.adminSmsStatus === 'sent' ? 'Twilio accepted request' : item.adminSmsStatus === 'failed' ? 'Failed' : 'Not configured'}</p>
       <div className="flex flex-wrap gap-2">{(['acknowledged','under_review','resolved','closed'] as const).map(status=><button key={status} type="button" disabled={busy===item.incidentId||item.status===status} onClick={()=>void update(item,status)} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold disabled:opacity-40">{labels[status]}</button>)}</div>
     </article>)}
-    <p className="text-[10px] text-amber-800">QuickFix records and reviews reports only. Admin SMS is optional and works only with verified server secrets; “sent” means Twilio accepted the request, not handset delivery. No police/ambulance dispatch. Immediate danger: call 112.</p>
+    <p className="text-[10px] text-amber-800">KamXApp records and reviews reports only. Admin SMS is optional and works only with verified server secrets; “sent” means Twilio accepted the request, not handset delivery. No police/ambulance dispatch. Immediate danger: call 112.</p>
   </section>;
 };
