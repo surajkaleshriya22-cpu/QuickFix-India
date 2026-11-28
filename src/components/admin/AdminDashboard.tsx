@@ -2252,7 +2252,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-800 gap-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-[11px] text-amber-300">
-                              Payment actions are disabled. QuickFix has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
+                              Payment actions are disabled. KamXApp has no verified payment gateway or escrow settlement connected; this screen does not confirm receipt, refund, or custody of funds.
                             </p>
                           </div>
 
@@ -3013,7 +3013,7 @@ export const AdminDashboard: React.FC = () => {
                       </h4>
                     </div>
                     <p className="text-xs text-blue-200 mt-0.5">
-                      Restricts technician duty status updates (Online/Offline) to defined operating perimeters. Enforces QuickFix 1-Hour SLA delivery.
+                      Restricts technician duty status updates (Online/Offline) to defined operating perimeters. Enforces KamXApp 1-Hour SLA delivery.
                     </p>
                   </div>
 
@@ -3231,7 +3231,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="bg-blue-950/40 border border-blue-900/60 p-2.5 rounded-xl text-[11px] space-y-1">
                       <span className="text-blue-400 font-bold block flex items-center gap-1">
                         <MessageSquare className="w-3 h-3" />
-                        <span>QuickFix Official Response:</span>
+                        <span>KamXApp Official Response:</span>
                       </span>
                       <p className="text-slate-300 italic">{b.review.adminReply}</p>
                     </div>
@@ -3402,7 +3402,7 @@ export const AdminDashboard: React.FC = () => {
 
                 <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Fulfilled By (Partner):</span>
-                  <p className="font-bold text-white">{selectedReceiptBooking.technicianName || 'QuickFix Direct Dispatch'}</p>
+                  <p className="font-bold text-white">{selectedReceiptBooking.technicianName || 'KamXApp Direct Dispatch'}</p>
                   <p className="text-slate-400 font-mono text-[11px]">{selectedReceiptBooking.technicianPhone || 'Not provided'}</p>
                   <p className="text-blue-300 font-mono text-[10px] capitalize">Trade: {selectedReceiptBooking.category}</p>
                   <p className="text-slate-400 text-[10px]">Start OTP: <strong className="text-amber-400 font-mono">{selectedReceiptBooking.startOtp}</strong></p>
