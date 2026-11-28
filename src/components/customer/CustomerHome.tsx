@@ -210,7 +210,7 @@ export const CustomerHome: React.FC = () => {
         {isAuthenticated && currentUser?.role === 'customer' && currentUser.quickFixId && (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-blue-700">{language === 'hi' ? 'आपकी स्थायी QuickFix ID' : 'Your permanent QuickFix ID'}</p>
+              <p className="text-[10px] font-semibold text-blue-700">{language === 'hi' ? 'आपकी स्थायी KamXApp ID' : 'Your permanent KamXApp ID'}</p>
               <p className="font-mono text-sm font-extrabold tracking-wide text-blue-950">{currentUser.quickFixId}</p>
               <p className="text-[10px] text-blue-700">{language === 'hi' ? 'Customer Care से मदद लेते समय यह ID बताएं।' : 'Share this ID with Customer Care when you need help.'}</p>
             </div>
@@ -420,7 +420,7 @@ export const CustomerHome: React.FC = () => {
                 <Shield className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">QuickFix Admin HQ & Operations</h4>
+                <h4 className="text-xs font-bold text-white">KamXApp Admin HQ & Operations</h4>
                 <p className="text-[10px] text-slate-400">Customer, Booking Dispatch, KYC & Payment Console</p>
               </div>
             </div>
@@ -451,7 +451,7 @@ export const CustomerHome: React.FC = () => {
 
         {/* QuickFix Trust Pillars */}
         <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 space-y-2.5">
-          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">QuickFix Trust Guarantee</div>
+          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">KamXApp Trust Guarantee</div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
