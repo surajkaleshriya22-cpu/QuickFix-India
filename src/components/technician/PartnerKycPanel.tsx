@@ -46,7 +46,7 @@ export const PartnerKycPanel: React.FC = () => {
     const user = auth.currentUser;
     if (!isFirebaseConfigured || !user) {
       setConfigUnavailable(true);
-      setError('Secure KYC requires an active QuickFix Firebase sign-in.');
+      setError('Secure KYC requires an active KamXApp Firebase sign-in.');
       setLoading(false);
       return;
     }
@@ -94,7 +94,7 @@ export const PartnerKycPanel: React.FC = () => {
       return;
     }
     if (!config.documentTypes.includes(documentType)) {
-      setError('This document type is not enabled by QuickFix.');
+      setError('This document type is not enabled by KamXApp.');
       return;
     }
     if (!config.allowedContentTypes.includes(file.type) || file.size <= 0 || file.size > config.maxFileBytes) {
@@ -160,16 +160,16 @@ export const PartnerKycPanel: React.FC = () => {
       ) : configUnavailable ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <div><strong>Secure upload is currently disabled.</strong><p className="mt-1">{error || 'QuickFix server privacy policy and private Storage configuration are not ready. Do not send documents on WhatsApp or to anyone personally.'}</p></div>
+          <div><strong>Secure upload is currently disabled.</strong><p className="mt-1">{error || 'KamXApp server privacy policy and private Storage configuration are not ready. Do not send documents on WhatsApp or to anyone personally.'}</p></div>
         </div>
       ) : config ? (
         <>
           <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-950 space-y-2">
-            <strong>QuickFix India KYC Privacy Notice · {config.privacyNoticeVersion}</strong>
-            <p>Purpose: verify your identity, service address and trade qualifications so QuickFix can review your Channel Partner application and help protect customers and partners.</p>
-            <p>Documents you choose to submit may include identity proof, address proof, trade/qualification certificate and profile photo. Access is restricted to your account and authorized QuickFix administrators for verification and security review. Documents are stored privately and are not public.</p>
-            <p>Uploaded KYC document files are kept for up to <strong>{config.retentionDays} days</strong>. This is separate from your active account record: while your QuickFix account remains active, your profile, verification decision, booking/service history and necessary safety/audit records are retained. If a fresh document is required for verification, QuickFix may ask you to upload it again. For privacy questions, correction or deletion requests, contact <a className="font-semibold underline" href="mailto:surajkaleshriya22@gmail.com">surajkaleshriya22@gmail.com</a>.</p>
-            <p className="font-semibold text-amber-800">Important: automated expiry/deletion is not yet deployed and verified. Do not upload real identity documents until QuickFix confirms the deletion process and privacy notice are operational.</p>
+            <strong>KamXApp KYC Privacy Notice · {config.privacyNoticeVersion}</strong>
+            <p>Purpose: verify your identity, service address and trade qualifications so KamXApp can review your Channel Partner application and help protect customers and partners.</p>
+            <p>Documents you choose to submit may include identity proof, address proof, trade/qualification certificate and profile photo. Access is restricted to your account and authorized KamXApp administrators for verification and security review. Documents are stored privately and are not public.</p>
+            <p>Uploaded KYC document files are kept for up to <strong>{config.retentionDays} days</strong>. This is separate from your active account record: while your KamXApp account remains active, your profile, verification decision, booking/service history and necessary safety/audit records are retained. If a fresh document is required for verification, KamXApp may ask you to upload it again. For privacy questions, correction or deletion requests, contact <a className="font-semibold underline" href="mailto:surajkaleshriya22@gmail.com">surajkaleshriya22@gmail.com</a>.</p>
+            <p className="font-semibold text-amber-800">Important: automated expiry/deletion is not yet deployed and verified. Do not upload real identity documents until KamXApp confirms the deletion process and privacy notice are operational.</p>
           </div>
           <div>
             <label htmlFor="partner-kyc-type" className="block text-xs font-semibold text-slate-700 mb-1">Document type</label>
@@ -182,7 +182,7 @@ export const PartnerKycPanel: React.FC = () => {
             <input id="partner-kyc-file" type="file" accept="image/jpeg,image/png,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold" />
             <p className="text-[10px] text-slate-500 mt-1">Maximum size: {Math.floor(config.maxFileBytes / (1024 * 1024))} MB. Do not upload unrelated documents.</p>
           </div>
-          <label className="flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={consentAccepted} onChange={e => setConsentAccepted(e.target.checked)} className="mt-0.5" /><span>I consent to QuickFix processing this document for identity, address or qualification verification under privacy notice {config.privacyNoticeVersion}.</span></label>
+          <label className="flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={consentAccepted} onChange={e => setConsentAccepted(e.target.checked)} className="mt-0.5" /><span>I consent to KamXApp processing this document for identity, address or qualification verification under privacy notice {config.privacyNoticeVersion}.</span></label>
           <label className="flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={retentionAccepted} onChange={e => setRetentionAccepted(e.target.checked)} className="mt-0.5" /><span>I understand the document is scheduled for retention for up to {config.retentionDays} days under the configured policy.</span></label>
           <button type="button" onClick={() => void handleUpload()} disabled={uploading || !file || !consentAccepted || !retentionAccepted} className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold text-sm py-3 flex items-center justify-center gap-2">
             <UploadCloud className="w-4 h-4" />{uploading ? 'Uploading securely…' : 'Upload & Submit for Review'}
