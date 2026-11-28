@@ -381,6 +381,11 @@ fun CustomerHomeScreen(
                                     fontSize = 11.sp,
                                     color = TextSecondary
                                 )
+                                val bookingLocation = listOf(activeBooking.customerAddress, activeBooking.city, activeBooking.tehsil, activeBooking.district, activeBooking.state, activeBooking.pincode).filter { it.isNotBlank() }.joinToString(", ")
+                                if (bookingLocation.isNotBlank()) Text(if (isEnglish) "Address: $bookingLocation" else "पता: $bookingLocation", fontSize = 10.sp, color = TextSecondary)
+                                if (activeBooking.scheduledDate.isNotBlank() || activeBooking.scheduledTimeSlot.isNotBlank()) Text(if (isEnglish) "Schedule: ${activeBooking.scheduledDate} ${activeBooking.scheduledTimeSlot}" else "समय: ${activeBooking.scheduledDate} ${activeBooking.scheduledTimeSlot}", fontSize = 10.sp, color = TextSecondary)
+                                if (activeBooking.paymentMethod.isNotBlank()) Text(if (isEnglish) "Payment: ${activeBooking.paymentMethod} · ${activeBooking.paymentStatus}" else "भुगतान: ${activeBooking.paymentMethod} · ${activeBooking.paymentStatus}", fontSize = 10.sp, color = TextSecondary)
+                                if (activeBooking.notes.isNotBlank()) Text(if (isEnglish) "Your notes: ${activeBooking.notes}" else "आपकी जानकारी: ${activeBooking.notes}", fontSize = 10.sp, color = TextSecondary)
                                 if (activeBooking.status in listOf("assigned", "technician_en_route")) {
                                     val customerOtp = customerStartOtps[activeBooking.id]
                                     Text(

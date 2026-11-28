@@ -22,6 +22,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
+private fun bookingFieldText(value: Any?): String = when (value) {
+    is com.google.firebase.Timestamp -> java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(value.toDate())
+    is java.util.Date -> java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(value)
+    is String -> value
+    else -> ""
+}
+
 data class CustomerBookingQuote(
     val quoteAvailable: Boolean,
     val pricingStatus: String,
@@ -75,7 +82,12 @@ data class PartnerJob(
     val scheduledTimeSlot: String = "",
     val paymentMethod: String = "",
     val paymentStatus: String = "pending",
-    val pricingStatus: String = ""
+    val pricingStatus: String = "",
+    val notes: String = "",
+    val quoteMinimum: Double = 0.0,
+    val quoteMaximum: Double = 0.0,
+    val acceptedAt: String = "",
+    val serviceDeadline: String = ""
 )
 
 data class AdminMetrics(
@@ -178,6 +190,10 @@ class QuickFixViewModel : ViewModel() {
                             customerUid = data["customerUid"] as? String ?: "",
                             technicianUid = data["technicianUid"] as? String ?: "",
                             customerPhone = data["customerPhone"] as? String ?: "",
+                            technicianPhone = data["technicianPhone"] as? String ?: "",
+                            notes = data["notes"] as? String ?: "",
+                            acceptedAt = bookingFieldText(data["acceptedAt"]),
+                            serviceDeadline = bookingFieldText(data["serviceDeadline"]),
                             city = data["city"] as? String ?: "",
                             pincode = data["pincode"] as? String ?: "",
                             state = (data["serviceArea"] as? Map<*, *>)?.get("state") as? String ?: "",
@@ -190,8 +206,8 @@ class QuickFixViewModel : ViewModel() {
                             quoteMinimum = ((data["quoteRange"] as? Map<*, *>)?.get("minimum") as? Number)?.toDouble() ?: 0.0,
                             quoteMaximum = ((data["quoteRange"] as? Map<*, *>)?.get("maximum") as? Number)?.toDouble() ?: 0.0,
                             priceConsentAccepted = (data["priceConsent"] as? Map<*, *>)?.get("accepted") as? Boolean ?: false,
-                            createdAt = data["createdAt"] as? String ?: "",
-                            updatedAt = data["updatedAt"] as? String ?: ""
+                            createdAt = bookingFieldText(data["createdAt"]),
+                            updatedAt = bookingFieldText(data["updatedAt"])
                         )
                     } ?: emptyList()
                     _firestoreSyncStatus.value = "Bookings loaded from Firestore."
@@ -864,6 +880,11 @@ class QuickFixViewModel : ViewModel() {
                             paymentMethod = item.optString("paymentMethod", ""),
                             paymentStatus = item.optString("paymentStatus", "pending"),
                             pricingStatus = item.optString("pricingStatus", ""),
+                            notes = item.optString("notes", ""),
+                            quoteMinimum = item.optJSONObject("quoteRange")?.optDouble("minimum", 0.0) ?: 0.0,
+                            quoteMaximum = item.optJSONObject("quoteRange")?.optDouble("maximum", 0.0) ?: 0.0,
+                            acceptedAt = item.optString("acceptedAt", ""),
+                            serviceDeadline = item.optString("serviceDeadline", ""),
                             price = item.optInt("price", 0),
                             totalAmount = item.optInt("totalAmount", 0),
                             status = "requested",
@@ -906,6 +927,11 @@ class QuickFixViewModel : ViewModel() {
                             paymentMethod = item.optString("paymentMethod", ""),
                             paymentStatus = item.optString("paymentStatus", "pending"),
                             pricingStatus = item.optString("pricingStatus", ""),
+                            notes = item.optString("notes", ""),
+                            quoteMinimum = item.optJSONObject("quoteRange")?.optDouble("minimum", 0.0) ?: 0.0,
+                            quoteMaximum = item.optJSONObject("quoteRange")?.optDouble("maximum", 0.0) ?: 0.0,
+                            acceptedAt = item.optString("acceptedAt", ""),
+                            serviceDeadline = item.optString("serviceDeadline", ""),
                             price = item.optInt("price", 0),
                             totalAmount = item.optInt("totalAmount", 0),
                             status = item.optString("status", "assigned"),

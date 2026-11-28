@@ -575,6 +575,14 @@ fun BookingsTab(
                     Text("Customer: ${booking.customerName}", fontSize = 12.sp, color = TextSecondary)
                     Text("Assigned: ${booking.technicianName ?: "Pending Allocation"}", fontSize = 12.sp, color = TextSecondary)
                     Text("Booking total: ₹${booking.totalAmount}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                    Text("Location: ${listOf(booking.customerAddress, booking.city, booking.tehsil, booking.district, booking.state, booking.pincode).filter { it.isNotBlank() }.joinToString(", ")}", fontSize = 11.sp, color = TextSecondary)
+                    if (booking.scheduledDate.isNotBlank() || booking.scheduledTimeSlot.isNotBlank()) Text("Schedule: ${booking.scheduledDate} ${booking.scheduledTimeSlot}", fontSize = 11.sp, color = TextSecondary)
+                    if (booking.customerPhone.isNotBlank()) Text("Customer phone: ${booking.customerPhone}", fontSize = 11.sp, color = TextSecondary)
+                    if (booking.technicianPhone.isNotBlank()) Text("Partner phone: ${booking.technicianPhone}", fontSize = 11.sp, color = TextSecondary)
+                    if (booking.notes.isNotBlank()) Text("Customer notes: ${booking.notes}", fontSize = 11.sp, color = TextSecondary)
+                    Text("Payment: ${booking.paymentMethod.ifBlank { "unknown" }} · ${booking.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
+                    if (booking.acceptedAt.isNotBlank()) Text("Accepted: ${booking.acceptedAt}", fontSize = 10.sp, color = TextSecondary)
+                    if (booking.serviceDeadline.isNotBlank()) Text("Service deadline: ${booking.serviceDeadline}", fontSize = 10.sp, color = TextSecondary)
                     if (booking.lineItems.isNotEmpty()) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                             Text("Item-wise approved rates / अलग-अलग काम का रेट", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BrandBlue)

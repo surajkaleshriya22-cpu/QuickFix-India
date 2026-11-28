@@ -259,6 +259,13 @@ fun LiveTrackingScreen(
                         Text("Service Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                         Text(booking.serviceTitle, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = BrandBlue)
                         Text("Service address: ${booking.customerAddress}", fontSize = 11.sp, color = TextSecondary)
+                        val serviceAreaLabel = listOf(booking.city, booking.tehsil, booking.district, booking.state, booking.pincode).filter { it.isNotBlank() }.joinToString(", ")
+                        if (serviceAreaLabel.isNotBlank()) Text("क्षेत्र: $serviceAreaLabel", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.scheduledDate.isNotBlank() || booking.scheduledTimeSlot.isNotBlank()) Text("समय: ${booking.scheduledDate} ${booking.scheduledTimeSlot}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.paymentMethod.isNotBlank()) Text("भुगतान: ${booking.paymentMethod} · ${booking.paymentStatus}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.notes.isNotBlank()) Text("आपकी जानकारी: ${booking.notes}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.technicianPhone.isNotBlank()) Text("Channel Partner phone: ${booking.technicianPhone}", fontSize = 11.sp, color = TextSecondary)
+                        if (booking.serviceDeadline.isNotBlank()) Text("Service deadline: ${booking.serviceDeadline}", fontSize = 11.sp, color = TextSecondary)
                         if (booking.customerLatitude != null && booking.customerLongitude != null) {
                             val latitude = booking.customerLatitude
                             val longitude = booking.customerLongitude
