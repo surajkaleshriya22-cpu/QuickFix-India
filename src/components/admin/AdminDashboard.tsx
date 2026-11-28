@@ -332,15 +332,12 @@ export const AdminDashboard: React.FC = () => {
     }> = {};
 
     bookings.forEach(b => {
-      const dateKey = b.createdAt ? b.createdAt.split('T')[0] : '2026-11-03';
+      const dateKey = b.createdAt ? b.createdAt.split('T')[0] : 'date-unavailable';
       if (!groups[dateKey]) {
-        let display = dateKey;
-        if (dateKey === '2026-11-03') display = 'Today (03 Nov 2026)';
-        else if (dateKey === '2026-11-02') display = 'Yesterday (02 Nov 2026)';
-        else if (dateKey === '2026-10-31') display = '31 Oct 2026';
-        else if (dateKey === '2026-10-28') display = '28 Oct 2026';
-        else if (dateKey === '2026-10-15') display = '15 Oct 2026';
-        else if (dateKey === '2026-10-10') display = '10 Oct 2026';
+        const parsedDate = dateKey === 'date-unavailable' ? null : new Date(`${dateKey}T00:00:00`);
+        const display = parsedDate && !Number.isNaN(parsedDate.getTime())
+          ? parsedDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          : 'Date unavailable';
 
         groups[dateKey] = {
           date: dateKey,
@@ -387,8 +384,11 @@ export const AdminDashboard: React.FC = () => {
     }> = {};
 
     bookings.forEach(b => {
-      const monthKey = b.createdAt ? b.createdAt.substring(0, 7) : '2026-11';
-      const label = monthKey === '2026-11' ? 'November 2026 (Month-to-Date)' : monthKey === '2026-10' ? 'October 2026 (Prior Month)' : monthKey;
+      const monthKey = b.createdAt ? b.createdAt.substring(0, 7) : 'month-unavailable';
+      const parsedMonth = monthKey === 'month-unavailable' ? null : new Date(`${monthKey}-01T00:00:00`);
+      const label = parsedMonth && !Number.isNaN(parsedMonth.getTime())
+        ? parsedMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+        : 'Date unavailable';
 
       if (!groups[monthKey]) {
         groups[monthKey] = {
