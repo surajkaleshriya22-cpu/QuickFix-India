@@ -1566,7 +1566,7 @@ app.get('/api/partners/bookings', authenticateFirebaseUser, async (req: Request,
     const assignedDocs = new Map<string, any>();
     [...ownedByUid.docs, ...ownedByLegacyId.docs].forEach((document) => assignedDocs.set(document.id, document));
     const assignedBookings = [...assignedDocs.values()]
-      .filter((document) => ['assigned', 'technician_en_route', 'in_progress'].includes(String(document.data().status || '')))
+      .filter((document) => ['assigned', 'technician_en_route', 'in_progress', 'completed'].includes(String(document.data().status || '')))
       .map((document) => {
         const booking = document.data();
         return {
