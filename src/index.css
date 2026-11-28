@@ -10,13 +10,17 @@
   --color-brand-500: #2563eb;
   --color-brand-600: #1d4ed8;
   --color-brand-700: #1e40af;
-  --color-brand-900: #1e3a8a;
+  --color-brand-900: #102a56;
+  --color-kamx-blue: #0b4fcb;
+  --color-kamx-navy: #102a56;
+  --color-kamx-saffron: #ff8a00;
+  --color-kamx-paper: #fffdf8;
 }
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: #f8fafc;
+  background-color: #fffdf8;
   color: #0f172a;
 }
 
@@ -34,4 +38,38 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+
+/* KamXApp visual system: royal blue, deep navy, warm white and saffron. */
+:root {
+  color-scheme: light;
+  --kamx-blue: #0b4fcb;
+  --kamx-navy: #102a56;
+  --kamx-saffron: #ff8a00;
+  --kamx-paper: #fffdf8;
+  --kamx-border: #dbe5f2;
+}
+
+.kamxapp-surface {
+  background: var(--kamx-paper);
+}
+
+.kamxapp-card {
+  background: #fff;
+  border: 1px solid var(--kamx-border);
+  border-radius: 1rem;
+  box-shadow: 0 5px 18px rgb(16 42 86 / 6%);
+}
+
+.kamxapp-primary-action {
+  color: #fff;
+  background: linear-gradient(135deg, var(--kamx-blue), var(--kamx-navy));
+  border: 1px solid rgb(11 79 203 / 18%);
+  box-shadow: 0 5px 12px rgb(11 79 203 / 16%);
+}
+
+.kamxapp-accent-rule {
+  height: 4px;
+  background: linear-gradient(90deg, var(--kamx-blue) 0 62%, #fff 62% 72%, var(--kamx-saffron) 72% 100%);
 }
