@@ -621,7 +621,7 @@ export const AdminDashboard: React.FC = () => {
             <Shield className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">QuickFix HQ Admin Console</h3>
+            <h3 className="text-base font-bold text-white">KamXApp Admin HQ</h3>
             <p className="text-xs text-slate-400 mt-1">
               Role-Based Access Control: Restricted to platform executives and dispatch managers.
             </p>
