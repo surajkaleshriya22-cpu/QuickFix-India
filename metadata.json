@@ -1,6 +1,6 @@
 {
-  "name": "Remix QuickFix - India Home Services Marketplace",
-  "description": "On-demand home services marketplace for India featuring Electrician and Plumber bookings, technician partner dispatch, live tracking, admin commission management, and native Android Jetpack Compose architecture.",
+  "name": "KamXApp — हर काम का एक समाधान",
+  "description": "भारत का आपका अपना डिजिटल सर्विस प्लेटफॉर्म।",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
